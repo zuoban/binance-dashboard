@@ -53,7 +53,7 @@ echo "ghp_xxxxxxxxxxxx" | docker login ghcr.io -u zuoban --password-stdin
 docker run -d \
   --name binance-dashboard \
   -p 3000:3000 \
-  -e NEXT_PUBLIC_BINANCE_API_KEY=your_api_key \
+  -e BINANCE_API_KEY=your_api_key \
   -e BINANCE_API_SECRET=your_api_secret \
   ghcr.io/zuoban/binance-dashboard:latest
 ```
@@ -64,7 +64,7 @@ docker run -d \
 
 ```env
 # 币安 API 配置
-NEXT_PUBLIC_BINANCE_API_KEY=your_api_key_here
+BINANCE_API_KEY=your_api_key_here
 BINANCE_API_SECRET=your_api_secret_here
 
 # API 端点（可选）
@@ -144,7 +144,7 @@ docker buildx build \
 
 # 运行测试
 docker run -d -p 3000:3000 \
-  -e NEXT_PUBLIC_BINANCE_API_KEY=test \
+  -e BINANCE_API_KEY=test \
   -e BINANCE_API_SECRET=test \
   ghcr.io/zuoban/binance-dashboard:test
 ```
@@ -153,7 +153,7 @@ docker run -d -p 3000:3000 \
 
 | 变量名 | 必需 | 说明 | 默认值 |
 |--------|------|------|--------|
-| `NEXT_PUBLIC_BINANCE_API_KEY` | ✅ | 币安 API Key | - |
+| `BINANCE_API_KEY` | ✅ | 币安 API Key | - |
 | `BINANCE_API_SECRET` | ✅ | 币安 API Secret | - |
 | `NEXT_PUBLIC_BINANCE_REST_API` | ❌ | REST API 端点 | `https://fapi.binance.com` |
 | `NEXT_PUBLIC_BINANCE_WS_API` | ❌ | WebSocket API 端点 | `wss://fstream.binance.com/ws` |

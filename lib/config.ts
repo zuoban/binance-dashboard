@@ -12,8 +12,6 @@ export const binanceConfig = {
   restApi: process.env.NEXT_PUBLIC_BINANCE_REST_API || 'https://fapi.binance.com',
   /** WebSocket API 基础 URL */
   wsApi: process.env.NEXT_PUBLIC_BINANCE_WS_API || 'wss://fstream.binance.com/ws',
-  /** API Key（客户端可见） */
-  apiKey: process.env.NEXT_PUBLIC_BINANCE_API_KEY || '',
   /** 是否使用测试网 */
   useTestnet: process.env.NEXT_PUBLIC_USE_TESTNET === 'true',
 } as const;
@@ -74,6 +72,16 @@ export const uiConfig = {
 } as const;
 
 /**
+ * 认证配置
+ */
+export const authConfig = {
+  /** 访问码（留空则不启用认证） */
+  accessCode: process.env.ACCESS_CODE || '',
+  /** 是否启用认证 */
+  enabled: !!process.env.ACCESS_CODE,
+} as const;
+
+/**
  * 完整配置对象
  */
 export const config = {
@@ -82,6 +90,7 @@ export const config = {
   api: apiConfig,
   ws: wsConfig,
   ui: uiConfig,
+  auth: authConfig,
 } as const;
 
 /**
@@ -90,13 +99,12 @@ export const config = {
 export function validateConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // 验证币安 API 配置
-  if (!binanceConfig.apiKey) {
-    errors.push('Missing BINANCE_API_KEY in environment variables');
+  // API Key 和 Secret 只在服务端可用，在服务端时才验证
+  if (typeof window === 'undefined') {
+    if (!process.env.BINANCE_API_KEY) {
+      errors.push('Missing BINANCE_API_KEY in environment variables');
+    }
   }
-
-  // API Secret 只在服务端可用，这里不验证
-  // 实际使用时会在服务器端验证
 
   if (errors.length > 0) {
     return { valid: false, errors };
@@ -106,7 +114,7 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
 }
 
 /**
- * 获取服务端专用配置（包含 API Secret）
+ * 获取服务端专用配置（包含 API Key 和 API Secret）
  * ⚠️ 警告：此函数只能在服务端调用
  */
 export function getServerConfig() {
@@ -118,6 +126,7 @@ export function getServerConfig() {
     ...config,
     binance: {
       ...binanceConfig,
+      apiKey: process.env.BINANCE_API_KEY || '',
       apiSecret: process.env.BINANCE_API_SECRET || '',
     },
   };

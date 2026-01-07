@@ -78,7 +78,7 @@ cp .env.example .env.local
 
 ```env
 # 币安 API 配置
-NEXT_PUBLIC_BINANCE_API_KEY=your_api_key_here
+BINANCE_API_KEY=your_api_key_here
 BINANCE_API_SECRET=your_secret_key_here
 
 # API 端点（使用默认值即可）
@@ -274,7 +274,7 @@ binance-dashboard/
 在 Vercel 项目设置中添加以下环境变量：
 
 ```env
-NEXT_PUBLIC_BINANCE_API_KEY=your_api_key_here
+BINANCE_API_KEY=your_api_key_here
 BINANCE_API_SECRET=your_secret_key_here
 NEXT_PUBLIC_BINANCE_REST_API=https://fapi.binance.com
 NEXT_PUBLIC_BINANCE_WS_API=wss://fstream.binance.com/ws

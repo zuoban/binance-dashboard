@@ -70,7 +70,7 @@ function checkEnvFile(): boolean {
 
     // 检查必需的环境变量
     const requiredVars = [
-      'NEXT_PUBLIC_BINANCE_API_KEY',
+      'BINANCE_API_KEY',
       'BINANCE_API_SECRET',
     ];
 
