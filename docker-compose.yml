@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   binance-dashboard:
-    image: zuoban/binance-dashboard:latest
+    image: ghcr.io/zuoban/binance-dashboard:latest
     container_name: binance-dashboard
     restart: unless-stopped
     ports:

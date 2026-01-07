@@ -2,6 +2,7 @@
 
 # 多架构 Docker 镜像构建和推送脚本
 # 支持: linux/amd64, linux/arm64
+# 使用 GitHub Container Registry
 
 set -e
 
@@ -9,15 +10,20 @@ set -e
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 配置
-IMAGE_NAME="${DOCKER_IMAGE_NAME:-zuoban}"
+# GitHub Container Registry 格式: ghcr.io/username/repo:tag
+GITHUB_USERNAME="${GITHUB_USERNAME:-zuoban}"
+IMAGE_NAME="binance-dashboard"
 IMAGE_TAG="${DOCKER_IMAGE_TAG:-latest}"
-FULL_IMAGE_NAME="${IMAGE_NAME}/binance-dashboard"
+REGISTRY="ghcr.io"
+FULL_IMAGE_NAME="${REGISTRY}/${GITHUB_USERNAME}/${IMAGE_NAME}"
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  多架构 Docker 镜像构建和推送脚本${NC}"
+echo -e "${GREEN}  (GitHub Container Registry)${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -31,17 +37,22 @@ fi
 echo -e "${GREEN}✓ Docker 运行中${NC}"
 echo ""
 
-# 检查是否已登录 Docker Hub
-echo -e "${YELLOW}检查 Docker Hub 登录状态...${NC}"
-if ! docker login | grep -q "Login Succeeded"; then
-    echo -e "${YELLOW}请先登录 Docker Hub:${NC}"
-    docker login
+# 检查是否已登录 GHCR
+echo -e "${YELLOW}检查 GitHub Container Registry 登录状态...${NC}"
+if ! docker buildx inspect "$BUILDER_NAME" > /dev/null 2>&1; then
+    echo -e "${YELLOW}请先登录 GitHub Container Registry:${NC}"
+    echo -e "${BLUE}使用 GitHub Personal Access Token (PAT) 登录${NC}"
+    echo -e "${YELLOW}1. 访问: https://github.com/settings/tokens${NC}"
+    echo -e "${YELLOW}2. 生成 PAT (需要 read:packages 和 write:packages 权限)${NC}"
+    echo -e "${YELLOW}3. 执行: echo ${NC}\${BLUE}\"<PAT>\"${NC} ${YELLOW}| docker login ghcr.io -u${NC} \${BLUE}\"<GitHub-username>\"${NC} ${YELLOW}--password-stdin${NC}"
+    echo ""
+    docker login ghcr.io
     if [ $? -ne 0 ]; then
-        echo -e "${RED}错误: Docker Hub 登录失败${NC}"
+        echo -e "${RED}错误: GitHub Container Registry 登录失败${NC}"
         exit 1
     fi
 fi
-echo -e "${GREEN}✓ Docker Hub 已登录${NC}"
+echo -e "${GREEN}✓ GitHub Container Registry 已登录${NC}"
 echo ""
 
 # 创建并使用 buildx builder
@@ -84,11 +95,14 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "镜像地址:"
-    echo -e "  ${FULL_IMAGE_NAME}:${IMAGE_TAG}"
-    echo -e "  ${FULL_IMAGE_NAME}:latest"
+    echo -e "  ${BLUE}${FULL_IMAGE_NAME}:${IMAGE_TAG}${NC}"
+    echo -e "  ${BLUE}${FULL_IMAGE_NAME}:latest${NC}"
     echo ""
     echo -e "${YELLOW}使用方法:${NC}"
     echo -e "  docker run -d -p 3000:3000 ${FULL_IMAGE_NAME}:${IMAGE_TAG}"
+    echo ""
+    echo -e "${YELLOW}拉取镜像:${NC}"
+    echo -e "  docker pull ${FULL_IMAGE_NAME}:${IMAGE_TAG}"
     echo ""
 
     # 显示镜像信息

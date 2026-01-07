@@ -2,21 +2,41 @@
 
 本文档介绍如何使用 Docker 部署币安合约交易看板系统。
 
+## 镜像托管平台
+
+本项目使用 **GitHub Container Registry (GHCR)** 托管镜像，提供更好的国内访问体验。
+
 ## 前置要求
 
 - Docker 20.10+
-- Docker Hub 账号
+- GitHub 账号
+- GitHub Personal Access Token (PAT)
 - 币安 API Key 和 Secret（只读权限）
 
 ## 快速开始
 
-### 1. 登录 Docker Hub
+### 1. 生成 GitHub Personal Access Token
+
+1. 访问：https://github.com/settings/tokens
+2. 点击 "Generate new token (classic)"
+3. 设置 token 名称（如：binance-dashboard）
+4. 选择权限：
+   - ✅ `read:packages`
+   - ✅ `write:packages`
+5. 点击 "Generate token"
+6. **重要**：复制生成的 token（只显示一次）
+
+### 2. 登录 GitHub Container Registry
 
 ```bash
-docker login
+# 使用 PAT 登录
+echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+
+# 示例
+echo "ghp_xxxxxxxxxxxx" | docker login ghcr.io -u zuoban --password-stdin
 ```
 
-### 2. 使用构建脚本构建多架构镜像
+### 3. 使用构建脚本构建多架构镜像
 
 ```bash
 ./build-docker.sh
@@ -24,10 +44,10 @@ docker login
 
 该脚本会自动：
 - 构建 `linux/amd64` 和 `linux/arm64` 两种架构的镜像
-- 推送到 Docker Hub
+- 推送到 GitHub Container Registry
 - 创建 `latest` 和版本标签
 
-### 3. 使用 Docker 运行
+### 4. 使用 Docker 运行
 
 ```bash
 docker run -d \
@@ -35,10 +55,10 @@ docker run -d \
   -p 3000:3000 \
   -e NEXT_PUBLIC_BINANCE_API_KEY=your_api_key \
   -e BINANCE_API_SECRET=your_api_secret \
-  zuoban/binance-dashboard:latest
+  ghcr.io/zuoban/binance-dashboard:latest
 ```
 
-### 4. 使用 Docker Compose（推荐）
+### 5. 使用 Docker Compose（推荐）
 
 1. 创建 `.env` 文件：
 
@@ -72,12 +92,13 @@ docker-compose down
 
 ## 镜像信息
 
-- **镜像名称**: `zuoban/binance-dashboard`
+- **镜像地址**: `ghcr.io/zuoban/binance-dashboard`
 - **支持架构**:
   - `linux/amd64` (x86_64)
   - `linux/arm64` (ARM 64位)
 - **镜像大小**: ~150MB (压缩后)
 - **基础镜像**: node:20-alpine
+- **托管平台**: GitHub Container Registry
 
 ## 支持的平台
 
@@ -85,15 +106,21 @@ docker-compose down
 - ✅ Linux ARM 64位 (arm64)
 - ✅ macOS (Apple Silicon M1/M2/M3)
 - ✅ Raspberry Pi 4+
+- ✅ 各类云服务器
+
+## 查看镜像
+
+访问 GitHub Packages 查看镜像：
+https://github.com/users/zuoban/packages/container/package/binance-dashboard
 
 ## 自定义构建
 
-### 修改 Docker 镜像名称
+### 修改镜像名称或标签
 
 编辑 `build-docker.sh`，修改以下变量：
 
 ```bash
-IMAGE_NAME="your-dockerhub-username"
+GITHUB_USERNAME="your-github-username"
 IMAGE_TAG="v1.0.0"
 ```
 
@@ -111,7 +138,7 @@ PLATFORMS="linux/amd64,linux/arm64,linux/arm/v7"
 # 仅构建本地镜像（不推送）
 docker buildx build \
   --platform linux/amd64 \
-  --tag binance-dashboard:test \
+  --tag ghcr.io/zuoban/binance-dashboard:test \
   --load \
   .
 
@@ -119,7 +146,7 @@ docker buildx build \
 docker run -d -p 3000:3000 \
   -e NEXT_PUBLIC_BINANCE_API_KEY=test \
   -e BINANCE_API_SECRET=test \
-  binance-dashboard:test
+  ghcr.io/zuoban/binance-dashboard:test
 ```
 
 ## 环境变量
@@ -139,12 +166,17 @@ docker run -d -p 3000:3000 \
    - 限制 IP 白名单
    - 不要开启提现和交易权限
 
-2. **环境变量管理**
-   - 不要在代码中硬编码 API 密钥
-   - 使用 `.env` 文件或 Docker secrets
-   - 定期轮换 API 密钥
+2. **GitHub Token 管理**
+   - 定期轮换 PAT
+   - 设置 token 过期时间
+   - 不要在代码中硬编码 token
 
-3. **网络隔离**
+3. **环境变量管理**
+   - 使用 `.env` 文件或 Docker secrets
+   - 不要将 `.env` 文件提交到 Git
+   - 定期更换 API 密钥
+
+4. **网络隔离**
    - 使用反向代理 (Nginx/Traefik)
    - 启用 HTTPS
    - 限制访问来源
@@ -184,28 +216,38 @@ docker logs binance-dashboard
 docker inspect binance-dashboard | grep -A 20 "Env"
 ```
 
-### 2. API 请求失败
+### 2. 镜像拉取失败
+
+```bash
+# 重新拉取镜像
+docker pull ghcr.io/zuoban/binance-dashboard:latest
+
+# 检查登录状态
+docker login ghcr.io
+```
+
+### 3. API 请求失败
 
 - 检查 API Key 是否正确
 - 确认 API Key 有只读权限
 - 检查网络连接
 - 查看容器日志中的错误信息
 
-### 3. 镜像拉取失败
+### 4. GHCR 认证失败
 
 ```bash
-# 重新拉取镜像
-docker pull zuoban/binance-dashboard:latest
+# 重新登录
+echo "YOUR_NEW_PAT" | docker login ghcr.io -u zuoban --password-stdin
 
-# 清理 Docker 缓存
-docker system prune -a
+# 清理旧凭证
+docker logout ghcr.io
 ```
 
 ## 更新镜像
 
 ```bash
 # 拉取最新镜像
-docker-compose pull
+docker pull ghcr.io/zuoban/binance-dashboard:latest
 
 # 重新创建容器
 docker-compose up -d --force-recreate
@@ -215,7 +257,7 @@ docker-compose up -d --force-recreate
 
 1. **使用版本标签**
    ```bash
-   zuoban/binance-dashboard:v1.0.0
+   ghcr.io/zuoban/binance-dashboard:v1.0.0
    ```
 
 2. **健康检查**
@@ -234,12 +276,28 @@ docker-compose up -d --force-recreate
    ```
 
 4. **监控和告警**
-   - 集成 Prometheus + Grafana
+   - 使用 GitHub Actions 自动构建
+   - 集成监控系统（Prometheus + Grafana）
    - 设置容器状态监控
    - 配置告警规则
 
+## GitHub Packages 管理
+
+### 查看镜像列表
+```bash
+# 使用 GitHub CLI
+gh repo view --json packages --jq .packages[].name
+```
+
+### 删除旧镜像
+访问：https://github.com/users/zuoban/packages/container/package/binance-dashboard/versions
+
+### 设置镜像可见性
+镜像默认是公开的，可以设置为私有（需要 GitHub Pro 账号）
+
 ## 相关链接
 
-- [Docker Hub](https://hub.docker.com/r/zuoban/binance-dashboard)
-- [GitHub 仓库](https://github.com/zuoban/binance-dashboard)
-- [币安 API 文档](https://developers.binance.com/docs)
+- **GitHub Container Registry**: https://github.com/users/zuoban/packages/container/package/binance-dashboard
+- **GitHub 仓库**: https://github.com/zuoban/binance-dashboard
+- **币安 API 文档**: https://developers.binance.com/docs
+- **GitHub Packages 文档**: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry
