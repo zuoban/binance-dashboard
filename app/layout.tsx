@@ -5,11 +5,13 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  adjustFontFallback: true, // 使用本地字体回退，避免网络请求
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  adjustFontFallback: true, // 使用本地字体回退，避免网络请求
 });
 
 export const metadata: Metadata = {

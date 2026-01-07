@@ -23,6 +23,8 @@ FROM base AS builder
 # 设置构建时环境变量
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# 禁用 Google Fonts 下载（使用系统字体回退）
+ENV NEXT_PUBLIC_SKIP_FONT_OPTIMIZATION=true
 
 # 复制源代码
 COPY . .
