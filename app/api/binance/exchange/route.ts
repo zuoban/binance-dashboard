@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { BinanceRestClient } from '@/lib/binance/rest-client';
-import { config } from '@/lib/config';
+import { getServerConfig } from '@/lib/config';
 
 /**
  * GET /api/binance/exchange/info
@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'info';
     const symbol = searchParams.get('symbol');
+
+    // 获取服务端配置
+    const config = getServerConfig();
 
     // 创建 REST 客户端（不需要签名）
     const client = new BinanceRestClient({

@@ -14,8 +14,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 
-  // 币安 API 配置
-  NEXT_PUBLIC_BINANCE_API_KEY: z.string().min(1, 'API Key is required'),
+  // 币安 API 配置（服务端专用）
+  BINANCE_API_KEY: z.string().min(1, 'API Key is required'),
   BINANCE_API_SECRET: z.string().min(1, 'API Secret is required'),
 
   // API 端点
@@ -43,7 +43,7 @@ function validateEnv() {
     const env = envSchema.parse({
       NODE_ENV: process.env.NODE_ENV,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-      NEXT_PUBLIC_BINANCE_API_KEY: process.env.NEXT_PUBLIC_BINANCE_API_KEY,
+      BINANCE_API_KEY: process.env.BINANCE_API_KEY,
       BINANCE_API_SECRET: process.env.BINANCE_API_SECRET,
       NEXT_PUBLIC_BINANCE_REST_API: process.env.NEXT_PUBLIC_BINANCE_REST_API,
       NEXT_PUBLIC_BINANCE_WS_API: process.env.NEXT_PUBLIC_BINANCE_WS_API,
@@ -90,7 +90,7 @@ export const env = envValidation.success
       // 提供默认值以防止应用崩溃
       NODE_ENV: 'development' as const,
       NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
-      NEXT_PUBLIC_BINANCE_API_KEY: '',
+      BINANCE_API_KEY: '',
       BINANCE_API_SECRET: '',
       NEXT_PUBLIC_BINANCE_REST_API: 'https://fapi.binance.com',
       NEXT_PUBLIC_BINANCE_WS_API: 'wss://fstream.binance.com/ws',

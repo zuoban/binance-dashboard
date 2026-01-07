@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { fetchWithAuth } from '@/lib/utils/fetch-with-auth';
 
 interface DashboardData {
   account: {
@@ -91,7 +92,7 @@ export function useDashboardData(
       }
       setError(null);
 
-      const response = await fetch(`/api/binance/dashboard?orderTimeRange=${orderTimeRange}`);
+      const response = await fetchWithAuth(`/api/binance/dashboard?orderTimeRange=${orderTimeRange}`);
       const result = await response.json();
 
       if (!result.success) {

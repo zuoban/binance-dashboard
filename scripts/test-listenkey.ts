@@ -22,7 +22,7 @@ if (result.error) {
 }
 
 console.log('Environment loaded successfully');
-console.log('  - NEXT_PUBLIC_BINANCE_API_KEY:', process.env.NEXT_PUBLIC_BINANCE_API_KEY ? 'SET' : 'NOT SET');
+console.log('  - BINANCE_API_KEY:', process.env.BINANCE_API_KEY ? 'SET' : 'NOT SET');
 console.log('  - BINANCE_API_SECRET:', process.env.BINANCE_API_SECRET ? 'SET' : 'NOT SET');
 
 // 动态导入其他模块(确保环境变量已加载)
@@ -49,7 +49,7 @@ async function main() {
 
       if (!config.binance.apiKey || !config.binance.apiSecret) {
         console.error('\n❌ Error: API credentials not configured!');
-        console.error('Please set NEXT_PUBLIC_BINANCE_API_KEY and BINANCE_API_SECRET in .env.local');
+        console.error('Please set BINANCE_API_KEY and BINANCE_API_SECRET in .env.local');
         process.exit(1);
       }
 
