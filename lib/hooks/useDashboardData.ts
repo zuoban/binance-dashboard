@@ -11,7 +11,7 @@ interface DashboardData {
     totalWalletBalance: string;
     availableBalance: string;
     unrealizedProfit: string;
-  };
+  } | null;
   positions: any[];
   orders: any[];
   orderStats: {

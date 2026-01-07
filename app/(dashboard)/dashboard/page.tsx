@@ -37,14 +37,6 @@ export default function DashboardPage() {
     orderTimeRange: config.orderTimeRange,
   });
 
-  // 计算统计数据
-  const stats = useMemo(() => ({
-    totalPositions: positions.length,
-    longPositions: positions.filter(p => p.positionSide === 'LONG').length,
-    shortPositions: positions.filter(p => p.positionSide === 'SHORT').length,
-    totalOrders: orders.length,
-  }), [positions, orders]);
-
   // 计算风险等级
   const riskLevel = useMemo(() => {
     if (!account) return 'low';

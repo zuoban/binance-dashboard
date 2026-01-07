@@ -9,8 +9,8 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "check": "node scripts/check-env.ts",
-    "prebuild": "node scripts/check-env.ts",
+    "check": "tsx scripts/check-env.ts",
+    "prebuild": "tsx scripts/check-env.ts",
     "test:listenkey": "tsx scripts/test-listenkey.ts"
   },
   "dependencies": {

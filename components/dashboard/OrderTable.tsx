@@ -106,64 +106,6 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
 }
 
 /**
- * 紧凑模式订单状态标签
- */
-function CompactOrderStatusBadge({ status }: { status: OrderStatus }) {
-  const getStatusConfig = () => {
-    switch (status) {
-      case 'FILLED':
-        return {
-          label: '已完成',
-          className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-        };
-      case 'CANCELED':
-        return {
-          label: '已撤销',
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
-      case 'NEW':
-        return {
-          label: '新建',
-          className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-        };
-      case 'PARTIALLY_FILLED':
-        return {
-          label: '部分成交',
-          className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-        };
-      case 'PENDING_CANCEL':
-        return {
-          label: '撤销中',
-          className: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-        };
-      case 'REJECTED':
-        return {
-          label: '已拒绝',
-          className: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-        };
-      case 'EXPIRED':
-        return {
-          label: '已过期',
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
-      default:
-        return {
-          label: status,
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
-    }
-  };
-
-  const config = getStatusConfig();
-
-  return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${config.className}`}>
-      {config.label}
-    </span>
-  );
-}
-
-/**
  * 订单表格
  */
 export function OrderTable({ orders, className = '', compact = false }: OrderTableProps) {

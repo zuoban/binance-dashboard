@@ -2,8 +2,6 @@
  * 订单统计组件
  */
 
-import { useMemo } from 'react';
-
 interface OrderStatsProps {
   /** 订单统计数据 */
   stats: {

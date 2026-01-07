@@ -124,7 +124,7 @@ export function AssetOverview({
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">权益总额</p>
             <div className="flex items-center gap-1">
               <p className={`text-sm font-semibold ${getProfitColor()}`}>
-                ${(parseFloat(balance) + parseFloat(isNaN(profit) ? '0' : profit)).toFixed(2)}
+                ${(parseFloat(balance) + parseFloat(profit || '0')).toFixed(2)}
               </p>
               <span
                 className={`text-xs font-medium ${getProfitColor()}`}

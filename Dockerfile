@@ -1,6 +1,6 @@
 # 多阶段构建 - 生产环境优化
 
-FROM node:20-alpine AS base
+FROM docker.m.daocloud.io/library/node:20-alpine AS base
 
 # 安装依赖仅用于运行时
 RUN apk add --no-cache tzdata

@@ -34,7 +34,31 @@ export function mapBinanceAccount(data: any): AccountAsset {
     crossUnPnlRatio: data.crossUnPnlRatio || '0',
     // 持仓保证金
     positionInitialMargin: data.positionInitialMargin || '0',
-    // 资产列表（如果有）
+    // open 损失
+    openOrderInitialMargin: data.openOrderInitialMargin || '0',
+    // leverage 倍数
+    leverage: data.leverage || '1',
+    // 持仓模式
+    notionalLeverage: data.notionalLeverage || '0',
+    // 持仓模式
+    notionalValue: data.notionalValue || '0',
+    // isolated 保证金余额
+    isolatedWalletBalance: data.isolatedWalletBalance || '0',
+    // 更新时间
+    updateTime: data.updateTime || Date.now(),
+    // 总持仓保证金
+    totalPositionInitialMargin: data.totalPositionInitialMargin || '0',
+    // 总维持保证金
+    totalMaintMargin: data.totalMaintMargin || '0',
+    // 最大可提取金额
+    maxWithdrawAmount: data.maxWithdrawAmount || '0',
+    // 总 open 订单保证金
+    totalOpenOrderInitialMargin: data.totalOpenOrderInitialMargin || '0',
+    // 总 cross 钱包余额
+    totalCrossWalletBalance: data.totalCrossWalletBalance || '0',
+    // 总 cross 未实现盈亏
+    totalCrossUnPnl: data.totalCrossUnPnl || '0',
+    // 资产列表
     assets: data.assets || [],
     // 当前杠杆
     currentLeverage: data.currentLeverage || '1',

@@ -67,6 +67,7 @@ export function useBinanceOrders(options: UseBinanceOrdersOptions) {
 
   // 获取订单数据
   const loadOrders = useCallback(async () => {
+    if (!symbol) return;
     await fetchOrders(symbol, {
       orderId,
       startTime,

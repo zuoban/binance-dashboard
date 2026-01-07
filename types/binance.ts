@@ -153,6 +153,10 @@ export interface AccountAsset {
   totalCrossUnPnl: string;
   /** 资产列表 */
   assets: Asset[];
+  /** 当前杠杆倍数 */
+  currentLeverage: string;
+  /** 保证金模式 */
+  marginMode: string;
 }
 
 

@@ -47,7 +47,7 @@ LICENSE
 *.md
 
 # 脚本
-scripts/
+# scripts/  # 需要保留用于构建时的环境检查
 vercel.json
 
 # 其他

@@ -18,7 +18,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
  * GET /api/binance/exchange-info
  * 获取交易规则和精度信息
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 检查缓存
     const now = Date.now();
