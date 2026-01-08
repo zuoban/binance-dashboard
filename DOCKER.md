@@ -43,6 +43,7 @@ echo "ghp_xxxxxxxxxxxx" | docker login ghcr.io -u zuoban --password-stdin
 ```
 
 该脚本会自动：
+
 - 构建 `linux/amd64` 和 `linux/arm64` 两种架构的镜像
 - 推送到 GitHub Container Registry
 - 创建 `latest` 和版本标签
@@ -151,13 +152,13 @@ docker run -d -p 3000:3000 \
 
 ## 环境变量
 
-| 变量名 | 必需 | 说明 | 默认值 |
-|--------|------|------|--------|
-| `BINANCE_API_KEY` | ✅ | 币安 API Key | - |
-| `BINANCE_API_SECRET` | ✅ | 币安 API Secret | - |
-| `NEXT_PUBLIC_BINANCE_REST_API` | ❌ | REST API 端点 | `https://fapi.binance.com` |
-| `NEXT_PUBLIC_BINANCE_WS_API` | ❌ | WebSocket API 端点 | `wss://fstream.binance.com/ws` |
-| `NODE_ENV` | ❌ | 运行环境 | `production` |
+| 变量名                         | 必需 | 说明               | 默认值                         |
+| ------------------------------ | ---- | ------------------ | ------------------------------ |
+| `BINANCE_API_KEY`              | ✅   | 币安 API Key       | -                              |
+| `BINANCE_API_SECRET`           | ✅   | 币安 API Secret    | -                              |
+| `NEXT_PUBLIC_BINANCE_REST_API` | ❌   | REST API 端点      | `https://fapi.binance.com`     |
+| `NEXT_PUBLIC_BINANCE_WS_API`   | ❌   | WebSocket API 端点 | `wss://fstream.binance.com/ws` |
+| `NODE_ENV`                     | ❌   | 运行环境           | `production`                   |
 
 ## 安全建议
 
@@ -256,6 +257,7 @@ docker-compose up -d --force-recreate
 ## 生产部署建议
 
 1. **使用版本标签**
+
    ```bash
    ghcr.io/zuoban/binance-dashboard:v1.0.0
    ```
@@ -266,6 +268,7 @@ docker-compose up -d --force-recreate
    - 失败 3 次后重启容器
 
 3. **日志管理**
+
    ```bash
    # 限制日志大小
    logging:
@@ -284,15 +287,18 @@ docker-compose up -d --force-recreate
 ## GitHub Packages 管理
 
 ### 查看镜像列表
+
 ```bash
 # 使用 GitHub CLI
 gh repo view --json packages --jq .packages[].name
 ```
 
 ### 删除旧镜像
+
 访问：https://github.com/users/zuoban/packages/container/package/binance-dashboard/versions
 
 ### 设置镜像可见性
+
 镜像默认是公开的，可以设置为私有（需要 GitHub Pro 账号）
 
 ## 相关链接

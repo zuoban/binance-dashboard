@@ -6,9 +6,9 @@
  * 在部署前验证环境和配置
  */
 
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
 const colors = {
   reset: '\x1b[0m',
@@ -16,165 +16,165 @@ const colors = {
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
-};
+}
 
-type ColorType = keyof typeof colors;
+type ColorType = keyof typeof colors
 
 function log(message: string, color: ColorType = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+  console.log(`${colors[color]}${message}${colors.reset}`)
 }
 
 function success(message: string) {
-  log(`✓ ${message}`, 'green');
+  log(`✓ ${message}`, 'green')
 }
 
 function error(message: string) {
-  log(`✗ ${message}`, 'red');
+  log(`✗ ${message}`, 'red')
 }
 
 function warn(message: string) {
-  log(`⚠ ${message}`, 'yellow');
+  log(`⚠ ${message}`, 'yellow')
 }
 
 function info(message: string) {
-  log(`ℹ ${message}`, 'blue');
+  log(`ℹ ${message}`, 'blue')
 }
 
 function checkCommand(command: string, name: string): boolean {
   try {
-    execSync(`${command} --version`, { stdio: 'ignore' });
-    success(`${name} is installed`);
-    return true;
+    execSync(`${command} --version`, { stdio: 'ignore' })
+    success(`${name} is installed`)
+    return true
   } catch {
-    error(`${name} is not installed`);
-    return false;
+    error(`${name} is not installed`)
+    return false
   }
 }
 
 function checkFile(path: string, name: string): boolean {
   try {
-    const fullPath = resolve(process.cwd(), path);
-    readFileSync(fullPath, 'utf-8');
-    success(`${name} exists`);
-    return true;
+    const fullPath = resolve(process.cwd(), path)
+    readFileSync(fullPath, 'utf-8')
+    success(`${name} exists`)
+    return true
   } catch {
-    error(`${name} not found`);
-    return false;
+    error(`${name} not found`)
+    return false
   }
 }
 
 function checkEnvFile(): boolean {
   try {
-    const envPath = resolve(process.cwd(), '.env.local');
-    const content = readFileSync(envPath, 'utf-8');
+    const envPath = resolve(process.cwd(), '.env.local')
+    const content = readFileSync(envPath, 'utf-8')
 
     // 检查必需的环境变量
-    const requiredVars = [
-      'BINANCE_API_KEY',
-      'BINANCE_API_SECRET',
-    ];
+    const requiredVars = ['BINANCE_API_KEY', 'BINANCE_API_SECRET']
 
-    let hasPlaceholders = false;
+    let hasPlaceholders = false
 
     for (const varName of requiredVars) {
-      const regex = new RegExp(`^${varName}=.+`, 'm');
+      const regex = new RegExp(`^${varName}=.+`, 'm')
       if (!regex.test(content)) {
-        error(`${varName} is not set in .env.local`);
-        hasPlaceholders = true;
-      } else if (content.includes(`${varName}=your_`) || content.includes(`${varName}=`) && !content.match(new RegExp(`^${varName}=[^\\s]`, 'm'))) {
-        warn(`${varName} is set to placeholder value`);
-        hasPlaceholders = true;
+        error(`${varName} is not set in .env.local`)
+        hasPlaceholders = true
+      } else if (
+        content.includes(`${varName}=your_`) ||
+        (content.includes(`${varName}=`) && !content.match(new RegExp(`^${varName}=[^\\s]`, 'm')))
+      ) {
+        warn(`${varName} is set to placeholder value`)
+        hasPlaceholders = true
       } else {
-        success(`${varName} is configured`);
+        success(`${varName} is configured`)
       }
     }
 
     // 不返回 false，只是警告
     if (hasPlaceholders) {
-      warn('Environment variables contain placeholder values');
-      warn('This is okay for CI/CD, but configure them for local development');
+      warn('Environment variables contain placeholder values')
+      warn('This is okay for CI/CD, but configure them for local development')
     }
 
-    return true; // 总是返回 true，不阻止构建
+    return true // 总是返回 true，不阻止构建
   } catch {
-    warn('.env.local file not found (run: cp .env.example .env.local)');
-    warn('Using placeholder values for CI/CD');
-    return true; // 不阻止构建
+    warn('.env.local file not found (run: cp .env.example .env.local)')
+    warn('Using placeholder values for CI/CD')
+    return true // 不阻止构建
   }
 }
 
 function main() {
-  log('\n==========================================', 'blue');
-  log('  Binance Dashboard Pre-deployment Check', 'blue');
-  log('==========================================\n', 'blue');
+  log('\n==========================================', 'blue')
+  log('  Binance Dashboard Pre-deployment Check', 'blue')
+  log('==========================================\n', 'blue')
 
-  let hasError = false;
+  let hasError = false
 
   // 检查 Node.js 版本
-  info('Checking Node.js version...');
-  const nodeVersion = process.version;
-  const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+  info('Checking Node.js version...')
+  const nodeVersion = process.version
+  const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0])
   if (majorVersion >= 18) {
-    success(`Node.js version: ${nodeVersion}`);
+    success(`Node.js version: ${nodeVersion}`)
   } else {
-    error(`Node.js version ${nodeVersion} is too old (require >= 18.17.0)`);
-    hasError = true;
+    error(`Node.js version ${nodeVersion} is too old (require >= 18.17.0)`)
+    hasError = true
   }
 
   // 检查 pnpm
-  console.log();
-  info('Checking package manager...');
+  console.log()
+  info('Checking package manager...')
   if (!checkCommand('pnpm', 'pnpm')) {
-    hasError = true;
+    hasError = true
   }
 
   // 检查必需文件
-  console.log();
-  info('Checking required files...');
+  console.log()
+  info('Checking required files...')
   const requiredFiles = [
     ['package.json', 'package.json'],
     ['next.config.ts', 'Next.js config'],
     ['tsconfig.json', 'TypeScript config'],
     ['postcss.config.mjs', 'PostCSS config (Tailwind CSS 4.x)'],
     ['.env.example', 'Environment template'],
-  ];
+  ]
 
   for (const [file, name] of requiredFiles) {
     if (!checkFile(file, name)) {
-      hasError = true;
+      hasError = true
     }
   }
 
   // 检查环境变量
-  console.log();
-  info('Checking environment variables...');
+  console.log()
+  info('Checking environment variables...')
   if (!checkEnvFile()) {
-    warn('Environment variables not properly configured');
-    warn('This is okay for CI/CD, but required for local development');
+    warn('Environment variables not properly configured')
+    warn('This is okay for CI/CD, but required for local development')
   }
 
   // 检查依赖
-  console.log();
-  info('Checking dependencies...');
+  console.log()
+  info('Checking dependencies...')
   try {
-    execSync('test -d node_modules', { stdio: 'ignore' });
-    success('Dependencies installed');
+    execSync('test -d node_modules', { stdio: 'ignore' })
+    success('Dependencies installed')
   } catch {
-    warn('Dependencies not installed (run: pnpm install)');
+    warn('Dependencies not installed (run: pnpm install)')
   }
 
   // 总结
-  console.log();
-  log('==========================================', 'blue');
+  console.log()
+  log('==========================================', 'blue')
   if (hasError) {
-    error('Pre-deployment check FAILED!');
-    log('Please fix the errors above before deploying.\n', 'red');
-    process.exit(1);
+    error('Pre-deployment check FAILED!')
+    log('Please fix the errors above before deploying.\n', 'red')
+    process.exit(1)
   } else {
-    success('Pre-deployment check PASSED!');
-    log('You are ready to deploy!\n', 'green');
-    process.exit(0);
+    success('Pre-deployment check PASSED!')
+    log('You are ready to deploy!\n', 'green')
+    process.exit(0)
   }
 }
 
-main();
+main()

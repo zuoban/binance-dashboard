@@ -4,10 +4,10 @@
  * 代理前端请求到币安 API，隐藏 API Secret
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { BinanceRestClient } from '@/lib/binance/rest-client';
-import { getServerConfig } from '@/lib/config';
-import { checkRateLimit } from '@/lib/middleware/rate-limit';
+import { NextRequest, NextResponse } from 'next/server'
+import { BinanceRestClient } from '@/lib/binance/rest-client'
+import { getServerConfig } from '@/lib/config'
+import { checkRateLimit } from '@/lib/middleware/rate-limit'
 
 /**
  * GET /api/binance/account
@@ -16,13 +16,13 @@ import { checkRateLimit } from '@/lib/middleware/rate-limit';
 export async function GET(request: NextRequest) {
   try {
     // 检查速率限制
-    const rateLimitResult = await checkRateLimit(request);
+    const rateLimitResult = await checkRateLimit(request)
     if (!rateLimitResult.allowed) {
-      return rateLimitResult.error!;
+      return rateLimitResult.error!
     }
 
     // 获取服务端配置
-    const config = getServerConfig();
+    const config = getServerConfig()
 
     // 验证 API 配置
     if (!config.binance.apiKey || !config.binance.apiSecret) {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
           },
         },
         { status: 500 }
-      );
+      )
     }
 
     // 创建 REST 客户端
@@ -44,18 +44,18 @@ export async function GET(request: NextRequest) {
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
       enableLog: config.app.isDevelopment,
-    });
+    })
 
     // 调用币安 API
-    const accountInfo = await client.getAccountInfo();
+    const accountInfo = await client.getAccountInfo()
 
     // 返回结果
     return NextResponse.json({
       success: true,
       data: accountInfo,
-    });
+    })
   } catch (error: any) {
-    console.error('[Account API] Error:', error);
+    console.error('[Account API] Error:', error)
 
     return NextResponse.json(
       {
@@ -66,6 +66,6 @@ export async function GET(request: NextRequest) {
         },
       },
       { status: error.code === -1021 ? 401 : 500 }
-    );
+    )
   }
 }

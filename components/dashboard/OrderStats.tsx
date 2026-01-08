@@ -5,16 +5,16 @@
 interface OrderStatsProps {
   /** 订单统计数据 */
   stats: {
-    total: number;
-    buy: number;
-    sell: number;
-    filled: number;
-    totalVolume: number;
-  };
+    total: number
+    buy: number
+    sell: number
+    filled: number
+    totalVolume: number
+  }
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
   /** 是否使用紧凑样式（无边框和背景） */
-  compact?: boolean;
+  compact?: boolean
 }
 
 /**
@@ -22,12 +22,12 @@ interface OrderStatsProps {
  */
 function formatNumber(num: number): string {
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(2) + 'M';
+    return (num / 1000000).toFixed(2) + 'M'
   }
   if (num >= 1000) {
-    return (num / 1000).toFixed(2) + 'K';
+    return (num / 1000).toFixed(2) + 'K'
   }
-  return num.toFixed(2);
+  return num.toFixed(2)
 }
 
 /**
@@ -35,15 +35,15 @@ function formatNumber(num: number): string {
  */
 export function OrderStats({ stats, className = '', compact = false }: OrderStatsProps) {
   return (
-    <div className={`${compact ? '' : 'bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4'} ${className}`}>
+    <div
+      className={`${compact ? '' : 'bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4'} ${className}`}
+    >
       {/* 统计数据 */}
       <div className="grid grid-cols-3 gap-3">
         {/* 总订单 */}
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">总订单</p>
-          <p className="text-base font-semibold text-gray-900 dark:text-white">
-            {stats.total}
-          </p>
+          <p className="text-base font-semibold text-gray-900 dark:text-white">{stats.total}</p>
         </div>
 
         {/* 买入 */}
@@ -57,9 +57,7 @@ export function OrderStats({ stats, className = '', compact = false }: OrderStat
         {/* 卖出 */}
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">卖出</p>
-          <p className="text-base font-semibold text-red-600 dark:text-red-400">
-            {stats.sell}
-          </p>
+          <p className="text-base font-semibold text-red-600 dark:text-red-400">{stats.sell}</p>
         </div>
       </div>
 
@@ -73,5 +71,5 @@ export function OrderStats({ stats, className = '', compact = false }: OrderStat
         </div>
       </div>
     </div>
-  );
+  )
 }

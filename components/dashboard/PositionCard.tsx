@@ -2,18 +2,18 @@
  * 持仓卡片组件
  */
 
-'use client';
+'use client'
 
-import { Position } from '@/types/binance';
-import { useExchangeInfo } from '@/lib/hooks';
+import { Position } from '@/types/binance'
+import { useExchangeInfo } from '@/lib/hooks'
 
 interface PositionCardProps {
   /** 持仓数据 */
-  position: Position;
+  position: Position
   /** 交易规则数据 */
-  exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>;
+  exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
 }
 
 /**
@@ -23,11 +23,11 @@ function getSymbolPrecision(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): number {
-  const precision = exchangeInfo[symbol]?.pricePrecision;
+  const precision = exchangeInfo[symbol]?.pricePrecision
   if (precision !== undefined) {
-    return precision;
+    return precision
   }
-  return 2;
+  return 2
 }
 
 /**
@@ -38,11 +38,11 @@ function formatPrice(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): string {
-  const num = typeof price === 'string' ? parseFloat(price) : price;
-  if (num === 0) return '0.00';
-  if (isNaN(num)) return '0.00';
-  const precision = getSymbolPrecision(symbol, exchangeInfo);
-  return num.toFixed(precision);
+  const num = typeof price === 'string' ? parseFloat(price) : price
+  if (num === 0) return '0.00'
+  if (isNaN(num)) return '0.00'
+  const precision = getSymbolPrecision(symbol, exchangeInfo)
+  return num.toFixed(precision)
 }
 
 /**
@@ -53,25 +53,25 @@ function formatAmount(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): string {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (num === 0) return '0';
-  if (isNaN(num)) return '0';
-  const precision = exchangeInfo[symbol]?.quantityPrecision || 3;
-  return num.toFixed(precision);
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (num === 0) return '0'
+  if (isNaN(num)) return '0'
+  const precision = exchangeInfo[symbol]?.quantityPrecision || 3
+  return num.toFixed(precision)
 }
 
 /**
  * 单个持仓卡片
  */
 export function PositionCard({ position, exchangeInfo, className = '' }: PositionCardProps) {
-  const unrealizedProfit = parseFloat(position.unrealizedProfit);
-  const leverage = parseFloat(position.leverage);
-  const positionAmount = parseFloat(position.positionAmount);
-  const entryPrice = parseFloat(position.entryPrice);
-  const positionValue = positionAmount * entryPrice;
+  const unrealizedProfit = parseFloat(position.unrealizedProfit)
+  const leverage = parseFloat(position.leverage)
+  const positionAmount = parseFloat(position.positionAmount)
+  const entryPrice = parseFloat(position.entryPrice)
+  const positionValue = positionAmount * entryPrice
 
-  const isLong = position.positionSide === 'LONG';
-  const isProfit = unrealizedProfit >= 0;
+  const isLong = position.positionSide === 'LONG'
+  const isProfit = unrealizedProfit >= 0
 
   return (
     <div
@@ -148,7 +148,9 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
           <div className="flex items-center gap-1">
             <span
               className={`text-sm font-bold ${
-                isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                isProfit
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-red-600 dark:text-red-400'
               }`}
             >
               {isProfit ? '+' : ''}${formatPrice(unrealizedProfit, position.symbol, exchangeInfo)}
@@ -157,7 +159,7 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -165,31 +167,27 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
  */
 interface PositionCardsProps {
   /** 持仓列表 */
-  positions: Position[];
+  positions: Position[]
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
 }
 
 export function PositionCards({ positions, className = '' }: PositionCardsProps) {
-  const { exchangeInfo } = useExchangeInfo();
+  const { exchangeInfo } = useExchangeInfo()
 
   if (positions.length === 0) {
     return (
       <div className={`text-center py-12 ${className}`}>
         <p className="text-gray-500 dark:text-gray-400">暂无持仓</p>
       </div>
-    );
+    )
   }
 
   return (
     <div className={`space-y-3 ${className}`}>
-      {positions.map((position) => (
-        <PositionCard
-          key={position.symbol}
-          position={position}
-          exchangeInfo={exchangeInfo}
-        />
+      {positions.map(position => (
+        <PositionCard key={position.symbol} position={position} exchangeInfo={exchangeInfo} />
       ))}
     </div>
-  );
+  )
 }

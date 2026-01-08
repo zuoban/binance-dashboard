@@ -1,49 +1,46 @@
-'use client';
+'use client'
 
 /**
  * 错误边界组件
  */
 
-import React, { Component, ReactNode } from 'react';
+import React, { Component, ReactNode } from 'react'
 
 interface ErrorBoundaryProps {
-  children: ReactNode;
+  children: ReactNode
   /** 自定义错误展示 */
-  fallback?: ReactNode;
+  fallback?: ReactNode
   /** 错误回调 */
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
+  hasError: boolean
+  error: Error | null
 }
 
 /**
  * 错误边界类组件
  */
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
+    super(props)
+    this.state = { hasError: false, error: null }
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Caught error:', error, errorInfo);
-    this.props.onError?.(error, errorInfo);
+    console.error('[ErrorBoundary] Caught error:', error, errorInfo)
+    this.props.onError?.(error, errorInfo)
   }
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback;
+        return this.props.fallback
       }
 
       return (
@@ -65,9 +62,7 @@ export class ErrorBoundary extends Component<
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                出错了
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">出错了</h2>
             </div>
 
             <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -90,10 +85,10 @@ export class ErrorBoundary extends Component<
             </div>
           </div>
         </div>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -101,10 +96,10 @@ export class ErrorBoundary extends Component<
  * 函数式错误边界包装器
  */
 interface ErrorWrapperProps {
-  children: ReactNode;
-  fallback?: ReactNode;
+  children: ReactNode
+  fallback?: ReactNode
 }
 
 export function ErrorWrapper({ children, fallback }: ErrorWrapperProps) {
-  return <ErrorBoundary fallback={fallback}>{children}</ErrorBoundary>;
+  return <ErrorBoundary fallback={fallback}>{children}</ErrorBoundary>
 }

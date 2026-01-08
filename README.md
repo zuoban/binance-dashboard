@@ -32,15 +32,17 @@
 
 ## 技术栈
 
-| 类别 | 技术 | 说明 |
-|------|------|------|
-| **框架** | Next.js 16 | React 框架，App Router |
-| **语言** | TypeScript 5 | 严格类型检查 |
-| **样式** | Tailwind CSS 4 | 原子化 CSS 框架 |
-| **状态管理** | Zustand | 轻量级状态管理 |
-| **数据可视化** | Recharts | React 图表库 |
-| **HTTP 客户端** | Axios | HTTP 请求库 |
-| **表单验证** | Zod | TypeScript 优先的验证库 |
+| 类别            | 技术         | 版本  | 说明                         |
+| --------------- | ------------ | ----- | ---------------------------- |
+| **框架**        | Next.js      | 16.1+ | React 框架，支持 App Router  |
+| **语言**        | TypeScript   | 5.9+  | 严格模式，完整类型检查       |
+| **样式**        | Tailwind CSS | 4.x   | 原子化 CSS 框架              |
+| **状态管理**    | Zustand      | 5.x   | 轻量级状态管理库             |
+| **数据可视化**  | Recharts     | 2.x   | React 图表库                 |
+| **HTTP 客户端** | Axios        | 1.7+  | HTTP 请求库                  |
+| **WebSocket**   | 原生 API     | -     | 实时数据推送                 |
+| **表单验证**    | Zod          | 4.x   | TypeScript 优先的验证库      |
+| **包管理器**    | pnpm         | 10.x  | 快速、节省磁盘空间的包管理器 |
 
 ---
 
@@ -207,7 +209,115 @@ binance-dashboard/
 
 ---
 
-## 开发脚本
+## 🎯 功能特性详解
+
+### 1. 实时持仓监控
+
+- 查看所有活跃持仓
+- 实时显示未实现盈亏
+- 支持做多/做空方向标识
+- 显示杠杆倍数和保证金模式
+
+### 2. 历史订单查询
+
+- 按交易对筛选订单
+- 支持时间范围查询
+- 订单状态标签（已完成、已撤销、部分成交等）
+- 排序功能（按时间、价格等）
+
+### 3. 账户资产概览
+
+- 总余额和可用余额
+- 未实现盈亏统计
+- 风险等级评估
+- 资产变化趋势图
+
+### 4. 数据可视化
+
+- **PnL 收益曲线** - 显示账户盈亏历史走势
+- **持仓分布饼图** - 各币种持仓占比
+- **实时价格图表** - 交易对价格走势（支持折线图和面积图）
+
+### 5. WebSocket 实时推送
+
+- 自动连接和重连
+- 心跳检测（每 30 秒）
+- Listen Key 自动刷新（每 30 分钟）
+- 连接状态实时显示
+
+---
+
+## 🔒 安全特性
+
+### API 密钥保护
+
+- ✅ API 密钥仅存储在服务端
+- ✅ 通过 Next.js API Routes 代理请求
+- ✅ 客户端无法访问敏感信息
+
+### 输入验证
+
+- ✅ 使用 Zod 验证所有 API 输入
+- ✅ 交易对格式验证（XXXUSDT）
+- ✅ 数值范围验证
+- ✅ 类型安全的数据转换
+
+### 速率限制
+
+- ✅ API 路由速率限制（60 次/分钟）
+- ✅ 基于 IP 的限流
+- ✅ 标准 429 响应和 Retry-After 头
+
+### 环境变量验证
+
+- ✅ 启动时验证所有必需配置
+- ✅ 生产环境缺失配置会抛出错误
+- ✅ 开发环境友好提示
+
+---
+
+## 📦 部署
+
+### Vercel 部署（推荐）
+
+1. **Fork 并推送到 GitHub**
+
+2. **在 Vercel 中导入项目**
+   - 访问 [vercel.com](https://vercel.com)
+   - 点击"New Project"
+   - 导入你的 GitHub 仓库
+
+3. **配置环境变量**
+
+在 Vercel 项目设置中添加以下环境变量：
+
+```env
+BINANCE_API_KEY=your_api_key_here
+BINANCE_API_SECRET=your_secret_key_here
+NEXT_PUBLIC_BINANCE_REST_API=https://fapi.binance.com
+NEXT_PUBLIC_BINANCE_WS_API=wss://fstream.binance.com/ws
+NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+```
+
+4. **部署**
+
+点击"Deploy"按钮，Vercel 会自动：
+
+- 安装依赖（`pnpm install`）
+- 构建项目（`pnpm build`）
+- 部署到全球 CDN
+
+### 其他平台
+
+项目可以部署到任何支持 Next.js 的平台：
+
+- **Netlify** - 支持 Next.js，自动构建
+- **Railway** - 全栈应用部署
+- **自托管** - 使用 Docker 或 Node.js
+
+---
+
+## 📝 开发脚本
 
 ```bash
 # 启动开发服务器
@@ -299,23 +409,6 @@ docker inspect binance-dashboard | grep -A 20 "Env"
 
 ---
 
-## 部署平台
-
-### Vercel（推荐）
-
-1. 推送代码到 GitHub
-2. 在 [Vercel](https://vercel.com) 中导入项目
-3. 配置环境变量
-4. 部署
-
-### 其他平台
-
-- **Netlify** - 支持 Next.js
-- **Railway** - 全栈应用部署
-- **Docker** - 使用 `docker-compose.yml`
-
----
-
 ## 许可证
 
 MIT License
@@ -328,6 +421,7 @@ MIT License
 - [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
 - [Zustand](https://zustand-demo.pmnd.rs/) - 状态管理
 - [Recharts](https://recharts.org/) - 图表库
+- [Zod](https://zod.dev/) - 表单验证
 - [币安](https://www.binance.com/) - 交易平台
 
 ---

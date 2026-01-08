@@ -2,21 +2,21 @@
  * 侧边栏导航组件
  */
 
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 /**
  * 导航菜单项
  */
 interface NavItem {
   /** 路由路径 */
-  path: string;
+  path: string
   /** 显示标签 */
-  label: string;
+  label: string
   /** 图标 SVG */
-  icon: string;
+  icon: string
 }
 
 const navItems: NavItem[] = [
@@ -25,22 +25,22 @@ const navItems: NavItem[] = [
     label: '交易看板',
     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>',
   },
-];
+]
 
 interface SidebarProps {
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
 }
 
 /**
  * 侧边栏导航
  */
 export function Sidebar({ className = '' }: SidebarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   const isActive = (path: string) => {
-    return pathname === path;
-  };
+    return pathname === path
+  }
 
   return (
     <aside
@@ -50,23 +50,17 @@ export function Sidebar({ className = '' }: SidebarProps) {
       <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-yellow-900"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5 text-yellow-900" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            币安合约看板
-          </span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">币安合约看板</span>
         </Link>
       </div>
 
       {/* 导航菜单 */}
       <nav className="p-4">
-        {navItems.map((item) => (
+        {navItems.map(item => (
           <Link
             key={item.path}
             href={item.path}
@@ -76,10 +70,7 @@ export function Sidebar({ className = '' }: SidebarProps) {
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
-            <div
-              className="w-5 h-5"
-              dangerouslySetInnerHTML={{ __html: item.icon }}
-            />
+            <div className="w-5 h-5" dangerouslySetInnerHTML={{ __html: item.icon }} />
             <span className="font-medium">{item.label}</span>
           </Link>
         ))}
@@ -92,5 +83,5 @@ export function Sidebar({ className = '' }: SidebarProps) {
         </div>
       </div>
     </aside>
-  );
+  )
 }

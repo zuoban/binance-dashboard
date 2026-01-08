@@ -2,37 +2,30 @@
  * 持仓分布饼图组件
  */
 
-'use client';
+'use client'
 
-import { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-} from 'recharts';
-import { Position } from '@/types/binance';
+import { useMemo } from 'react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { Position } from '@/types/binance'
 
 interface PositionDistributionData {
   /** 交易对名称 */
-  name: string;
+  name: string
   /** 占比（美元） */
-  value: number;
+  value: number
   /** 持仓方向 */
-  side: 'LONG' | 'SHORT' | 'BOTH';
+  side: 'LONG' | 'SHORT' | 'BOTH'
   /** 颜色 */
-  color: string;
+  color: string
   /** 索引签名（Recharts 要求） */
-  [key: string]: string | number;
+  [key: string]: string | number
 }
 
 interface PositionDistributionProps {
   /** 持仓列表 */
-  positions: Position[];
+  positions: Position[]
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
 }
 
 // 预定义颜色方案
@@ -47,7 +40,7 @@ const COLORS = [
   '#F97316', // 深橙色
   '#6366F1', // 靛蓝色
   '#84CC16', // 黄绿色
-];
+]
 
 /**
  * 获取持仓方向标签
@@ -55,13 +48,13 @@ const COLORS = [
 function getPositionSideLabel(side: 'LONG' | 'SHORT' | 'BOTH'): string {
   switch (side) {
     case 'LONG':
-      return '做多';
+      return '做多'
     case 'SHORT':
-      return '做空';
+      return '做空'
     case 'BOTH':
-      return '双向';
+      return '双向'
     default:
-      return side;
+      return side
   }
 }
 
@@ -69,58 +62,48 @@ function getPositionSideLabel(side: 'LONG' | 'SHORT' | 'BOTH'): string {
  * 持仓分布饼图
  * 显示各币种持仓的占比分布
  */
-export function PositionDistribution({
-  positions,
-  className = '',
-}: PositionDistributionProps) {
+export function PositionDistribution({ positions, className = '' }: PositionDistributionProps) {
   // 计算持仓分布数据
   const chartData = useMemo((): PositionDistributionData[] => {
-    if (positions.length === 0) return [];
+    if (positions.length === 0) return []
 
     return positions.map((position, index) => {
       const notionalValue =
-        Math.abs(parseFloat(position.positionAmount)) *
-        parseFloat(position.markPrice);
+        Math.abs(parseFloat(position.positionAmount)) * parseFloat(position.markPrice)
 
       return {
         name: position.symbol.replace('USDT', ''), // 移除 USDT 后缀，更简洁
         value: notionalValue,
         side: position.positionSide,
         color: COLORS[index % COLORS.length],
-      };
-    });
-  }, [positions]);
+      }
+    })
+  }, [positions])
 
   // 计算总价值
   const totalValue = useMemo(() => {
-    return chartData.reduce((sum, item) => sum + item.value, 0);
-  }, [chartData]);
+    return chartData.reduce((sum, item) => sum + item.value, 0)
+  }, [chartData])
 
   // 自定义 Tooltip
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const percentage = ((data.value / totalValue) * 100).toFixed(1);
+      const data = payload[0].payload
+      const percentage = ((data.value / totalValue) * 100).toFixed(1)
 
       return (
         <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-            {data.name}
-          </p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{data.name}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
             {getPositionSideLabel(data.side)}
           </p>
-          <p className="text-sm text-gray-900 dark:text-white">
-            价值: ${data.value.toFixed(2)}
-          </p>
-          <p className="text-sm text-gray-900 dark:text-white">
-            占比: {percentage}%
-          </p>
+          <p className="text-sm text-gray-900 dark:text-white">价值: ${data.value.toFixed(2)}</p>
+          <p className="text-sm text-gray-900 dark:text-white">占比: {percentage}%</p>
         </div>
-      );
+      )
     }
-    return null;
-  };
+    return null
+  }
 
   // 自定义 Legend
   const CustomLegend = ({ payload }: any) => {
@@ -131,16 +114,13 @@ export function PositionDistribution({
             key={index}
             className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
           >
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
             <span>{entry.value}</span>
           </div>
         ))}
       </div>
-    );
-  };
+    )
+  }
 
   if (chartData.length === 0) {
     return (
@@ -149,19 +129,15 @@ export function PositionDistribution({
           <p className="text-gray-500 dark:text-gray-400">暂无持仓数据</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 ${className}`}>
       {/* 标题 */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          持仓分布
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          各币种持仓占比分布
-        </p>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">持仓分布</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">各币种持仓占比分布</p>
       </div>
 
       {/* 图表 */}
@@ -172,9 +148,7 @@ export function PositionDistribution({
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) =>
-              `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
-            }
+            label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
             outerRadius={100}
             fill="#8884d8"
             dataKey="value"
@@ -191,16 +165,14 @@ export function PositionDistribution({
       {/* 总价值 */}
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            总持仓价值
-          </span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">总持仓价值</span>
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
             ${totalValue.toFixed(2)}
           </span>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -212,21 +184,20 @@ export function SimplePositionDistribution({
   className = '',
 }: PositionDistributionProps) {
   const chartData = useMemo((): PositionDistributionData[] => {
-    if (positions.length === 0) return [];
+    if (positions.length === 0) return []
 
     return positions.map((position, index) => {
       const notionalValue =
-        Math.abs(parseFloat(position.positionAmount)) *
-        parseFloat(position.markPrice);
+        Math.abs(parseFloat(position.positionAmount)) * parseFloat(position.markPrice)
 
       return {
         name: position.symbol.replace('USDT', ''),
         value: notionalValue,
         side: position.positionSide,
         color: COLORS[index % COLORS.length],
-      };
-    });
-  }, [positions]);
+      }
+    })
+  }, [positions])
 
   if (chartData.length === 0) {
     return (
@@ -235,7 +206,7 @@ export function SimplePositionDistribution({
           <p className="text-gray-500 dark:text-gray-400">暂无持仓数据</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -247,9 +218,7 @@ export function SimplePositionDistribution({
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) =>
-              `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
-            }
+            label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
@@ -259,9 +228,7 @@ export function SimplePositionDistribution({
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number | undefined) =>
-              value ? `$${value.toFixed(2)}` : '$0.00'
-            }
+            formatter={(value: number | undefined) => (value ? `$${value.toFixed(2)}` : '$0.00')}
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid #ccc',
@@ -271,5 +238,5 @@ export function SimplePositionDistribution({
         </PieChart>
       </ResponsiveContainer>
     </div>
-  );
+  )
 }

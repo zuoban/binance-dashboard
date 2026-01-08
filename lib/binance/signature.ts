@@ -5,7 +5,7 @@
  * 参考: https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/rest-api#signed-trade-and-user_data-endpoint-security
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto'
 
 /**
  * 签名工具类
@@ -24,7 +24,7 @@ export class BinanceSignature {
    * ```
    */
   static generateSignature(queryString: string, secretKey: string): string {
-    return createHmac('sha256', secretKey).update(queryString).digest('hex');
+    return createHmac('sha256', secretKey).update(queryString).digest('hex')
   }
 
   /**
@@ -33,7 +33,7 @@ export class BinanceSignature {
    * @returns 当前时间戳
    */
   static getTimestamp(): string {
-    return Date.now().toString();
+    return Date.now().toString()
   }
 
   /**
@@ -57,22 +57,22 @@ export class BinanceSignature {
   ): { queryString: string; signature: string } {
     // 添加时间戳
     const paramsWithTimestamp: Record<string, string> = {
-      ...Object.fromEntries(
+      ...(Object.fromEntries(
         Object.entries(params).filter(([_, value]) => value !== undefined)
-      ) as Record<string, string>,
+      ) as Record<string, string>),
       timestamp: this.getTimestamp(),
-    };
+    }
 
     // 构建查询字符串（按参数名排序）
     const queryString = Object.keys(paramsWithTimestamp)
       .sort()
-      .map((key) => `${key}=${paramsWithTimestamp[key]}`)
-      .join('&');
+      .map(key => `${key}=${paramsWithTimestamp[key]}`)
+      .join('&')
 
     // 生成签名
-    const signature = this.generateSignature(queryString, secretKey);
+    const signature = this.generateSignature(queryString, secretKey)
 
-    return { queryString, signature };
+    return { queryString, signature }
   }
 
   /**
@@ -84,8 +84,8 @@ export class BinanceSignature {
    * @returns 签名是否有效
    */
   static verifySignature(queryString: string, signature: string, secretKey: string): boolean {
-    const expectedSignature = this.generateSignature(queryString, secretKey);
-    return timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature));
+    const expectedSignature = this.generateSignature(queryString, secretKey)
+    return timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature))
   }
 
   /**
@@ -110,9 +110,9 @@ export class BinanceSignature {
     params: Record<string, string | number | boolean | undefined>,
     secretKey: string
   ): string {
-    const { queryString, signature } = this.buildSignedQuery(params, secretKey);
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}${queryString}&signature=${signature}`;
+    const { queryString, signature } = this.buildSignedQuery(params, secretKey)
+    const separator = baseUrl.includes('?') ? '&' : '?'
+    return `${baseUrl}${separator}${queryString}&signature=${signature}`
   }
 }
 
@@ -121,7 +121,7 @@ export class BinanceSignature {
  */
 export class SignatureError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'SignatureError';
+    super(message)
+    this.name = 'SignatureError'
   }
 }

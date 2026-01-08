@@ -7,29 +7,29 @@
 
 export interface Position {
   /** 交易对 */
-  symbol: string;
+  symbol: string
   /** 持仓数量 */
-  positionAmount: string;
+  positionAmount: string
   /** 入场价格 */
-  entryPrice: string;
+  entryPrice: string
   /** 标记价格 */
-  markPrice: string;
+  markPrice: string
   /** 未实现盈亏 */
-  unrealizedProfit: string;
+  unrealizedProfit: string
   /** 强平价格 */
-  liquidationPrice: string;
+  liquidationPrice: string
   /** 杠杆倍数 */
-  leverage: string;
+  leverage: string
   /** 持仓方向 */
-  positionSide: 'LONG' | 'SHORT' | 'BOTH';
+  positionSide: 'LONG' | 'SHORT' | 'BOTH'
   /** 保证金类型 */
-  marginType: 'isolated' | 'cross';
+  marginType: 'isolated' | 'cross'
   /** 未结盈亏 */
-  notional: string;
+  notional: string
   /** 隔离保证金 */
-  isolatedWallet: string;
+  isolatedWallet: string
   /** 双向持仓模式 */
-  dualSide: boolean;
+  dualSide: boolean
 }
 
 // ==================== 订单信息 ====================
@@ -42,7 +42,7 @@ export type OrderStatus =
   | 'PENDING_CANCEL'
   | 'REJECTED'
   | 'EXPIRED'
-  | 'EXPIRED_IN_MATCH';
+  | 'EXPIRED_IN_MATCH'
 
 export type OrderType =
   | 'LIMIT'
@@ -51,243 +51,250 @@ export type OrderType =
   | 'STOP_MARKET'
   | 'TAKE_PROFIT'
   | 'TAKE_PROFIT_MARKET'
-  | 'TRAILING_STOP_MARKET';
+  | 'TRAILING_STOP_MARKET'
 
-export type TimeInForce = 'GTC' | 'IOC' | 'FOK' | 'GTX';
+export type TimeInForce = 'GTC' | 'IOC' | 'FOK' | 'GTX'
 
 export interface Order {
   /** 订单 ID */
-  orderId: number;
+  orderId: number
   /** 交易对 */
-  symbol: string;
+  symbol: string
   /** 客户端订单 ID */
-  clientOrderId: string;
+  clientOrderId: string
   /** 订单价格 */
-  price: string;
+  price: string
   /** 原始数量 */
-  origQty: string;
+  origQty: string
   /** 已成交数量 */
-  executedQty: string;
+  executedQty: string
   /** 累计成交金额 */
-  cumQuote: string;
+  cumQuote: string
   /** 订单状态 */
-  status: OrderStatus;
+  status: OrderStatus
   /** 时间在力 */
-  timeInForce: TimeInForce;
+  timeInForce: TimeInForce
   /** 订单类型 */
-  type: OrderType;
+  type: OrderType
   /** 买卖方向 */
-  side: 'BUY' | 'SELL';
+  side: 'BUY' | 'SELL'
   /** 止损价格 */
-  stopPrice: string;
+  stopPrice: string
   /** 冰山订单数量 */
-  icebergQty: string;
+  icebergQty: string
   /** 订单创建时间 */
-  time: number;
+  time: number
   /** 订单更新时间 */
-  updateTime: number;
+  updateTime: number
   /** 是否只减仓 */
-  reduceOnly: boolean;
+  reduceOnly: boolean
   /** 是否全平 */
-  closePosition: boolean;
+  closePosition: boolean
   /** 方向 */
-  positionSide: 'BOTH' | 'LONG' | 'SHORT';
+  positionSide: 'BOTH' | 'LONG' | 'SHORT'
   /** 是否只减仓 */
-  workingType: 'MARK_PRICE' | 'CONTRACT_PRICE';
+  workingType: 'MARK_PRICE' | 'CONTRACT_PRICE'
   /** 原始订单类型 */
-  origType: OrderType;
+  origType: OrderType
   /** 价格保护 */
-  priceMatch: 'NONE' | 'MATCH' | 'OPPONENT' | 'OPPONENT_5' | 'OPPONENT_10' | 'OPPONENT_20';
+  priceMatch: 'NONE' | 'MATCH' | 'OPPONENT' | 'OPPONENT_5' | 'OPPONENT_10' | 'OPPONENT_20'
   /** 自定义止损 */
-  selfTradePreventionMode: 'EXPIRE_NONE' | 'EXPIRE_TAKER' | 'EXPIRE_MAKER' | 'EXPIRE_BOTH';
+  selfTradePreventionMode: 'EXPIRE_NONE' | 'EXPIRE_TAKER' | 'EXPIRE_MAKER' | 'EXPIRE_BOTH'
   /** GPU 失败原因 */
-  priceProtect: boolean;
+  priceProtect: boolean
 }
 
 // ==================== 账户资产信息 ====================
 
 export interface AccountAsset {
   /** 总钱包余额 */
-  totalWalletBalance: string;
+  totalWalletBalance: string
   /** 可用余额 */
-  availableBalance: string;
+  availableBalance: string
   /** 未实现盈亏 */
-  unrealizedProfit: string;
+  unrealizedProfit: string
   /** 保证金余额 */
-  marginBalance: string;
+  marginBalance: string
   /** 持仓保证金 */
-  maintainMargin: string;
+  maintainMargin: string
   /** 账户余额 */
-  balance: string;
+  balance: string
   /** cross 保证金余额 */
-  crossWalletBalance: string;
+  crossWalletBalance: string
   /** cross 未实现盈亏 */
-  crossUnPnl: string;
+  crossUnPnl: string
   /** 持仓未结盈亏 */
-  crossUnPnlRatio: string;
+  crossUnPnlRatio: string
   /** 持仓保证金 */
-  positionInitialMargin: string;
+  positionInitialMargin: string
   /** open 损失 */
-  openOrderInitialMargin: string;
+  openOrderInitialMargin: string
   /** leverage 倍数 */
-  leverage: string;
+  leverage: string
   /** 持仓模式 */
-  notionalLeverage: string;
+  notionalLeverage: string
   /** 持仓模式 */
-  notionalValue: string;
+  notionalValue: string
   /** isolated 保证金余额 */
-  isolatedWalletBalance: string;
+  isolatedWalletBalance: string
   /** 更新时间 */
-  updateTime: number;
+  updateTime: number
   /** 总持仓保证金 */
-  totalPositionInitialMargin: string;
+  totalPositionInitialMargin: string
   /** 总维持保证金 */
-  totalMaintMargin: string;
+  totalMaintMargin: string
   /** 最大可提取金额 */
-  maxWithdrawAmount: string;
+  maxWithdrawAmount: string
   /** 总 open 订单保证金 */
-  totalOpenOrderInitialMargin: string;
+  totalOpenOrderInitialMargin: string
   /** 总 cross 钱包余额 */
-  totalCrossWalletBalance: string;
+  totalCrossWalletBalance: string
   /** 总 cross 未实现盈亏 */
-  totalCrossUnPnl: string;
+  totalCrossUnPnl: string
   /** 资产列表 */
-  assets: Asset[];
+  assets: Asset[]
   /** 当前杠杆倍数 */
-  currentLeverage: string;
+  currentLeverage: string
   /** 保证金模式 */
-  marginMode: string;
+  marginMode: string
 }
-
 
 export interface Asset {
   /** 资产名称 */
-  asset: string;
+  asset: string
   /** 钱包余额 */
-  walletBalance: string;
+  walletBalance: string
   /** cross 钱包余额 */
-  crossWalletBalance: string;
+  crossWalletBalance: string
   /** unrealized 盈亏 */
-  unrealizedProfit: string;
+  unrealizedProfit: string
   /** margin 余额 */
-  marginBalance: string;
+  marginBalance: string
   /** maintain 保证金 */
-  maintainMargin: string;
+  maintainMargin: string
   /** 初始保证金 */
-  initialMargin: string;
+  initialMargin: string
   /** positionInitialMargin */
-  positionInitialMargin: string;
+  positionInitialMargin: string
   /** openOrderInitialMargin */
-  openOrderInitialMargin: string;
+  openOrderInitialMargin: string
   /** cross 未实现盈亏 */
-  crossUnPnl: string;
+  crossUnPnl: string
   /** available 余额 */
-  availableBalance: string;
+  availableBalance: string
   /** max 可提取金额 */
-  maxWithdrawAmount: string;
+  maxWithdrawAmount: string
   /** 杠杆倍数 */
-  leverage: string;
+  leverage: string
   /** 持仓方向 */
-  positionSide: 'BOTH' | 'LONG' | 'SHORT';
+  positionSide: 'BOTH' | 'LONG' | 'SHORT'
   /** notional 杠杆 */
-  notionalLeverage: string;
+  notionalLeverage: string
   /** notional 价值 */
-  notionalValue: string;
+  notionalValue: string
   /** isolated 保证金余额 */
-  isolatedWalletBalance: string;
+  isolatedWalletBalance: string
 }
 
 // ==================== API 响应 ====================
 
 export interface BinanceApiResponse<T> {
   /** 响应代码 */
-  code: number;
+  code: number
   /** 响应消息 */
-  msg: string;
+  msg: string
   /** 响应数据 */
-  data: T;
+  data: T
 }
 
 export interface BinanceErrorResponse {
   /** 错误代码 */
-  code: number;
+  code: number
   /** 错误消息 */
-  msg: string;
+  msg: string
 }
 
 // ==================== API 请求参数 ====================
 
 export interface PositionQueryParams {
   /** 交易对 */
-  symbol?: string;
+  symbol?: string
 }
 
 export interface OrderQueryParams {
   /** 交易对 */
-  symbol?: string;
+  symbol?: string
   /** 订单 ID */
-  orderId?: number;
+  orderId?: number
   /** 客户端订单 ID */
-  origClientOrderId?: string;
+  origClientOrderId?: string
   /** 开始时间 */
-  startTime?: number;
+  startTime?: number
   /** 结束时间 */
-  endTime?: number;
+  endTime?: number
   /** 每页数量 */
-  limit?: number;
+  limit?: number
 }
 
 // ==================== WebSocket ====================
 
 export interface WebSocketMessage {
   /** 事件类型 */
-  e: string;
+  e: string
   /** 事件时间 */
-  E: number;
+  E: number
   /** 交易对 */
-  s?: string;
+  s?: string
   /** 数据 */
-  [key: string]: any;
+  [key: string]: any
 }
 
 export interface PositionUpdateMessage extends WebSocketMessage {
-  e: 'ACCOUNT_UPDATE';
-  E: number;
-  T: number;
+  e: 'ACCOUNT_UPDATE'
+  E: number
+  T: number
   a: {
     /** 更新的事件原因 */
-    m: 'DEPOSIT' | 'WITHDRAW' | 'ADJUSTMENT' | 'FEE' | 'FUNDING_FEE' | 'MARGIN_CALL' | 'PRELIQUIDATION' | 'LIQUIDATION';
+    m:
+      | 'DEPOSIT'
+      | 'WITHDRAW'
+      | 'ADJUSTMENT'
+      | 'FEE'
+      | 'FUNDING_FEE'
+      | 'MARGIN_CALL'
+      | 'PRELIQUIDATION'
+      | 'LIQUIDATION'
     /** 事件更新的账户余额 */
-    B: AssetBalance[];
+    B: AssetBalance[]
     /** 事件更新的持仓信息 */
-    P: PositionUpdate[];
-  };
+    P: PositionUpdate[]
+  }
 }
 
 export interface AssetBalance {
   /** 资产名称 */
-  a: string;
+  a: string
   /** 可用余额 */
-    f: string;
+  f: string
   /** 锁定余额 */
-  l: string;
+  l: string
 }
 
 export interface PositionUpdate {
   /** 交易对 */
-  s: string;
+  s: string
   /** 持仓方向 */
-  ps: 'BOTH' | 'LONG' | 'SHORT';
+  ps: 'BOTH' | 'LONG' | 'SHORT'
   /** 持仓数量 */
-  pa: string;
+  pa: string
   /** 入场价格 */
-  ep: string;
+  ep: string
   /** 未实现盈亏 */
-  up: string;
+  up: string
   /** notional */
-  mt: 'isolated' | 'cross';
+  mt: 'isolated' | 'cross'
   /** 持仓保证金 */
-  iw: string;
+  iw: string
   /** 杠杆倍数 */
-  mv: string;
+  mv: string
 }

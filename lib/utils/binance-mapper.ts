@@ -4,7 +4,7 @@
  * 将币安 API 返回的原始数据转换为我们的类型格式
  */
 
-import { Position } from '@/types/binance';
+import { Position } from '@/types/binance'
 
 /**
  * 将币安 positionRisk API 响应转换为我们的 Position 类型
@@ -23,7 +23,7 @@ export function mapBinancePosition(data: any): Position {
     notional: data.notional || '0',
     isolatedWallet: data.isolatedWallet || '0',
     dualSide: data.dualSide === true || data.dualSide === 'true',
-  };
+  }
 }
 
 /**
@@ -31,16 +31,16 @@ export function mapBinancePosition(data: any): Position {
  */
 export function mapBinancePositions(dataArray: any[]): Position[] {
   if (!Array.isArray(dataArray)) {
-    console.warn('[mapBinancePositions] Input is not an array:', dataArray);
-    return [];
+    console.warn('[mapBinancePositions] Input is not an array:', dataArray)
+    return []
   }
 
   return dataArray
-    .filter((item) => item && typeof item === 'object')
+    .filter(item => item && typeof item === 'object')
     .map(mapBinancePosition)
-    .filter((position) => {
+    .filter(position => {
       // 只返回有实际持仓的仓位（持仓数量不为 0）
-      const amt = parseFloat(position.positionAmount);
-      return !isNaN(amt) && amt !== 0;
-    });
+      const amt = parseFloat(position.positionAmount)
+      return !isNaN(amt) && amt !== 0
+    })
 }

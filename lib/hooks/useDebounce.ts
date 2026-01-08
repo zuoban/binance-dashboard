@@ -4,7 +4,7 @@
  * 用于防抖处理的自定义 Hook
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 
 /**
  * 防抖 Hook
@@ -25,21 +25,21 @@ import { useEffect, useState } from 'react';
  * ```
  */
 export function useDebounce<T>(value: T, delay: number = 500): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
   useEffect(() => {
     // 设置定时器
     const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
+      setDebouncedValue(value)
+    }, delay)
 
     // 清除定时器
     return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
+      clearTimeout(handler)
+    }
+  }, [value, delay])
 
-  return debouncedValue;
+  return debouncedValue
 }
 
 /**
@@ -66,17 +66,17 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   delay: number = 500,
   deps: any[] = []
 ): T {
-  const [debouncedValue, setDebouncedValue] = useState<(() => void) | null>(null);
+  const [debouncedValue, setDebouncedValue] = useState<(() => void) | null>(null)
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedValue(() => callback);
-    }, delay);
+      setDebouncedValue(() => callback)
+    }, delay)
 
     return () => {
-      clearTimeout(handler);
-    };
-  }, [callback, delay, ...deps]);
+      clearTimeout(handler)
+    }
+  }, [callback, delay, ...deps])
 
-  return ((debouncedValue || callback) as unknown) as T;
+  return (debouncedValue || callback) as unknown as T
 }

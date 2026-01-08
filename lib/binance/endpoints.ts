@@ -7,22 +7,22 @@
 /**
  * API 端点类型
  */
-export type ApiEndpointType = 'GET' | 'POST' | 'DELETE' | 'PUT';
+export type ApiEndpointType = 'GET' | 'POST' | 'DELETE' | 'PUT'
 
 /**
  * API 端点接口
  */
 export interface ApiEndpoint {
   /** 端点路径 */
-  path: string;
+  path: string
   /** HTTP 方法 */
-  method: ApiEndpointType;
+  method: ApiEndpointType
   /** 是否需要签名 */
-  signed: boolean;
+  signed: boolean
   /** 是否需要 API Key */
-  needKey: boolean;
+  needKey: boolean
   /** 权重（用于限流） */
-  weight: number;
+  weight: number
 }
 
 /**
@@ -196,7 +196,7 @@ export const BinanceEndpoints = {
     needKey: true,
     weight: 1,
   } as ApiEndpoint,
-};
+}
 
 /**
  * 币安 API 基础 URL
@@ -210,7 +210,7 @@ export const BinanceBaseUrl = {
   TESTNET_REST: 'https://testnet.binancefuture.com',
   /** 测试网 WebSocket */
   TESTNET_WS: 'wss://stream.binancefuture.com/ws',
-};
+}
 
 /**
  * API 权限类型
@@ -268,7 +268,7 @@ export const RateLimitConfig = {
   REQUEST_LIMIT_PER_SECOND: 300,
   /** 时间窗口（毫秒） */
   RECV_WINDOW: 5000,
-};
+}
 
 /**
  * K 线间隔
@@ -306,6 +306,6 @@ export const KlineInterval = {
   '1w': '1w',
   /** 1 月 */
   '1M': '1M',
-} as const;
+} as const
 
-export type KlineInterval = (typeof KlineInterval)[keyof typeof KlineInterval];
+export type KlineInterval = (typeof KlineInterval)[keyof typeof KlineInterval]

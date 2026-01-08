@@ -4,17 +4,19 @@
 
 interface FooterProps {
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
 }
 
 /**
  * 页脚
  */
 export function Footer({ className = '' }: FooterProps) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear()
 
   return (
-    <footer className={`bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 ${className}`}>
+    <footer
+      className={`bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 ${className}`}
+    >
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* 左侧：版权信息 */}
@@ -52,5 +54,5 @@ export function Footer({ className = '' }: FooterProps) {
         </div>
       </div>
     </footer>
-  );
+  )
 }

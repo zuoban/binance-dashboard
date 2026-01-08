@@ -4,9 +4,9 @@
  * 用于获取、刷新和关闭币安用户数据流的 Listen Key
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { BinanceRestClient } from '@/lib/binance/rest-client';
-import { getServerConfig } from '@/lib/config';
+import { NextRequest, NextResponse } from 'next/server'
+import { BinanceRestClient } from '@/lib/binance/rest-client'
+import { getServerConfig } from '@/lib/config'
 
 /**
  * POST /api/binance/listen-key
@@ -14,25 +14,25 @@ import { getServerConfig } from '@/lib/config';
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('[Listen Key API] 📨 Received POST request');
+    console.log('[Listen Key API] 📨 Received POST request')
 
-    const body = await request.json();
-    const { listenKey, action } = body;
+    const body = await request.json()
+    const { listenKey, action } = body
 
-    console.log('[Listen Key API] Request body:', { action, hasListenKey: !!listenKey });
+    console.log('[Listen Key API] Request body:', { action, hasListenKey: !!listenKey })
 
     // 获取服务端配置
-    const config = getServerConfig();
+    const config = getServerConfig()
 
     console.log('[Listen Key API] Config:', {
       hasApiKey: !!config.binance.apiKey,
       hasApiSecret: !!config.binance.apiSecret,
       isDevelopment: config.app.isDevelopment,
-    });
+    })
 
     // 验证 API 配置
     if (!config.binance.apiKey || !config.binance.apiSecret) {
-      console.error('[Listen Key API] ❌ API credentials not configured');
+      console.error('[Listen Key API] ❌ API credentials not configured')
       return NextResponse.json(
         {
           success: false,
@@ -42,50 +42,53 @@ export async function POST(request: NextRequest) {
           },
         },
         { status: 500 }
-      );
+      )
     }
 
     // 创建 REST 客户端
-    console.log('[Listen Key API] Creating REST client...');
+    console.log('[Listen Key API] Creating REST client...')
     const client = new BinanceRestClient({
       apiKey: config.binance.apiKey,
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
       enableLog: config.app.isDevelopment,
-    });
+    })
 
-    let result;
+    let result
 
     if (action === 'refresh' || listenKey) {
       // 刷新 Listen Key
-      console.log('[Listen Key API] 🔁 Refreshing Listen Key...');
-      result = await client.keepAliveListenKey(listenKey);
-      console.log('[Listen Key API] ✅ Listen Key refreshed');
+      console.log('[Listen Key API] 🔁 Refreshing Listen Key...')
+      result = await client.keepAliveListenKey(listenKey)
+      console.log('[Listen Key API] ✅ Listen Key refreshed')
     } else if (action === 'close' || listenKey) {
       // 关闭 Listen Key
-      console.log('[Listen Key API] 🔒 Closing Listen Key...');
-      result = await client.closeListenKey(listenKey);
-      console.log('[Listen Key API] ✅ Listen Key closed');
+      console.log('[Listen Key API] 🔒 Closing Listen Key...')
+      result = await client.closeListenKey(listenKey)
+      console.log('[Listen Key API] ✅ Listen Key closed')
     } else {
       // 获取新的 Listen Key
-      console.log('[Listen Key API] 🔑 Creating new Listen Key...');
-      result = await client.getListenKey();
-      console.log('[Listen Key API] ✅ Listen Key created:', result?.listenKey?.substring(0, 20) + '...');
+      console.log('[Listen Key API] 🔑 Creating new Listen Key...')
+      result = await client.getListenKey()
+      console.log(
+        '[Listen Key API] ✅ Listen Key created:',
+        result?.listenKey?.substring(0, 20) + '...'
+      )
     }
 
     // 返回结果
-    console.log('[Listen Key API] ✅ Sending successful response');
+    console.log('[Listen Key API] ✅ Sending successful response')
     return NextResponse.json({
       success: true,
       data: result,
-    });
+    })
   } catch (error: any) {
-    console.error('[Listen Key API] ❌ Error:', error);
+    console.error('[Listen Key API] ❌ Error:', error)
     console.error('[Listen Key API] Error details:', {
       code: error.code,
       message: error.message,
       stack: error.stack,
-    });
+    })
 
     return NextResponse.json(
       {
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
         },
       },
       { status: error.code === -1021 ? 401 : 500 }
-    );
+    )
   }
 }
 
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest) {
  * 刷新 Listen Key
  */
 export async function PUT(request: NextRequest) {
-  return POST(request);
+  return POST(request)
 }
 
 /**
@@ -114,8 +117,8 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { listenKey } = body;
+    const body = await request.json()
+    const { listenKey } = body
 
     if (!listenKey) {
       return NextResponse.json(
@@ -127,11 +130,11 @@ export async function DELETE(request: NextRequest) {
           },
         },
         { status: 400 }
-      );
+      )
     }
 
     // 获取服务端配置
-    const config = getServerConfig();
+    const config = getServerConfig()
 
     // 验证 API 配置
     if (!config.binance.apiKey || !config.binance.apiSecret) {
@@ -144,7 +147,7 @@ export async function DELETE(request: NextRequest) {
           },
         },
         { status: 500 }
-      );
+      )
     }
 
     // 创建 REST 客户端
@@ -153,18 +156,18 @@ export async function DELETE(request: NextRequest) {
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
       enableLog: config.app.isDevelopment,
-    });
+    })
 
     // 关闭 Listen Key
-    await client.closeListenKey(listenKey);
+    await client.closeListenKey(listenKey)
 
     // 返回结果
     return NextResponse.json({
       success: true,
       data: { message: 'Listen key closed successfully' },
-    });
+    })
   } catch (error: any) {
-    console.error('[Listen Key API] Error:', error);
+    console.error('[Listen Key API] Error:', error)
 
     return NextResponse.json(
       {
@@ -175,6 +178,6 @@ export async function DELETE(request: NextRequest) {
         },
       },
       { status: error.code === -1021 ? 401 : 500 }
-    );
+    )
   }
 }

@@ -4,7 +4,7 @@
  * 用于获取和管理币安账户资产数据的自定义 Hook
  */
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo } from 'react'
 import {
   useAccountStore,
   getTotalWalletBalance,
@@ -13,13 +13,13 @@ import {
   getUnrealizedProfitPercentage,
   getAssetsByType,
   getRiskLevel,
-} from '@/lib/store';
+} from '@/lib/store'
 
 interface UseBinanceAccountOptions {
   /** 是否自动获取数据 */
-  autoFetch?: boolean;
+  autoFetch?: boolean
   /** 刷新间隔（毫秒） */
-  refreshInterval?: number;
+  refreshInterval?: number
 }
 
 /**
@@ -37,58 +37,52 @@ interface UseBinanceAccountOptions {
  * ```
  */
 export function useBinanceAccount(options: UseBinanceAccountOptions = {}) {
-  const { autoFetch = true, refreshInterval } = options;
+  const { autoFetch = true, refreshInterval } = options
 
-  const {
-    account,
-    loadingState,
-    error,
-    fetchAccount,
-    clearError,
-  } = useAccountStore();
+  const { account, loadingState, error, fetchAccount, clearError } = useAccountStore()
 
   // 获取账户数据
   const loadAccount = useCallback(async () => {
-    await fetchAccount();
-  }, [fetchAccount]);
+    await fetchAccount()
+  }, [fetchAccount])
 
   // 手动刷新
   const refetch = useCallback(async () => {
-    await loadAccount();
-  }, [loadAccount]);
+    await loadAccount()
+  }, [loadAccount])
 
   // 自动获取数据
   useEffect(() => {
     if (autoFetch) {
-      loadAccount();
+      loadAccount()
     }
-  }, [autoFetch, loadAccount]);
+  }, [autoFetch, loadAccount])
 
   // 定时刷新
   useEffect(() => {
-    if (!refreshInterval || !autoFetch) return;
+    if (!refreshInterval || !autoFetch) return
 
     const interval = setInterval(() => {
-      loadAccount();
-    }, refreshInterval);
+      loadAccount()
+    }, refreshInterval)
 
-    return () => clearInterval(interval);
-  }, [refreshInterval, autoFetch, loadAccount]);
+    return () => clearInterval(interval)
+  }, [refreshInterval, autoFetch, loadAccount])
 
   // 处理错误
   useEffect(() => {
     if (error) {
-      console.error('[useBinanceAccount] Error:', error);
+      console.error('[useBinanceAccount] Error:', error)
     }
-  }, [error]);
+  }, [error])
 
   // 计算属性
-  const balance = useMemo(() => getTotalWalletBalance(account), [account]);
-  const availableBalance = useMemo(() => getAvailableBalance(account), [account]);
-  const profit = useMemo(() => getUnrealizedProfit(account), [account]);
-  const profitPercentage = useMemo(() => getUnrealizedProfitPercentage(account), [account]);
-  const assets = useMemo(() => getAssetsByType(account), [account]);
-  const riskLevel = useMemo(() => getRiskLevel(account), [account]);
+  const balance = useMemo(() => getTotalWalletBalance(account), [account])
+  const availableBalance = useMemo(() => getAvailableBalance(account), [account])
+  const profit = useMemo(() => getUnrealizedProfit(account), [account])
+  const profitPercentage = useMemo(() => getUnrealizedProfitPercentage(account), [account])
+  const assets = useMemo(() => getAssetsByType(account), [account])
+  const riskLevel = useMemo(() => getRiskLevel(account), [account])
 
   return {
     // 数据
@@ -108,5 +102,5 @@ export function useBinanceAccount(options: UseBinanceAccountOptions = {}) {
     // 操作
     refetch,
     clearError,
-  };
+  }
 }

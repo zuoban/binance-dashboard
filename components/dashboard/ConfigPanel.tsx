@@ -2,19 +2,19 @@
  * 看板配置面板组件
  */
 
-'use client';
+'use client'
 
-import { useState } from 'react';
+import { useState } from 'react'
 
 interface ConfigPanelProps {
   /** 自动刷新间隔（秒） */
-  refreshInterval: number;
+  refreshInterval: number
   /** 订单查询时间范围（小时） */
-  orderTimeRangeHours: number;
+  orderTimeRangeHours: number
   /** 保存配置 */
-  onSave: (refreshInterval: number, orderTimeRangeHours: number) => void;
+  onSave: (refreshInterval: number, orderTimeRangeHours: number) => void
   /** 取消 */
-  onCancel: () => void;
+  onCancel: () => void
 }
 
 /**
@@ -26,7 +26,7 @@ const REFRESH_INTERVALS = [
   { label: '10 秒', value: 10 },
   { label: '30 秒', value: 30 },
   { label: '60 秒', value: 60 },
-];
+]
 
 /**
  * 订单时间范围选项（小时）
@@ -38,7 +38,7 @@ const ORDER_TIME_RANGES = [
   { label: '6 小时', value: 6 },
   { label: '12 小时', value: 12 },
   { label: '24 小时', value: 24 },
-];
+]
 
 /**
  * 配置面板
@@ -49,27 +49,32 @@ export function ConfigPanel({
   onSave,
   onCancel,
 }: ConfigPanelProps) {
-  const [localRefreshInterval, setLocalRefreshInterval] = useState(refreshInterval / 1000);
-  const [localOrderTimeRange, setLocalOrderTimeRange] = useState(orderTimeRangeHours / (60 * 60 * 1000));
+  const [localRefreshInterval, setLocalRefreshInterval] = useState(refreshInterval / 1000)
+  const [localOrderTimeRange, setLocalOrderTimeRange] = useState(
+    orderTimeRangeHours / (60 * 60 * 1000)
+  )
 
   const handleSave = () => {
-    onSave(localRefreshInterval * 1000, localOrderTimeRange);
-  };
+    onSave(localRefreshInterval * 1000, localOrderTimeRange)
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         {/* 标题 */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            看板配置
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">看板配置</h2>
           <button
             onClick={onCancel}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -82,7 +87,7 @@ export function ConfigPanel({
               自动刷新间隔
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {REFRESH_INTERVALS.map((option) => (
+              {REFRESH_INTERVALS.map(option => (
                 <button
                   key={option.value}
                   onClick={() => setLocalRefreshInterval(option.value)}
@@ -104,7 +109,7 @@ export function ConfigPanel({
               订单查询时间范围
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {ORDER_TIME_RANGES.map((option) => (
+              {ORDER_TIME_RANGES.map(option => (
                 <button
                   key={option.value}
                   onClick={() => setLocalOrderTimeRange(option.value)}
@@ -138,5 +143,5 @@ export function ConfigPanel({
         </div>
       </div>
     </div>
-  );
+  )
 }
