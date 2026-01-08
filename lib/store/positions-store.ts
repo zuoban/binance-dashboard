@@ -4,26 +4,26 @@
  * 使用 Zustand 管理持仓数据的全局状态
  */
 
-import { create } from 'zustand';
-import { Position } from '@/types/binance';
-import { LoadingState } from '@/types/common';
-import { mapBinancePositions } from '@/lib/utils/binance-mapper';
+import { create } from 'zustand'
+import { Position } from '@/types/binance'
+import { LoadingState } from '@/types/common'
+import { mapBinancePositions } from '@/lib/utils/binance-mapper'
 
 interface PositionsState {
   // 状态
-  positions: Position[];
-  loadingState: LoadingState;
-  error: string | null;
-  lastUpdated: number | null;
+  positions: Position[]
+  loadingState: LoadingState
+  error: string | null
+  lastUpdated: number | null
 
   // Actions
-  setPositions: (positions: Position[]) => void;
-  updatePosition: (symbol: string, data: Partial<Position>) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  clearError: () => void;
-  fetchPositions: () => Promise<void>;
-  reset: () => void;
+  setPositions: (positions: Position[]) => void
+  updatePosition: (symbol: string, data: Partial<Position>) => void
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
+  clearError: () => void
+  fetchPositions: () => Promise<void>
+  reset: () => void
 }
 
 /**
@@ -37,7 +37,7 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
   lastUpdated: null,
 
   // 设置持仓列表
-  setPositions: (positions) =>
+  setPositions: positions =>
     set({
       positions,
       loadingState: 'success',
@@ -47,20 +47,18 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
 
   // 更新单个持仓
   updatePosition: (symbol, data) =>
-    set((state) => ({
-      positions: state.positions.map((pos) =>
-        pos.symbol === symbol ? { ...pos, ...data } : pos
-      ),
+    set(state => ({
+      positions: state.positions.map(pos => (pos.symbol === symbol ? { ...pos, ...data } : pos)),
     })),
 
   // 设置加载状态
-  setLoading: (loading) =>
+  setLoading: loading =>
     set({
       loadingState: loading ? 'loading' : 'idle',
     }),
 
   // 设置错误
-  setError: (error) =>
+  setError: error =>
     set({
       error,
       loadingState: 'error',
@@ -74,30 +72,30 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
 
   // 获取持仓数据
   fetchPositions: async () => {
-    const { setLoading, setError, setPositions } = get();
+    const { setLoading, setError, setPositions } = get()
 
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
-      const response = await fetch('/api/binance/positions');
-      const result = await response.json();
+      const response = await fetch('/api/binance/positions')
+      const result = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error?.message || 'Failed to fetch positions');
+        throw new Error(result.error?.message || 'Failed to fetch positions')
       }
 
       // 使用映射函数转换数据
-      const mappedPositions = mapBinancePositions(result.data || []);
-      console.log('[Positions Store] Fetched positions:', mappedPositions);
+      const mappedPositions = mapBinancePositions(result.data || [])
+      console.log('[Positions Store] Fetched positions:', mappedPositions)
 
-      setPositions(mappedPositions);
+      setPositions(mappedPositions)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      setError(message);
-      console.error('[Positions Store] Error fetching positions:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setError(message)
+      console.error('[Positions Store] Error fetching positions:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   },
 
@@ -109,7 +107,7 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
       error: null,
       lastUpdated: null,
     }),
-}));
+}))
 
 // ==================== Selectors ====================
 
@@ -117,21 +115,21 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
  * 获取有持仓的仓位（过滤掉持仓数量为0的）
  */
 export const getActivePositions = (positions: Position[]) => {
-  return positions.filter((p) => parseFloat(p.positionAmount) !== 0);
-};
+  return positions.filter(p => parseFloat(p.positionAmount) !== 0)
+}
 
 /**
  * 获取总未实现盈亏
  */
 export const getTotalUnrealizedProfit = (positions: Position[]) => {
   return positions.reduce((total, p) => {
-    return total + parseFloat(p.unrealizedProfit || '0');
-  }, 0);
-};
+    return total + parseFloat(p.unrealizedProfit || '0')
+  }, 0)
+}
 
 /**
  * 按交易对获取持仓
  */
 export const getPositionBySymbol = (positions: Position[], symbol: string) => {
-  return positions.find((p) => p.symbol === symbol);
-};
+  return positions.find(p => p.symbol === symbol)
+}

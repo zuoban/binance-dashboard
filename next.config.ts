@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // 启用 standalone 输出模式（用于 Docker 部署）
@@ -14,6 +14,6 @@ const nextConfig: NextConfig = {
     // 禁用字体优化以避免构建时网络请求
     optimizeCss: false,
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

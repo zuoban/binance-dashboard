@@ -2,22 +2,22 @@
  * 访问码登录页面
  */
 
-'use client';
+'use client'
 
-import { useState, FormEvent, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { storeAccessCode } from '@/lib/utils/fetch-with-auth';
+import { useState, FormEvent, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { storeAccessCode } from '@/lib/utils/fetch-with-auth'
 
 function LoginForm() {
-  const searchParams = useSearchParams();
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams()
+  const [code, setCode] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
 
     try {
       // 验证访问码
@@ -27,26 +27,26 @@ function LoginForm() {
           'Content-Type': 'application/json',
           'x-access-code': code,
         },
-      });
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (result.success) {
         // 存储访问码
-        storeAccessCode(code);
+        storeAccessCode(code)
 
         // 使用 window.location.href 确保跳转成功
-        const redirect = searchParams.get('redirect') || '/dashboard';
-        window.location.href = redirect;
+        const redirect = searchParams.get('redirect') || '/dashboard'
+        window.location.href = redirect
       } else {
-        setError('访问码错误，请重试');
+        setError('访问码错误，请重试')
       }
     } catch {
-      setError('验证失败，请重试');
+      setError('验证失败，请重试')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
@@ -55,12 +55,8 @@ function LoginForm() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
           {/* 标题 */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              访问验证
-            </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              请输入访问码以继续
-            </p>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">访问验证</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">请输入访问码以继续</p>
           </div>
 
           {/* 表单 */}
@@ -77,7 +73,7 @@ function LoginForm() {
                 id="access-code"
                 type="password"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={e => setCode(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 placeholder="请输入访问码"
                 autoFocus
@@ -109,17 +105,19 @@ function LoginForm() {
         </p>
       </div>
     </div>
-  );
+  )
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-        <div className="text-gray-500 dark:text-gray-400">加载中...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+          <div className="text-gray-500 dark:text-gray-400">加载中...</div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
-  );
+  )
 }

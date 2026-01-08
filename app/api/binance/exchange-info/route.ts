@@ -4,15 +4,15 @@
  * 获取交易对的精度、交易规则等信息
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerConfig } from '@/lib/config';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerConfig } from '@/lib/config'
 
 /**
  * 交易规则缓存
  */
-let exchangeInfoCache: any = null;
-let cacheTime: number = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+let exchangeInfoCache: any = null
+let cacheTime: number = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 
 /**
  * GET /api/binance/exchange-info
@@ -21,16 +21,16 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
 export async function GET(_request: NextRequest) {
   try {
     // 检查缓存
-    const now = Date.now();
+    const now = Date.now()
     if (exchangeInfoCache && now - cacheTime < CACHE_DURATION) {
       return NextResponse.json({
         success: true,
         data: exchangeInfoCache,
-      });
+      })
     }
 
     // 获取服务端配置
-    const config = getServerConfig();
+    const config = getServerConfig()
 
     // 验证 API 配置
     if (!config.binance.apiKey) {
@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest) {
           },
         },
         { status: 500 }
-      );
+      )
     }
 
     // 调用币安 API 获取交易规则
@@ -53,24 +53,24 @@ export async function GET(_request: NextRequest) {
         'X-MBX-APIKEY': config.binance.apiKey,
         'Content-Type': 'application/json',
       },
-    });
+    })
 
-    const result = await response.json();
+    const result = await response.json()
 
     if (!response.ok) {
-      throw new Error(result.msg || 'Failed to fetch exchange info');
+      throw new Error(result.msg || 'Failed to fetch exchange info')
     }
 
     // 缓存结果
-    exchangeInfoCache = result;
-    cacheTime = now;
+    exchangeInfoCache = result
+    cacheTime = now
 
     return NextResponse.json({
       success: true,
       data: result,
-    });
+    })
   } catch (error: any) {
-    console.error('[Exchange Info API] Error:', error);
+    console.error('[Exchange Info API] Error:', error)
 
     return NextResponse.json(
       {
@@ -81,6 +81,6 @@ export async function GET(_request: NextRequest) {
         },
       },
       { status: 500 }
-    );
+    )
   }
 }

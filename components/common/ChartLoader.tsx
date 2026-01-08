@@ -2,18 +2,18 @@
  * 图表加载包装器
  */
 
-'use client';
+'use client'
 
-import { Suspense } from 'react';
-import { LoadingSpinner } from './LoadingSpinner';
+import { Suspense } from 'react'
+import { LoadingSpinner } from './LoadingSpinner'
 
 interface ChartLoaderProps {
   /** 图表组件 */
-  children: React.ReactNode;
+  children: React.ReactNode
   /** 加载提示文本 */
-  fallbackText?: string;
+  fallbackText?: string
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
 }
 
 /**
@@ -37,5 +37,5 @@ export function ChartLoader({
     >
       {children}
     </Suspense>
-  );
+  )
 }

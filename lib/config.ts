@@ -14,7 +14,7 @@ export const binanceConfig = {
   wsApi: process.env.NEXT_PUBLIC_BINANCE_WS_API || 'wss://fstream.binance.com/ws',
   /** 是否使用测试网 */
   useTestnet: process.env.NEXT_PUBLIC_USE_TESTNET === 'true',
-} as const;
+} as const
 
 /**
  * 应用配置
@@ -28,7 +28,7 @@ export const appConfig = {
   isDevelopment: process.env.NODE_ENV === 'development',
   /** 是否生产环境 */
   isProduction: process.env.NODE_ENV === 'production',
-} as const;
+} as const
 
 /**
  * API 配置
@@ -42,7 +42,7 @@ export const apiConfig = {
   retryDelay: parseInt(process.env.API_RETRY_DELAY || '1000', 10),
   /** 接收窗口时间（毫秒） */
   recvWindow: parseInt(process.env.RECV_WINDOW || '5000', 10),
-} as const;
+} as const
 
 /**
  * WebSocket 配置 */
@@ -57,7 +57,7 @@ export const wsConfig = {
   pingInterval: parseInt(process.env.WS_PING_INTERVAL || '30000', 10),
   /** Listen Key 更新间隔（毫秒） */
   listenKeyRefreshInterval: parseInt(process.env.WS_LISTEN_KEY_REFRESH_INTERVAL || '1800000', 10), // 30分钟
-} as const;
+} as const
 
 /**
  * UI 配置
@@ -69,7 +69,7 @@ export const uiConfig = {
   pageSize: parseInt(process.env.UI_PAGE_SIZE || '20', 10),
   /** 小数位数 */
   decimalPlaces: parseInt(process.env.UI_DECIMAL_PLACES || '2', 10),
-} as const;
+} as const
 
 /**
  * 认证配置
@@ -79,7 +79,7 @@ export const authConfig = {
   accessCode: process.env.ACCESS_CODE || '',
   /** 是否启用认证 */
   enabled: !!process.env.ACCESS_CODE,
-} as const;
+} as const
 
 /**
  * 完整配置对象
@@ -91,26 +91,26 @@ export const config = {
   ws: wsConfig,
   ui: uiConfig,
   auth: authConfig,
-} as const;
+} as const
 
 /**
  * 验证配置
  */
 export function validateConfig(): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
+  const errors: string[] = []
 
   // API Key 和 Secret 只在服务端可用，在服务端时才验证
   if (typeof window === 'undefined') {
     if (!process.env.BINANCE_API_KEY) {
-      errors.push('Missing BINANCE_API_KEY in environment variables');
+      errors.push('Missing BINANCE_API_KEY in environment variables')
     }
   }
 
   if (errors.length > 0) {
-    return { valid: false, errors };
+    return { valid: false, errors }
   }
 
-  return { valid: true, errors: [] };
+  return { valid: true, errors: [] }
 }
 
 /**
@@ -119,7 +119,7 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
  */
 export function getServerConfig() {
   if (typeof window !== 'undefined') {
-    throw new Error('getServerConfig can only be called on the server side');
+    throw new Error('getServerConfig can only be called on the server side')
   }
 
   return {
@@ -129,5 +129,5 @@ export function getServerConfig() {
       apiKey: process.env.BINANCE_API_KEY || '',
       apiSecret: process.env.BINANCE_API_SECRET || '',
     },
-  };
+  }
 }

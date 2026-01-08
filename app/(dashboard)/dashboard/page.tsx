@@ -4,68 +4,59 @@
  * 整合持仓、订单、资产信息
  */
 
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useDashboardData, useDashboardConfig } from '@/lib/hooks';
-import { PositionCards } from '@/components/dashboard/PositionCard';
-import { OrderTable } from '@/components/dashboard/OrderTable';
-import { OrderStats } from '@/components/dashboard/OrderStats';
-import { AssetOverview } from '@/components/dashboard/AssetOverview';
-import { ConfigPanel } from '@/components/dashboard/ConfigPanel';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { EmptyState } from '@/components/common/EmptyState';
-import { useMemo } from 'react';
+import { useState } from 'react'
+import { useDashboardData, useDashboardConfig } from '@/lib/hooks'
+import { PositionCards } from '@/components/dashboard/PositionCard'
+import { OrderTable } from '@/components/dashboard/OrderTable'
+import { OrderStats } from '@/components/dashboard/OrderStats'
+import { AssetOverview } from '@/components/dashboard/AssetOverview'
+import { ConfigPanel } from '@/components/dashboard/ConfigPanel'
+import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { EmptyState } from '@/components/common/EmptyState'
+import { useMemo } from 'react'
 
 export default function DashboardPage() {
-  const [showConfig, setShowConfig] = useState(false);
+  const [showConfig, setShowConfig] = useState(false)
 
   // 获取配置
-  const { config, updateConfig } = useDashboardConfig();
+  const { config, updateConfig } = useDashboardConfig()
 
   // 使用统一接口获取所有数据
-  const {
-    account,
-    positions,
-    orders,
-    orderStats,
-    loading,
-    countdown,
-  } = useDashboardData({
+  const { account, positions, orders, orderStats, loading, countdown } = useDashboardData({
     autoFetch: true,
     refreshInterval: config.refreshInterval,
     orderTimeRange: config.orderTimeRange,
-  });
+  })
 
   // 计算风险等级
   const riskLevel = useMemo(() => {
-    if (!account) return 'low';
-    const balance = parseFloat(account.totalWalletBalance);
-    const profit = parseFloat(account.unrealizedProfit);
-    const profitPercentage = (profit / balance) * 100;
+    if (!account) return 'low'
+    const balance = parseFloat(account.totalWalletBalance)
+    const profit = parseFloat(account.unrealizedProfit)
+    const profitPercentage = (profit / balance) * 100
 
-    if (profitPercentage < -10) return 'high';
-    if (profitPercentage < -5) return 'medium';
-    return 'low';
-  }, [account]);
+    if (profitPercentage < -10) return 'high'
+    if (profitPercentage < -5) return 'medium'
+    return 'low'
+  }, [account])
 
   // 计算盈亏百分比
   const profitPercentage = useMemo(() => {
-    if (!account) return '0';
-    const balance = parseFloat(account.totalWalletBalance);
-    const profit = parseFloat(account.unrealizedProfit);
-    if (balance === 0) return '0';
-    return ((profit / balance) * 100).toFixed(2);
-  }, [account]);
+    if (!account) return '0'
+    const balance = parseFloat(account.totalWalletBalance)
+    const profit = parseFloat(account.unrealizedProfit)
+    if (balance === 0) return '0'
+    return ((profit / balance) * 100).toFixed(2)
+  }, [account])
 
   return (
     <div className="space-y-4">
       {/* 顶部标题 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            交易看板
-          </h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">交易看板</h1>
           <span className="text-xs text-gray-400">
             · 每 {config.refreshInterval / 1000} 秒自动刷新 ({countdown}s)
           </span>
@@ -76,8 +67,18 @@ export default function DashboardPage() {
           title="配置"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
           </svg>
         </button>
       </div>
@@ -155,7 +156,9 @@ export default function DashboardPage() {
                   {/* 订单列表 */}
                   {orders.length === 0 ? (
                     <div className="p-6 text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">最近 1 小时无订单记录</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        最近 1 小时无订单记录
+                      </p>
                     </div>
                   ) : (
                     <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin">
@@ -175,12 +178,12 @@ export default function DashboardPage() {
           refreshInterval={config.refreshInterval}
           orderTimeRangeHours={config.orderTimeRange}
           onSave={(refreshInterval, orderTimeRangeHours) => {
-            updateConfig({ refreshInterval, orderTimeRange: orderTimeRangeHours * 60 * 60 * 1000 });
-            setShowConfig(false);
+            updateConfig({ refreshInterval, orderTimeRange: orderTimeRangeHours * 60 * 60 * 1000 })
+            setShowConfig(false)
           }}
           onCancel={() => setShowConfig(false)}
         />
       )}
     </div>
-  );
+  )
 }

@@ -32,17 +32,17 @@
 
 ## 🛠️ 技术栈
 
-| 类别 | 技术 | 版本 | 说明 |
-|------|------|------|------|
-| **框架** | Next.js | 16.1+ | React 框架，支持 App Router |
-| **语言** | TypeScript | 5.9+ | 严格模式，完整类型检查 |
-| **样式** | Tailwind CSS | 4.x | 原子化 CSS 框架 |
-| **状态管理** | Zustand | 5.x | 轻量级状态管理库 |
-| **数据可视化** | Recharts | 2.x | React 图表库 |
-| **HTTP 客户端** | Axios | 1.7+ | HTTP 请求库 |
-| **WebSocket** | 原生 API | - | 实时数据推送 |
-| **表单验证** | Zod | 4.x | TypeScript 优先的验证库 |
-| **包管理器** | pnpm | 10.x | 快速、节省磁盘空间的包管理器 |
+| 类别            | 技术         | 版本  | 说明                         |
+| --------------- | ------------ | ----- | ---------------------------- |
+| **框架**        | Next.js      | 16.1+ | React 框架，支持 App Router  |
+| **语言**        | TypeScript   | 5.9+  | 严格模式，完整类型检查       |
+| **样式**        | Tailwind CSS | 4.x   | 原子化 CSS 框架              |
+| **状态管理**    | Zustand      | 5.x   | 轻量级状态管理库             |
+| **数据可视化**  | Recharts     | 2.x   | React 图表库                 |
+| **HTTP 客户端** | Axios        | 1.7+  | HTTP 请求库                  |
+| **WebSocket**   | 原生 API     | -     | 实时数据推送                 |
+| **表单验证**    | Zod          | 4.x   | TypeScript 优先的验证库      |
+| **包管理器**    | pnpm         | 10.x  | 快速、节省磁盘空间的包管理器 |
 
 ---
 
@@ -284,6 +284,7 @@ NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
 4. **部署**
 
 点击"Deploy"按钮，Vercel 会自动：
+
 - 安装依赖（`pnpm install`）
 - 构建项目（`pnpm build`）
 - 部署到全球 CDN

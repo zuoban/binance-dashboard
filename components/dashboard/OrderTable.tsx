@@ -2,12 +2,12 @@
  * 订单表格组件
  */
 
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Order, OrderStatus } from '@/types/binance';
-import { formatDistanceToNow } from '@/lib/utils/date';
-import { useExchangeInfo } from '@/lib/hooks';
+import { useState } from 'react'
+import { Order, OrderStatus } from '@/types/binance'
+import { formatDistanceToNow } from '@/lib/utils/date'
+import { useExchangeInfo } from '@/lib/hooks'
 
 /**
  * 获取交易对的价格精度
@@ -16,11 +16,11 @@ function getSymbolPrecision(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): number {
-  const precision = exchangeInfo[symbol]?.pricePrecision;
+  const precision = exchangeInfo[symbol]?.pricePrecision
   if (precision !== undefined) {
-    return precision;
+    return precision
   }
-  return 2;
+  return 2
 }
 
 /**
@@ -31,20 +31,20 @@ function formatPrice(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): string {
-  const num = typeof price === 'string' ? parseFloat(price) : price;
-  if (num === 0) return '0.00';
-  if (isNaN(num)) return '0.00';
-  const precision = getSymbolPrecision(symbol, exchangeInfo);
-  return num.toFixed(precision);
+  const num = typeof price === 'string' ? parseFloat(price) : price
+  if (num === 0) return '0.00'
+  if (isNaN(num)) return '0.00'
+  const precision = getSymbolPrecision(symbol, exchangeInfo)
+  return num.toFixed(precision)
 }
 
 interface OrderTableProps {
   /** 订单列表 */
-  orders: Order[];
+  orders: Order[]
   /** 自定义样式类名 */
-  className?: string;
+  className?: string
   /** 是否为紧凑模式 */
-  compact?: boolean;
+  compact?: boolean
 }
 
 /**
@@ -57,110 +57,108 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
         return {
           label: '已完成',
           className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-        };
+        }
       case 'CANCELED':
         return {
           label: '已撤销',
           className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
+        }
       case 'NEW':
         return {
           label: '新建',
           className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-        };
+        }
       case 'PARTIALLY_FILLED':
         return {
           label: '部分成交',
           className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-        };
+        }
       case 'PENDING_CANCEL':
         return {
           label: '撤销中',
           className: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-        };
+        }
       case 'REJECTED':
         return {
           label: '已拒绝',
           className: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-        };
+        }
       case 'EXPIRED':
         return {
           label: '已过期',
           className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
+        }
       default:
         return {
           label: status,
           className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
+        }
     }
-  };
+  }
 
-  const config = getStatusConfig();
+  const config = getStatusConfig()
 
   return (
     <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${config.className}`}>
       {config.label}
     </span>
-  );
+  )
 }
 
 /**
  * 订单表格
  */
 export function OrderTable({ orders, className = '', compact = false }: OrderTableProps) {
-  const { exchangeInfo } = useExchangeInfo();
-  const [sortField, setSortField] = useState<keyof Order>('time');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const { exchangeInfo } = useExchangeInfo()
+  const [sortField, setSortField] = useState<keyof Order>('time')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // 排序处理（紧凑模式不支持排序）
   const handleSort = (field: keyof Order) => {
-    if (compact) return; // 紧凑模式不支持排序
+    if (compact) return // 紧凑模式不支持排序
 
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortField(field);
-      setSortOrder('desc');
+      setSortField(field)
+      setSortOrder('desc')
     }
-  };
+  }
 
   // 排序后的订单
   const sortedOrders = [...orders].sort((a, b) => {
-    if (compact) return 0; // 紧凑模式不排序
+    if (compact) return 0 // 紧凑模式不排序
 
-    const aVal = a[sortField];
-    const bVal = b[sortField];
+    const aVal = a[sortField]
+    const bVal = b[sortField]
 
     if (typeof aVal === 'number' && typeof bVal === 'number') {
-      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
     }
 
     if (typeof aVal === 'string' && typeof bVal === 'string') {
-      return sortOrder === 'asc'
-        ? aVal.localeCompare(bVal)
-        : bVal.localeCompare(aVal);
+      return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
     }
 
-    return 0;
-  });
+    return 0
+  })
 
   if (orders.length === 0) {
     return (
       <div className={`text-center py-12 ${className}`}>
         <p className="text-gray-500 dark:text-gray-400">暂无订单记录</p>
       </div>
-    );
+    )
   }
 
   // 紧凑模式：只显示关键列
   if (compact) {
     return (
       <div className={`space-y-1.5 ${className}`}>
-        {orders.map((order) => {
-          const executedQty = parseFloat(order.executedQty);
-          const price = parseFloat(order.price);
-          const totalAmount = executedQty * price;
+        {orders.map(order => {
+          const executedQty = parseFloat(order.executedQty)
+          const price = parseFloat(order.price)
+          const totalAmount = executedQty * price
 
           return (
             <div
@@ -190,15 +188,24 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-3">
                   <span className="text-gray-500 dark:text-gray-400">
-                    价格: <span className="font-medium text-gray-900 dark:text-white">${formatPrice(price, order.symbol, exchangeInfo)}</span>
+                    价格:{' '}
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      ${formatPrice(price, order.symbol, exchangeInfo)}
+                    </span>
                   </span>
                   <span className="text-gray-500 dark:text-gray-400">
-                    数量: <span className="font-medium text-gray-900 dark:text-white">{executedQty.toFixed(4)}</span>
+                    数量:{' '}
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {executedQty.toFixed(4)}
+                    </span>
                   </span>
                 </div>
                 <div className="text-right">
                   <span className="text-gray-500 dark:text-gray-400">
-                    金额: <span className="font-semibold text-gray-900 dark:text-white">${totalAmount.toFixed(2)}</span>
+                    金额:{' '}
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      ${totalAmount.toFixed(2)}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -208,10 +215,10 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
                 {formatDistanceToNow(order.time)}
               </div>
             </div>
-          );
+          )
         })}
       </div>
-    );
+    )
   }
 
   return (
@@ -261,7 +268,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
 
         {/* 表体 */}
         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {sortedOrders.map((order) => (
+          {sortedOrders.map(order => (
             <tr key={order.orderId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                 {formatDistanceToNow(order.time)}
@@ -300,5 +307,5 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
         </tbody>
       </table>
     </div>
-  );
+  )
 }

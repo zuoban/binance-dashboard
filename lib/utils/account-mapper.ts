@@ -4,7 +4,7 @@
  * 将币安 API 返回的账户信息映射到我们的类型定义
  */
 
-import { AccountAsset } from '@/types/binance';
+import { AccountAsset } from '@/types/binance'
 
 /**
  * 映射账户信息数据
@@ -64,5 +64,5 @@ export function mapBinanceAccount(data: any): AccountAsset {
     currentLeverage: data.currentLeverage || '1',
     // 保证金模式
     marginMode: data.marginMode || 'cross',
-  };
+  }
 }
