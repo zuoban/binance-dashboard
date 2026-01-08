@@ -1,304 +1,213 @@
-# 币安合约交易信息查看系统
+# 币安合约看板
 
 <div align="center">
 
-**一个现代化的币安合约交易信息查看系统**
+**现代化的币安合约交易信息查看系统**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.x-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
 
-[功能特性](#功能特性) • [快速开始](#快速开始) • [部署](#部署) • [文档](#文档)
+[功能特性](#功能特性) &bull; [快速开始](#快速开始) &bull; [Docker 部署](#docker-部署) &bull; [安全配置](#安全配置)
 
 </div>
 
 ---
 
-## 📋 项目简介
+## 概述
 
-这是一个功能完整的币安合约交易信息查看系统，提供实时持仓监控、历史订单查询、资产概览和数据可视化功能。采用现代化的技术栈构建，注重安全性、性能和用户体验。
+一个功能完整的币安合约交易信息查看系统，提供实时持仓监控、账户资产概览和数据可视化功能。采用现代化技术栈构建，注重安全性与性能。
 
 ### 核心功能
 
-- ✅ **实时持仓监控** - 查看当前持仓仓位、盈亏和风险指标
-- ✅ **历史订单查询** - 支持按交易对、时间范围筛选历史订单
-- ✅ **账户资产概览** - 总览账户余额、可用余额和未实现盈亏
-- ✅ **WebSocket 实时推送** - 自动接收账户数据更新
-- ✅ **数据可视化** - PnL 收益曲线、持仓分布饼图、实时价格走势
-- ✅ **响应式设计** - 完美适配桌面端和移动端
-- 🔒 **安全可靠** - API 密钥服务端管理、速率限制、输入验证
+- **实时持仓监控** - 查看当前持仓仓位、盈亏和风险指标
+- **账户资产概览** - 总览账户余额、可用余额和未实现盈亏
+- **WebSocket 实时推送** - 自动接收账户数据更新
+- **数据可视化** - PnL 收益曲线、持仓分布饼图、实时价格走势
+- **访问码认证** - 可选的访问码保护功能
+- **响应式设计** - 完美适配桌面端和移动端
 
 ---
 
-## 🛠️ 技术栈
+## 技术栈
 
-| 类别 | 技术 | 版本 | 说明 |
-|------|------|------|------|
-| **框架** | Next.js | 16.1+ | React 框架，支持 App Router |
-| **语言** | TypeScript | 5.9+ | 严格模式，完整类型检查 |
-| **样式** | Tailwind CSS | 4.x | 原子化 CSS 框架 |
-| **状态管理** | Zustand | 5.x | 轻量级状态管理库 |
-| **数据可视化** | Recharts | 2.x | React 图表库 |
-| **HTTP 客户端** | Axios | 1.7+ | HTTP 请求库 |
-| **WebSocket** | 原生 API | - | 实时数据推送 |
-| **表单验证** | Zod | 4.x | TypeScript 优先的验证库 |
-| **包管理器** | pnpm | 10.x | 快速、节省磁盘空间的包管理器 |
+| 类别 | 技术 | 说明 |
+|------|------|------|
+| **框架** | Next.js 16 | React 框架，App Router |
+| **语言** | TypeScript 5 | 严格类型检查 |
+| **样式** | Tailwind CSS 4 | 原子化 CSS 框架 |
+| **状态管理** | Zustand | 轻量级状态管理 |
+| **数据可视化** | Recharts | React 图表库 |
+| **HTTP 客户端** | Axios | HTTP 请求库 |
+| **表单验证** | Zod | TypeScript 优先的验证库 |
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 前置要求
 
-- Node.js >= 18.17.0
-- pnpm >= 8.0.0
+- Node.js >= 18
+- pnpm >= 8
 
-### 1. 克隆项目
+### 安装
 
 ```bash
-git clone https://github.com/your-username/binance-dashboard.git
+# 克隆项目
+git clone https://github.com/zuoban/binance-dashboard.git
 cd binance-dashboard
-```
 
-### 2. 安装依赖
-
-```bash
+# 安装依赖
 pnpm install
 ```
 
-### 3. 配置环境变量
-
-复制环境变量模板：
+### 配置环境变量
 
 ```bash
+# 复制环境变量模板
 cp .env.example .env.local
 ```
 
-编辑 `.env.local` 文件，填入你的币安 API 密钥：
+编辑 `.env.local` 文件：
 
 ```env
-# 币安 API 配置
+# 币安 API 配置（必填）
 BINANCE_API_KEY=your_api_key_here
 BINANCE_API_SECRET=your_secret_key_here
 
-# API 端点（使用默认值即可）
+# API 端点（可选，使用默认值即可）
 NEXT_PUBLIC_BINANCE_REST_API=https://fapi.binance.com
 NEXT_PUBLIC_BINANCE_WS_API=wss://fstream.binance.com/ws
 
 # 应用配置
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# 访问码认证（可选）
+# 设置后用户需要输入此访问码才能访问
+# ACCESS_CODE=your-access-code-here
 ```
 
-**⚠️ 重要安全提示：**
-
-1. **创建只读权限的 API 密钥**
-   - 登录币安账户
-   - 进入"API 管理"页面
-   - 创建新密钥时**只勾选"读取"权限**
-   - 不要启用"提现"或"交易"权限
-
-2. **保护密钥安全**
-   - ❌ 不要将 `.env.local` 提交到 Git
-   - ✅ 使用环境变量管理密钥
-   - ✅ 生产环境在部署平台配置环境变量
-
-### 4. 启动开发服务器
+### 启动开发服务器
 
 ```bash
 pnpm dev
 ```
 
-访问 [http://localhost:3000](http://localhost:3000) 查看应用。
+访问 [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 📁 项目结构
+## Docker 部署
+
+### 快速启动
+
+```bash
+# 使用 Docker Compose（推荐）
+docker-compose up -d
+```
+
+### 手动运行
+
+```bash
+docker run -d \
+  --name binance-dashboard \
+  -p 3000:3000 \
+  -e BINANCE_API_KEY=your_api_key \
+  -e BINANCE_API_SECRET=your_api_secret \
+  ghcr.io/zuoban/binance-dashboard:latest
+```
+
+### 镜像信息
+
+- **镜像地址**: `ghcr.io/zuoban/binance-dashboard`
+- **支持架构**: `linux/amd64`、`linux/arm64`
+- **镜像大小**: ~208MB
+- **基础镜像**: node:20-alpine
+
+> 详细的 Docker 部署指南请参阅 [DOCKER.md](DOCKER.md)
+
+---
+
+## 安全配置
+
+### API 密钥保护
+
+**重要**: 请使用具有**只读权限**的币安 API 密钥
+
+1. 登录币安账户，进入"API 管理"页面
+2. 创建新密钥时**仅勾选"读取"权限**
+3. 不要启用"提现"或"交易"权限
+
+### 访问码认证（可选）
+
+设置环境变量 `ACCESS_CODE` 后，用户需要输入正确的访问码才能访问应用：
+
+```env
+ACCESS_CODE=your-random-access-code
+```
+
+建议使用至少 16 字符的随机字符串。
+
+### API 请求保护
+
+- API 密钥仅存储在服务端
+- 通过 Next.js API Routes 代理请求
+- 客户端无法访问敏感信息
+- 使用 Zod 验证所有 API 输入
+
+---
+
+## 项目结构
 
 ```
 binance-dashboard/
 ├── app/                          # Next.js App Router
 │   ├── (dashboard)/              # Dashboard 路由组
 │   │   ├── layout.tsx            # Dashboard 布局
-│   │   ├── page.tsx              # 首页
-│   │   ├── positions/            # 持仓页面
-│   │   ├── orders/               # 订单页面
-│   │   └── assets/               # 资产页面
-│   ├── api/                      # API 路由代理
-│   │   └── binance/
-│   │       ├── account/route.ts
-│   │       ├── positions/route.ts
-│   │       ├── orders/route.ts
-│   │       ├── exchange/route.ts
-│   │       └── listen-key/route.ts
+│   │   └── dashboard/            # 仪表板页面
+│   ├── login/                    # 登录页面（访问码认证）
+│   ├── api/                      # API 路由
+│   │   ├── auth/                 # 认证相关 API
+│   │   └── binance/              # 币安 API 代理
+│   │       ├── account/          # 账户信息
+│   │       ├── positions/        # 持仓信息
+│   │       ├── orders/           # 订单历史
+│   │       ├── exchange/         # 交易所信息
+│   │       ├── exchange-info/    # 交易规则
+│   │       └── listen-key/       # WebSocket 密钥
 │   ├── layout.tsx                # 根布局
-│   └── page.tsx                  # 首页（重定向）
+│   └── page.tsx                  # 首页
 ├── components/
-│   ├── ui/                       # shadcn/ui 基础组件
-│   ├── layout/                   # 布局组件
-│   │   ├── Header.tsx
-│   │   └── Footer.tsx
+│   ├── ui/                       # 基础 UI 组件
 │   ├── dashboard/                # 仪表板组件
-│   │   ├── AssetOverview.tsx
-│   │   ├── PositionCard.tsx
-│   │   ├── OrderTable.tsx
-│   │   ├── PnLChart.tsx
-│   │   ├── PositionDistribution.tsx
-│   │   ├── PriceChart.tsx
-│   │   └── ChartLazy.tsx         # 图表懒加载
+│   │   ├── AssetOverview.tsx     # 资产概览
+│   │   ├── PositionCard.tsx      # 持仓卡片
+│   │   ├── PnLChart.tsx          # 收益曲线
+│   │   └── PositionDistribution.tsx  # 持仓分布
 │   └── common/                   # 通用组件
-│       ├── LoadingSpinner.tsx
-│       ├── ErrorBoundary.tsx
-│       ├── EmptyState.tsx
-│       ├── ConnectionStatus.tsx
-│       └── ChartLoader.tsx
 ├── lib/
 │   ├── binance/                  # 币安 API 集成
 │   │   ├── types.ts              # 类型定义
 │   │   ├── signature.ts          # 签名工具
 │   │   ├── rest-client.ts        # REST API 客户端
-│   │   ├── websocket-client.ts   # WebSocket 客户端
-│   │   └── endpoints.ts          # API 端点配置
-│   ├── config.ts                 # 应用配置
-│   ├── config/
-│   │   └── env.ts                # 环境变量验证
+│   │   └── websocket-client.ts   # WebSocket 客户端
+│   ├── config/                   # 配置文件
 │   ├── hooks/                    # 自定义 Hooks
-│   │   ├── useBinancePositions.ts
-│   │   ├── useBinanceOrders.ts
-│   │   ├── useBinanceAccount.ts
-│   │   ├── useWebSocket.ts
-│   │   └── useBinanceWebSocket.ts
 │   ├── store/                    # Zustand 状态管理
-│   │   ├── positions-store.ts
-│   │   ├── orders-store.ts
-│   │   ├── account-store.ts
-│   │   └── ws-store.ts
-│   ├── middleware/               # 中间件
-│   │   └── rate-limit.ts         # 速率限制
-│   ├── validations/              # 验证 Schema
-│   │   └── api.ts
 │   └── utils/                    # 工具函数
-│       ├── date.ts
-│       └── index.ts
-├── types/
-│   └── binance.ts                # 币安类型定义
-├── .env.example                  # 环境变量模板
-├── .env.local                    # 本地环境变量（不提交）
-├── next.config.ts                # Next.js 配置
-├── tsconfig.json                 # TypeScript 配置
-├── tailwind.config.ts            # Tailwind CSS 配置
-└── package.json
+├── scripts/
+│   ├── check-env.ts              # 环境变量检查
+│   └── test-listenkey.ts         # Listen Key 测试
+├── middleware.ts                 # Next.js 中间件（访问码认证）
+├── Dockerfile                    # Docker 镜像构建
+├── docker-compose.yml            # Docker Compose 配置
+└── build-docker.sh               # 多架构镜像构建脚本
 ```
 
 ---
 
-## 🎯 功能特性详解
-
-### 1. 实时持仓监控
-
-- 查看所有活跃持仓
-- 实时显示未实现盈亏
-- 支持做多/做空方向标识
-- 显示杠杆倍数和保证金模式
-
-### 2. 历史订单查询
-
-- 按交易对筛选订单
-- 支持时间范围查询
-- 订单状态标签（已完成、已撤销、部分成交等）
-- 排序功能（按时间、价格等）
-
-### 3. 账户资产概览
-
-- 总余额和可用余额
-- 未实现盈亏统计
-- 风险等级评估
-- 资产变化趋势图
-
-### 4. 数据可视化
-
-- **PnL 收益曲线** - 显示账户盈亏历史走势
-- **持仓分布饼图** - 各币种持仓占比
-- **实时价格图表** - 交易对价格走势（支持折线图和面积图）
-
-### 5. WebSocket 实时推送
-
-- 自动连接和重连
-- 心跳检测（每 30 秒）
-- Listen Key 自动刷新（每 30 分钟）
-- 连接状态实时显示
-
----
-
-## 🔒 安全特性
-
-### API 密钥保护
-
-- ✅ API 密钥仅存储在服务端
-- ✅ 通过 Next.js API Routes 代理请求
-- ✅ 客户端无法访问敏感信息
-
-### 输入验证
-
-- ✅ 使用 Zod 验证所有 API 输入
-- ✅ 交易对格式验证（XXXUSDT）
-- ✅ 数值范围验证
-- ✅ 类型安全的数据转换
-
-### 速率限制
-
-- ✅ API 路由速率限制（60 次/分钟）
-- ✅ 基于 IP 的限流
-- ✅ 标准 429 响应和 Retry-After 头
-
-### 环境变量验证
-
-- ✅ 启动时验证所有必需配置
-- ✅ 生产环境缺失配置会抛出错误
-- ✅ 开发环境友好提示
-
----
-
-## 📦 部署
-
-### Vercel 部署（推荐）
-
-1. **Fork 并推送到 GitHub**
-
-2. **在 Vercel 中导入项目**
-   - 访问 [vercel.com](https://vercel.com)
-   - 点击"New Project"
-   - 导入你的 GitHub 仓库
-
-3. **配置环境变量**
-
-在 Vercel 项目设置中添加以下环境变量：
-
-```env
-BINANCE_API_KEY=your_api_key_here
-BINANCE_API_SECRET=your_secret_key_here
-NEXT_PUBLIC_BINANCE_REST_API=https://fapi.binance.com
-NEXT_PUBLIC_BINANCE_WS_API=wss://fstream.binance.com/ws
-NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
-```
-
-4. **部署**
-
-点击"Deploy"按钮，Vercel 会自动：
-- 安装依赖（`pnpm install`）
-- 构建项目（`pnpm build`）
-- 部署到全球 CDN
-
-### 其他平台
-
-项目可以部署到任何支持 Next.js 的平台：
-
-- **Netlify** - 支持 Next.js，自动构建
-- **Railway** - 全栈应用部署
-- **自托管** - 使用 Docker 或 Node.js
-
----
-
-## 📝 开发脚本
+## 开发脚本
 
 ```bash
 # 启动开发服务器
@@ -315,11 +224,17 @@ pnpm lint
 
 # 类型检查
 pnpm type-check
+
+# 代码格式化
+pnpm format
+
+# 检查环境变量
+pnpm check
 ```
 
 ---
 
-## 🌐 API 文档
+## API 文档
 
 项目使用币安合约 API 的以下端点：
 
@@ -334,40 +249,37 @@ pnpm type-check
 
 - `wss://fstream.binance.com/ws/<listenKey>` - 用户数据流
 
-完整的 API 文档请参考：[币安合约 API 文档](https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures)
+完整文档: [币安合约 API 文档](https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures)
 
 ---
 
-## 🧪 测试
+## 环境变量参考
 
-项目包含以下测试策略：
-
-1. **类型检查** - TypeScript 严格模式
-2. **环境变量验证** - 启动时自动验证
-3. **API 输入验证** - Zod Schema 验证
-4. **构建测试** - `pnpm build` 验证
+| 变量名 | 必需 | 说明 | 默认值 |
+|--------|------|------|--------|
+| `BINANCE_API_KEY` | ✅ | 币安 API Key | - |
+| `BINANCE_API_SECRET` | ✅ | 币安 API Secret | - |
+| `NEXT_PUBLIC_BINANCE_REST_API` | ❌ | REST API 端点 | `https://fapi.binance.com` |
+| `NEXT_PUBLIC_BINANCE_WS_API` | ❌ | WebSocket API 端点 | `wss://fstream.binance.com/ws` |
+| `NEXT_PUBLIC_APP_URL` | ❌ | 应用访问地址 | `http://localhost:3000` |
+| `ACCESS_CODE` | ❌ | 访问码（留空则不启用） | - |
+| `BINANCE_TESTNET` | ❌ | 使用测试网 | - |
 
 ---
 
-## 🐛 故障排除
+## 故障排除
 
-### 常见问题
+### 提示"API credentials not configured"
 
-**Q: 提示"API credentials not configured"**
+检查 `.env.local` 文件是否正确配置了 API 密钥。
 
-A: 检查 `.env.local` 文件是否正确配置了 API 密钥。
+### WebSocket 连接失败
 
-**Q: WebSocket 连接失败**
+确保网络可以访问 `wss://fstream.binance.com`，检查防火墙设置。
 
-A: 确保网络可以访问 `wss://fstream.binance.com`，检查防火墙设置。
+### 构建失败
 
-**Q: 图表不显示**
-
-A: 确保有持仓数据，图表仅在有数据时显示。
-
-**Q: 构建失败**
-
-A: 删除 `.next` 目录和 `node_modules`，重新安装依赖：
+删除 `.next` 目录和 `node_modules`，重新安装依赖：
 
 ```bash
 rm -rf .next node_modules
@@ -375,40 +287,47 @@ pnpm install
 pnpm build
 ```
 
----
+### Docker 容器无法启动
 
-## 📄 许可证
+```bash
+# 查看容器日志
+docker logs binance-dashboard
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
-
----
-
-## 🤝 贡献指南
-
-欢迎贡献！请遵循以下步骤：
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+# 检查环境变量
+docker inspect binance-dashboard | grep -A 20 "Env"
+```
 
 ---
 
-## 📞 联系方式
+## 部署平台
 
-- 项目主页: [GitHub Repository](https://github.com/your-username/binance-dashboard)
-- 问题反馈: [Issues](https://github.com/your-username/binance-dashboard/issues)
+### Vercel（推荐）
+
+1. 推送代码到 GitHub
+2. 在 [Vercel](https://vercel.com) 中导入项目
+3. 配置环境变量
+4. 部署
+
+### 其他平台
+
+- **Netlify** - 支持 Next.js
+- **Railway** - 全栈应用部署
+- **Docker** - 使用 `docker-compose.yml`
 
 ---
 
-## 🙏 致谢
+## 许可证
+
+MIT License
+
+---
+
+## 致谢
 
 - [Next.js](https://nextjs.org/) - React 框架
 - [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
 - [Zustand](https://zustand-demo.pmnd.rs/) - 状态管理
 - [Recharts](https://recharts.org/) - 图表库
-- [Zod](https://zod.dev/) - 表单验证
 - [币安](https://www.binance.com/) - 交易平台
 
 ---
@@ -417,6 +336,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 **如果这个项目对你有帮助，请给个 ⭐️ Star 支持！**
 
-Made with ❤️ by [Your Name]
+Made with ❤️
 
 </div>
