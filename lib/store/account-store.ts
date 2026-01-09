@@ -8,6 +8,7 @@ import { create } from 'zustand'
 import { AccountAsset } from '@/types/binance'
 import { LoadingState } from '@/types/common'
 import { mapBinanceAccount } from '@/lib/utils/account-mapper'
+import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
 
 interface AccountState {
   // 状态
@@ -95,7 +96,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/binance/account')
+      const response = await fetchWithAuth('/api/binance/account')
       const result = await response.json()
 
       if (!result.success) {

@@ -7,6 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
 
 /**
  * 交易对精度信息
@@ -94,7 +95,7 @@ export function useExchangeInfo(): UseExchangeInfoReturn {
         globalCache.error = null
         notifyListeners()
 
-        const response = await fetch('/api/binance/exchange-info')
+        const response = await fetchWithAuth('/api/binance/exchange-info')
         const result = await response.json()
 
         if (!result.success) {

@@ -8,6 +8,7 @@ import { create } from 'zustand'
 import { Position } from '@/types/binance'
 import { LoadingState } from '@/types/common'
 import { mapBinancePositions } from '@/lib/utils/binance-mapper'
+import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
 
 interface PositionsState {
   // 状态
@@ -78,7 +79,7 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/binance/positions')
+      const response = await fetchWithAuth('/api/binance/positions')
       const result = await response.json()
 
       if (!result.success) {

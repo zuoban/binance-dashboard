@@ -7,6 +7,7 @@
 import { create } from 'zustand'
 import { Order, OrderStatus } from '@/types/binance'
 import { LoadingState } from '@/types/common'
+import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
 
 interface OrdersState {
   // 状态
@@ -136,7 +137,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       }
 
       const queryString = new URLSearchParams(params).toString()
-      const response = await fetch(`/api/binance/orders${queryString ? `?${queryString}` : ''}`)
+      const response = await fetchWithAuth(`/api/binance/orders${queryString ? `?${queryString}` : ''}`)
       const result = await response.json()
 
       if (!result.success) {
