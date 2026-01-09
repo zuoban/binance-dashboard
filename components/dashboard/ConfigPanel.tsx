@@ -21,11 +21,11 @@ interface ConfigPanelProps {
  * 刷新间隔选项（秒）
  */
 const REFRESH_INTERVALS = [
-  { label: '3 秒', value: 3 },
-  { label: '5 秒', value: 5 },
   { label: '10 秒', value: 10 },
   { label: '30 秒', value: 30 },
   { label: '60 秒', value: 60 },
+  { label: '2 分钟', value: 120 },
+  { label: '5 分钟', value: 300 },
 ]
 
 /**

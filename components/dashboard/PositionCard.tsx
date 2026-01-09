@@ -68,9 +68,14 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
   const leverage = parseFloat(position.leverage)
   const positionAmount = parseFloat(position.positionAmount)
   const entryPrice = parseFloat(position.entryPrice)
-  const positionValue = positionAmount * entryPrice
+  const positionValue = Math.abs(positionAmount) * entryPrice
 
-  const isLong = position.positionSide === 'LONG'
+  // 判断持仓方向：
+  // 1. 双向持仓模式：positionSide 为 LONG 或 SHORT
+  // 2. 单向持仓模式：positionSide 为 BOTH，通过 positionAmt 的正负判断（正数为做多，负数为做空）
+  const isLong =
+    position.positionSide === 'LONG' ||
+    (position.positionSide === 'BOTH' && positionAmount > 0)
   const isProfit = unrealizedProfit >= 0
 
   return (
@@ -113,7 +118,7 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
         <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
           <span className="text-xs text-gray-500 dark:text-gray-400">持仓数量</span>
           <span className="text-xs font-medium text-gray-900 dark:text-white">
-            {formatAmount(position.positionAmount, position.symbol, exchangeInfo)}
+            {formatAmount(Math.abs(position.positionAmount), position.symbol, exchangeInfo)}
           </span>
         </div>
 

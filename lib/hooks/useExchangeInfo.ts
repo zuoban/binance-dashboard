@@ -38,18 +38,61 @@ interface UseExchangeInfoReturn {
 }
 
 /**
+ * 全局缓存
+ */
+type CacheState = {
+  data: ExchangeInfoData
+  loading: boolean
+  error: string | null
+  promise: Promise<void> | null
+  listeners: Set<(state: CacheState) => void>
+}
+
+const globalCache: CacheState = {
+  data: {},
+  loading: false,
+  error: null,
+  promise: null,
+  listeners: new Set(),
+}
+
+/**
+ * 通知所有监听器
+ */
+function notifyListeners() {
+  globalCache.listeners.forEach(listener => listener(globalCache))
+}
+
+/**
  * 获取交易规则 Hook
  */
 export function useExchangeInfo(): UseExchangeInfoReturn {
-  const [exchangeInfo, setExchangeInfo] = useState<ExchangeInfoData>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [localState, setLocalState] = useState<CacheState>(() => globalCache)
 
+  // 订阅全局缓存变化
   useEffect(() => {
+    const listener = (state: CacheState) => {
+      setLocalState({ ...state })
+    }
+
+    globalCache.listeners.add(listener)
+
+    return () => {
+      globalCache.listeners.delete(listener)
+    }
+  }, [])
+
+  // 如果没有正在进行的请求且没有数据，则发起请求
+  useEffect(() => {
+    if (globalCache.loading || Object.keys(globalCache.data).length > 0) {
+      return
+    }
+
     const fetchExchangeInfo = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        globalCache.loading = true
+        globalCache.error = null
+        notifyListeners()
 
         const response = await fetch('/api/binance/exchange-info')
         const result = await response.json()
@@ -70,17 +113,23 @@ export function useExchangeInfo(): UseExchangeInfoReturn {
           })
         }
 
-        setExchangeInfo(precisionMap)
+        globalCache.data = precisionMap
+        globalCache.loading = false
+        notifyListeners()
       } catch (err: any) {
         console.error('[ExchangeInfo] 获取失败:', err)
-        setError(err.message || '获取交易规则失败')
-      } finally {
-        setLoading(false)
+        globalCache.error = err.message || '获取交易规则失败'
+        globalCache.loading = false
+        notifyListeners()
       }
     }
 
-    fetchExchangeInfo()
+    globalCache.promise = fetchExchangeInfo()
   }, [])
 
-  return { exchangeInfo, loading, error }
+  return {
+    exchangeInfo: localState.data,
+    loading: localState.loading,
+    error: localState.error,
+  }
 }

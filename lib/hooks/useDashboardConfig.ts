@@ -14,7 +14,7 @@ interface DashboardConfig {
 }
 
 const DEFAULT_CONFIG: DashboardConfig = {
-  refreshInterval: 5000, // 5秒
+  refreshInterval: 10000, // 10秒
   orderTimeRange: 60 * 60 * 1000, // 1小时
 }
 

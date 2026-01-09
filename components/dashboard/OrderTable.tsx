@@ -155,14 +155,14 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
   if (compact) {
     return (
       <div className={`space-y-1.5 ${className}`}>
-        {orders.map(order => {
+        {orders.map((order, index) => {
           const executedQty = parseFloat(order.executedQty)
           const price = parseFloat(order.price)
           const totalAmount = executedQty * price
 
           return (
             <div
-              key={order.orderId}
+              key={order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`}
               className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
             >
               {/* 第一行：交易对 + 方向 + 类型 */}
@@ -268,8 +268,8 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
 
         {/* 表体 */}
         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {sortedOrders.map(order => (
-            <tr key={order.orderId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+          {sortedOrders.map((order, index) => (
+            <tr key={order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                 {formatDistanceToNow(order.time)}
               </td>

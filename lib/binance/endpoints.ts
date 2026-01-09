@@ -96,6 +96,18 @@ export const BinanceEndpoints = {
   } as ApiEndpoint,
 
   /**
+   * 查询成交记录（USER_DATA）
+   * 权重: 20
+   */
+  USER_TRADES: {
+    path: '/fapi/v1/userTrades',
+    method: 'GET',
+    signed: true,
+    needKey: true,
+    weight: 20,
+  } as ApiEndpoint,
+
+  /**
    * 查询订单（USER_DATA）
    * 权重: 5
    */

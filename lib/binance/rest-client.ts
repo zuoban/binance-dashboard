@@ -267,6 +267,25 @@ export class BinanceRestClient {
   }
 
   /**
+   * 获取用户成交记录
+   */
+  async getUserTrades(
+    symbol: string,
+    options?: {
+      startTime?: number
+      endTime?: number
+      fromId?: number
+      limit?: number
+    }
+  ): Promise<any[]> {
+    const params: Record<string, string | number | undefined> = {
+      symbol,
+      ...options,
+    }
+    return this.get(BinanceEndpoints.USER_TRADES.path, params, true)
+  }
+
+  /**
    * 获取单个订单
    */
   async getOrder(symbol: string, orderId?: number, origClientOrderId?: string): Promise<any> {

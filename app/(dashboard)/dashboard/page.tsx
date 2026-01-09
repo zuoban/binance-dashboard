@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useDashboardData, useDashboardConfig } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderTable } from '@/components/dashboard/OrderTable'
@@ -15,10 +15,29 @@ import { AssetOverview } from '@/components/dashboard/AssetOverview'
 import { ConfigPanel } from '@/components/dashboard/ConfigPanel'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
-import { useMemo } from 'react'
 
 export default function DashboardPage() {
   const [showConfig, setShowConfig] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // 客户端挂载后才能显示动态内容
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  /**
+   * 清除服务端缓存
+   */
+  const clearServerCache = async (orderTimeRange?: number) => {
+    try {
+      const url = orderTimeRange
+        ? `/api/binance/dashboard/cache?orderTimeRange=${orderTimeRange}`
+        : '/api/binance/dashboard/cache'
+      await fetch(url, { method: 'DELETE' })
+    } catch (error) {
+      console.error('Failed to clear cache:', error)
+    }
+  }
 
   // 获取配置
   const { config, updateConfig } = useDashboardConfig()
@@ -58,7 +77,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">交易看板</h1>
           <span className="text-xs text-gray-400">
-            · 每 {config.refreshInterval / 1000} 秒自动刷新 ({countdown}s)
+            · 每 {config.refreshInterval / 1000} 秒自动刷新{mounted && ` (${countdown}s)`}
           </span>
         </div>
         <button
@@ -177,8 +196,15 @@ export default function DashboardPage() {
         <ConfigPanel
           refreshInterval={config.refreshInterval}
           orderTimeRangeHours={config.orderTimeRange}
-          onSave={(refreshInterval, orderTimeRangeHours) => {
-            updateConfig({ refreshInterval, orderTimeRange: orderTimeRangeHours * 60 * 60 * 1000 })
+          onSave={async (refreshInterval, orderTimeRangeHours) => {
+            const newOrderTimeRange = orderTimeRangeHours * 60 * 60 * 1000
+
+            // 清除旧的缓存
+            await clearServerCache(config.orderTimeRange)
+
+            // 更新配置（useEffect 会自动触发数据重新获取）
+            updateConfig({ refreshInterval, orderTimeRange: newOrderTimeRange })
+
             setShowConfig(false)
           }}
           onCancel={() => setShowConfig(false)}

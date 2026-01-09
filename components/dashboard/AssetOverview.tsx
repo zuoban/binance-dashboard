@@ -126,18 +126,9 @@ export function AssetOverview({
 
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">权益总额</p>
-            <div className="flex items-center gap-1">
-              <p className={`text-sm font-semibold ${getProfitColor()}`}>
-                ${(parseFloat(balance) + parseFloat(profit || '0')).toFixed(2)}
-              </p>
-              <span className={`text-xs font-medium ${getProfitColor()}`}>
-                (
-                {isNaN(parseFloat(profitPercentage)) || parseFloat(profitPercentage) >= 0
-                  ? '+'
-                  : ''}
-                {isNaN(parseFloat(profitPercentage)) ? '0.00' : profitPercentage}%)
-              </span>
-            </div>
+            <p className={`text-sm font-semibold ${getProfitColor()}`}>
+              ${(parseFloat(balance) + parseFloat(profit || '0')).toFixed(2)}
+            </p>
           </div>
         </div>
       </div>

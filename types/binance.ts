@@ -56,6 +56,8 @@ export type OrderType =
 export type TimeInForce = 'GTC' | 'IOC' | 'FOK' | 'GTX'
 
 export interface Order {
+  /** 成交记录 ID（可选，仅在使用 getUserTrades API 时存在） */
+  id?: number
   /** 订单 ID */
   orderId: number
   /** 交易对 */
