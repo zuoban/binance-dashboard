@@ -2,6 +2,10 @@
  * Footer 布局组件
  */
 
+'use client'
+
+import { useEffect, useState } from 'react'
+
 interface FooterProps {
   /** 自定义样式类名 */
   className?: string
@@ -11,7 +15,13 @@ interface FooterProps {
  * 页脚
  */
 export function Footer({ className = '' }: FooterProps) {
-  const currentYear = new Date().getFullYear()
+  // 初始年份为 2025,客户端挂载后更新为当前年份
+  // 避免 SSR hydration mismatch
+  const [currentYear, setCurrentYear] = useState(2025)
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear())
+  }, [])
 
   return (
     <footer
