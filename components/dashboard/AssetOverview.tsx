@@ -31,7 +31,6 @@ export function AssetOverview({
   balance: externalBalance,
   availableBalance: externalAvailableBalance,
   profit: externalProfit,
-  profitPercentage: externalProfitPercentage,
   riskLevel: externalRiskLevel,
   loading: externalLoading,
 }: AssetOverviewProps) {
@@ -43,7 +42,6 @@ export function AssetOverview({
   const balance = externalBalance ?? internal.balance
   const availableBalance = externalAvailableBalance ?? internal.availableBalance
   const profit = externalProfit ?? internal.profit
-  const profitPercentage = externalProfitPercentage ?? internal.profitPercentage
   const riskLevel = externalRiskLevel ?? internal.riskLevel
   const loading = externalLoading ?? internal.loading
 

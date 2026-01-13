@@ -43,11 +43,12 @@ export default function DashboardPage() {
   const { config, updateConfig } = useDashboardConfig()
 
   // 使用统一接口获取所有数据
-  const { account, positions, orders, orderStats, loading, countdown } = useDashboardData({
-    autoFetch: true,
-    refreshInterval: config.refreshInterval,
-    orderTimeRange: config.orderTimeRange,
-  })
+  const { account, positions, orders, orderStats, openOrdersStats, loading, countdown } =
+    useDashboardData({
+      autoFetch: true,
+      refreshInterval: config.refreshInterval,
+      orderTimeRange: config.orderTimeRange,
+    })
 
   // 计算风险等级
   const riskLevel = useMemo(() => {
@@ -169,7 +170,11 @@ export default function DashboardPage() {
                 <>
                   {/* 订单统计 */}
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                    <OrderStats stats={orderStats} compact={true} />
+                    <OrderStats
+                      stats={orderStats}
+                      openOrdersStats={openOrdersStats}
+                      compact={true}
+                    />
                   </div>
 
                   {/* 订单列表 */}

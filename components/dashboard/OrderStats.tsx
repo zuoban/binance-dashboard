@@ -11,6 +11,12 @@ interface OrderStatsProps {
     filled: number
     totalVolume: number
   }
+  /** 当前委托订单统计数据 */
+  openOrdersStats?: {
+    total: number
+    buy: number
+    sell: number
+  }
   /** 自定义样式类名 */
   className?: string
   /** 是否使用紧凑样式（无边框和背景） */
@@ -33,16 +39,21 @@ function formatNumber(num: number): string {
 /**
  * 订单统计卡片
  */
-export function OrderStats({ stats, className = '', compact = false }: OrderStatsProps) {
+export function OrderStats({
+  stats,
+  openOrdersStats,
+  className = '',
+  compact = false,
+}: OrderStatsProps) {
   return (
     <div
       className={`${compact ? '' : 'bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4'} ${className}`}
     >
-      {/* 统计数据 */}
+      {/* 历史成交统计 */}
       <div className="grid grid-cols-3 gap-3">
         {/* 总订单 */}
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">总订单</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">历史成交</p>
           <p className="text-base font-semibold text-gray-900 dark:text-white">{stats.total}</p>
         </div>
 
@@ -60,6 +71,37 @@ export function OrderStats({ stats, className = '', compact = false }: OrderStat
           <p className="text-base font-semibold text-red-600 dark:text-red-400">{stats.sell}</p>
         </div>
       </div>
+
+      {/* 当前委托统计 */}
+      {openOrdersStats && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="grid grid-cols-3 gap-3">
+            {/* 当前委托总数 */}
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">当前委托</p>
+              <p className="text-base font-semibold text-blue-600 dark:text-blue-400">
+                {openOrdersStats.total}
+              </p>
+            </div>
+
+            {/* 委托买单 */}
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">委托买</p>
+              <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400">
+                {openOrdersStats.buy}
+              </p>
+            </div>
+
+            {/* 委托卖单 */}
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">委托卖</p>
+              <p className="text-base font-semibold text-red-600 dark:text-red-400">
+                {openOrdersStats.sell}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 交易量 */}
       <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">

@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     // 检查缓存
     const cached = dashboardCache.get(cacheKey)
     const now = Date.now()
-    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+    if (cached && now - cached.timestamp < CACHE_TTL) {
       console.log('[Dashboard API] Returning cached data')
       return NextResponse.json({
         success: true,
@@ -140,11 +140,13 @@ export async function GET(request: NextRequest) {
     })
 
     // 并发获取所有数据
-    const [accountInfo, positionsInfo] = await Promise.all([
+    const [accountInfo, positionsInfo, openOrdersInfo] = await Promise.all([
       // 获取账户信息
       client.getAccountInfo(),
       // 获取持仓信息
       client.getPositions(),
+      // 获取当前委托订单
+      client.getOpenOrders(),
     ])
 
     // 映射账户数据
@@ -242,12 +244,20 @@ export async function GET(request: NextRequest) {
       }, 0),
     }
 
+    // 统计当前委托订单
+    const openOrdersStats = {
+      total: openOrdersInfo.length,
+      buy: openOrdersInfo.filter((t: any) => t.side === 'BUY').length,
+      sell: openOrdersInfo.filter((t: any) => t.side === 'SELL').length,
+    }
+
     // 返回结果
     const responseData = {
       account,
       positions,
       orders, // 使用映射后的 orders
       orderStats,
+      openOrdersStats,
       timestamp: Date.now(),
     }
 

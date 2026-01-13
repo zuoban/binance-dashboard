@@ -118,7 +118,7 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
         <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
           <span className="text-xs text-gray-500 dark:text-gray-400">持仓数量</span>
           <span className="text-xs font-medium text-gray-900 dark:text-white">
-            {formatAmount(Math.abs(position.positionAmount), position.symbol, exchangeInfo)}
+            {formatAmount(Math.abs(positionAmount), position.symbol, exchangeInfo)}
           </span>
         </div>
 
