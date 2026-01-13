@@ -43,12 +43,20 @@ export default function DashboardPage() {
   const { config, updateConfig } = useDashboardConfig()
 
   // 使用统一接口获取所有数据
-  const { account, positions, orders, orderStats, openOrdersStats, loading, countdown } =
-    useDashboardData({
-      autoFetch: true,
-      refreshInterval: config.refreshInterval,
-      orderTimeRange: config.orderTimeRange,
-    })
+  const {
+    account,
+    positions,
+    orders,
+    orderStats,
+    openOrdersStats,
+    openOrders,
+    loading,
+    countdown,
+  } = useDashboardData({
+    autoFetch: true,
+    refreshInterval: config.refreshInterval,
+    orderTimeRange: config.orderTimeRange,
+  })
 
   // 计算风险等级
   const riskLevel = useMemo(() => {
@@ -144,7 +152,7 @@ export default function DashboardPage() {
                 <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <PositionCards positions={positions} />
+                  <PositionCards positions={positions} openOrders={openOrders} />
                 </div>
               )}
             </div>

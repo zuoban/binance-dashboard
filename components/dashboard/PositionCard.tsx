@@ -4,7 +4,7 @@
 
 'use client'
 
-import { Position } from '@/types/binance'
+import { Position, Order } from '@/types/binance'
 import { useExchangeInfo } from '@/lib/hooks'
 
 interface PositionCardProps {
@@ -12,6 +12,8 @@ interface PositionCardProps {
   position: Position
   /** 交易规则数据 */
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
+  /** 当前委托订单 */
+  openOrders?: Order[]
   /** 自定义样式类名 */
   className?: string
 }
@@ -63,19 +65,42 @@ function formatAmount(
 /**
  * 单个持仓卡片
  */
-export function PositionCard({ position, exchangeInfo, className = '' }: PositionCardProps) {
+export function PositionCard({
+  position,
+  exchangeInfo,
+  openOrders = [],
+  className = '',
+}: PositionCardProps) {
   const unrealizedProfit = parseFloat(position.unrealizedProfit)
   const leverage = parseFloat(position.leverage)
   const positionAmount = parseFloat(position.positionAmount)
   const entryPrice = parseFloat(position.entryPrice)
   const positionValue = Math.abs(positionAmount) * entryPrice
 
+  // 过滤出与当前持仓相关的委托订单
+  const relatedOpenOrders = openOrders.filter(order => order.symbol === position.symbol)
+
+  // 找到最近的买单（价格最高的买单）
+  const nearbyBuyOrder = relatedOpenOrders
+    .filter(
+      order =>
+        order.side === 'BUY' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
+    )
+    .sort((a, b) => parseFloat(b.price) - parseFloat(a.price))[0]
+
+  // 找到最近的卖单（价格最低的卖单）
+  const nearbySellOrder = relatedOpenOrders
+    .filter(
+      order =>
+        order.side === 'SELL' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
+    )
+    .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))[0]
+
   // 判断持仓方向：
   // 1. 双向持仓模式：positionSide 为 LONG 或 SHORT
   // 2. 单向持仓模式：positionSide 为 BOTH，通过 positionAmt 的正负判断（正数为做多，负数为做空）
   const isLong =
-    position.positionSide === 'LONG' ||
-    (position.positionSide === 'BOTH' && positionAmount > 0)
+    position.positionSide === 'LONG' || (position.positionSide === 'BOTH' && positionAmount > 0)
   const isProfit = unrealizedProfit >= 0
 
   return (
@@ -144,6 +169,26 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
             </span>
           </div>
         )}
+
+        {/* 最近委托买单 */}
+        {nearbyBuyOrder && (
+          <div className="flex justify-between items-center py-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">委托买价</span>
+            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              ${formatPrice(nearbyBuyOrder.price, position.symbol, exchangeInfo)}
+            </span>
+          </div>
+        )}
+
+        {/* 最近委托卖单 */}
+        {nearbySellOrder && (
+          <div className="flex justify-between items-center py-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">委托卖价</span>
+            <span className="text-xs font-medium text-red-600 dark:text-red-400">
+              ${formatPrice(nearbySellOrder.price, position.symbol, exchangeInfo)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 底部：未实现盈亏 */}
@@ -173,11 +218,13 @@ export function PositionCard({ position, exchangeInfo, className = '' }: Positio
 interface PositionCardsProps {
   /** 持仓列表 */
   positions: Position[]
+  /** 当前委托订单 */
+  openOrders?: Order[]
   /** 自定义样式类名 */
   className?: string
 }
 
-export function PositionCards({ positions, className = '' }: PositionCardsProps) {
+export function PositionCards({ positions, openOrders, className = '' }: PositionCardsProps) {
   const { exchangeInfo } = useExchangeInfo()
 
   if (positions.length === 0) {
@@ -191,7 +238,12 @@ export function PositionCards({ positions, className = '' }: PositionCardsProps)
   return (
     <div className={`space-y-3 ${className}`}>
       {positions.map(position => (
-        <PositionCard key={position.symbol} position={position} exchangeInfo={exchangeInfo} />
+        <PositionCard
+          key={position.symbol}
+          position={position}
+          exchangeInfo={exchangeInfo}
+          openOrders={openOrders}
+        />
       ))}
     </div>
   )

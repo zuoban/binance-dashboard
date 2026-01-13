@@ -27,6 +27,7 @@ interface DashboardData {
     buy: number
     sell: number
   }
+  openOrders: any[]
 }
 
 interface UseDashboardDataOptions {
@@ -49,6 +50,8 @@ interface UseDashboardDataReturn {
   orderStats: DashboardData['orderStats']
   /** 当前委托订单统计 */
   openOrdersStats: DashboardData['openOrdersStats']
+  /** 当前委托订单数据 */
+  openOrders: any[]
   /** 加载状态 */
   loading: boolean
   /** 错误信息 */
@@ -84,6 +87,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       buy: 0,
       sell: 0,
     },
+    openOrders: [],
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -150,6 +154,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
           buy: 0,
           sell: 0,
         },
+        openOrders: result.data.openOrders || [],
       })
 
       isFirstLoadRef.current = false
@@ -225,6 +230,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     orders: data.orders,
     orderStats: data.orderStats,
     openOrdersStats: data.openOrdersStats,
+    openOrders: data.openOrders,
     loading,
     error,
     countdown,

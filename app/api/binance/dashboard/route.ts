@@ -45,6 +45,37 @@ function mapTradeToOrder(trade: any): Order {
 }
 
 /**
+ * 将 getOpenOrders API 返回的数据映射为 Order 类型
+ */
+function mapOpenOrderToOrder(order: any): Order {
+  return {
+    orderId: order.orderId,
+    symbol: order.symbol,
+    clientOrderId: order.clientOrderId,
+    price: order.price,
+    origQty: order.origQty,
+    executedQty: order.executedQty,
+    cumQuote: order.cumQuote,
+    status: order.status,
+    timeInForce: order.timeInForce,
+    type: order.type,
+    side: order.side,
+    stopPrice: order.stopPrice || '0',
+    icebergQty: order.icebergQty || '0',
+    time: order.time,
+    updateTime: order.updateTime,
+    reduceOnly: order.reduceOnly || false,
+    closePosition: order.closePosition || false,
+    positionSide: order.positionSide || 'BOTH',
+    workingType: order.workingType || 'CONTRACT_PRICE',
+    origType: order.origType || order.type,
+    priceMatch: order.priceMatch || 'NONE',
+    selfTradePreventionMode: order.selfTradePreventionMode || 'EXPIRE_NONE',
+    priceProtect: order.priceProtect || false,
+  }
+}
+
+/**
  * 默认订单时间范围（1小时）
  */
 const DEFAULT_ORDER_TIME_RANGE = 60 * 60 * 1000
@@ -251,6 +282,9 @@ export async function GET(request: NextRequest) {
       sell: openOrdersInfo.filter((t: any) => t.side === 'SELL').length,
     }
 
+    // 映射当前委托订单为 Order 类型
+    const openOrders = openOrdersInfo.map(mapOpenOrderToOrder)
+
     // 返回结果
     const responseData = {
       account,
@@ -258,6 +292,7 @@ export async function GET(request: NextRequest) {
       orders, // 使用映射后的 orders
       orderStats,
       openOrdersStats,
+      openOrders, // 完整的当前委托订单数据
       timestamp: Date.now(),
     }
 
