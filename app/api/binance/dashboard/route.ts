@@ -198,20 +198,9 @@ export async function GET(request: NextRequest) {
     // 使用getUserTrades获取成交记录，而不是getAllOrders
     const allTrades: any[] = []
 
-    // 定义要查询的交易对（持仓交易对 + 主流币种）
-    const commonSymbols = [
-      'BTCUSDT',
-      'ETHUSDT',
-      'BNBUSDT',
-      'SOLUSDT',
-      'XRPUSDT',
-      'DOGEUSDT',
-      'ADAUSDT',
-      'AVAXUSDT',
-      'DOTUSDT',
-      'MATICUSDT',
-    ]
-    const symbolsToCheck = Array.from(new Set([...symbols, ...commonSymbols]))
+    // 只查询当前持仓的交易对，减少不必要的API调用
+    // 如果没有持仓，则不查询任何交易对
+    const symbolsToCheck = symbols.length > 0 ? symbols : []
 
     // 使用滑动窗口策略获取成交记录
     const windowSize = 6 * 60 * 60 * 1000 // 6小时窗口
@@ -234,8 +223,13 @@ export async function GET(request: NextRequest) {
               allTrades.push(...trades.map((t: any) => ({ ...t, symbol })))
             }
 
-            // 移动窗口
-            currentEndTime = currentStartTime - 1
+            // 如果返回的记录少于限制值，说明没有更多数据了，停止查询
+            if (trades.length < 1000) {
+              hasMore = false
+            } else {
+              // 移动窗口
+              currentEndTime = currentStartTime - 1
+            }
 
             if (currentEndTime <= orderStartTime) {
               hasMore = false

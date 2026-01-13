@@ -154,15 +154,8 @@ export function PositionCard({
           </span>
         </div>
 
-        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-          <span className="text-xs text-gray-500 dark:text-gray-400">标记价格</span>
-          <span className="text-xs font-medium text-gray-900 dark:text-white">
-            ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
-          </span>
-        </div>
-
         {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 && (
-          <div className="flex justify-between items-center py-1.5">
+          <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
             <span className="text-xs text-gray-500 dark:text-gray-400">强平价格</span>
             <span className="text-xs font-medium text-red-600 dark:text-red-400">
               ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
@@ -172,21 +165,51 @@ export function PositionCard({
 
         {/* 最近委托买单 */}
         {nearbyBuyOrder && (
-          <div className="flex justify-between items-center py-1.5">
+          <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
             <span className="text-xs text-gray-500 dark:text-gray-400">委托买价</span>
-            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              ${formatPrice(nearbyBuyOrder.price, position.symbol, exchangeInfo)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                ${formatPrice(nearbyBuyOrder.price, position.symbol, exchangeInfo)}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                (
+                {(
+                  ((parseFloat(position.markPrice) - parseFloat(nearbyBuyOrder.price)) /
+                    parseFloat(position.markPrice)) *
+                  100
+                ).toFixed(2)}
+                %)
+              </span>
+            </div>
           </div>
         )}
+
+        {/* 标记价格 */}
+        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
+          <span className="text-xs text-gray-500 dark:text-gray-400">标记价格</span>
+          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+            ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
+          </span>
+        </div>
 
         {/* 最近委托卖单 */}
         {nearbySellOrder && (
           <div className="flex justify-between items-center py-1.5">
             <span className="text-xs text-gray-500 dark:text-gray-400">委托卖价</span>
-            <span className="text-xs font-medium text-red-600 dark:text-red-400">
-              ${formatPrice(nearbySellOrder.price, position.symbol, exchangeInfo)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                ${formatPrice(nearbySellOrder.price, position.symbol, exchangeInfo)}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                (
+                {(
+                  ((parseFloat(nearbySellOrder.price) - parseFloat(position.markPrice)) /
+                    parseFloat(position.markPrice)) *
+                  100
+                ).toFixed(2)}
+                %)
+              </span>
+            </div>
           </div>
         )}
       </div>
