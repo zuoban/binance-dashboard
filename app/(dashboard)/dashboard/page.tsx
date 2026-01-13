@@ -188,9 +188,7 @@ export default function DashboardPage() {
                   {/* 订单列表 */}
                   {orders.length === 0 ? (
                     <div className="p-6 text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        最近 1 小时无订单记录
-                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">无订单记录</p>
                     </div>
                   ) : (
                     <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin">
