@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useDashboardData, useDashboardConfig } from '@/lib/hooks'
+import { useDashboardWebSocket, useDashboardConfig } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderTable } from '@/components/dashboard/OrderTable'
 import { ConfigPanel } from '@/components/dashboard/ConfigPanel'
@@ -16,22 +16,18 @@ import { EmptyState } from '@/components/common/EmptyState'
 
 export default function DashboardPage() {
   const [showConfig, setShowConfig] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   // 客户端挂载后才能显示动态内容
   useEffect(() => {
-    setMounted(true)
+    // 确保客户端渲染完成
   }, [])
 
   /**
    * 清除服务端缓存
    */
-  const clearServerCache = async (orderTimeRange?: number) => {
+  const clearServerCache = async () => {
     try {
-      const url = orderTimeRange
-        ? `/api/binance/dashboard/cache?orderTimeRange=${orderTimeRange}`
-        : '/api/binance/dashboard/cache'
-      await fetch(url, { method: 'DELETE' })
+      await fetch('/api/binance/dashboard/cache', { method: 'DELETE' })
     } catch (error) {
       console.error('Failed to clear cache:', error)
     }
@@ -40,7 +36,7 @@ export default function DashboardPage() {
   // 获取配置
   const { config, updateConfig } = useDashboardConfig()
 
-  // 使用统一接口获取所有数据
+  // 使用 WebSocket 接收实时数据
   const {
     account,
     positions,
@@ -48,11 +44,18 @@ export default function DashboardPage() {
     openOrdersStats,
     openOrders,
     loading,
-    countdown,
-  } = useDashboardData({
-    autoFetch: true,
-    refreshInterval: config.refreshInterval,
-    orderTimeRange: config.orderTimeRange,
+    isConnected,
+    isConnecting,
+    lastUpdate,
+    reconnect,
+  } = useDashboardWebSocket({
+    autoConnect: true,
+    onError: (err) => {
+      console.error('[Dashboard] WebSocket error:', err)
+    },
+    onConnectionChange: (connected) => {
+      console.log('[Dashboard] Connection state changed:', connected)
+    },
   })
 
   return (
@@ -61,30 +64,64 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">交易看板</h1>
-          <span className="text-xs text-gray-400">
-            · 每 {config.refreshInterval / 1000} 秒自动刷新{mounted && ` (${countdown}s)`}
-          </span>
+          {/* WebSocket 连接状态 */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnecting
+                  ? 'bg-yellow-400 animate-pulse'
+                  : isConnected
+                  ? 'bg-green-400'
+                  : 'bg-red-400'
+              }`}
+              title={isConnecting ? '连接中...' : isConnected ? '已连接' : '未连接'}
+            />
+            <span className="text-xs text-gray-400">
+              {isConnecting
+                ? '连接中...'
+                : isConnected
+                ? '实时连接'
+                : '连接断开'}
+            </span>
+            {lastUpdate && (
+              <span className="text-xs text-gray-500">
+                · 更新于 {new Date(lastUpdate).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => setShowConfig(true)}
-          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          title="配置"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 重新连接按钮 */}
+          {!isConnected && !isConnecting && (
+            <button
+              onClick={reconnect}
+              className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+              title="重新连接"
+            >
+              重连
+            </button>
+          )}
+          <button
+            onClick={() => setShowConfig(true)}
+            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            title="配置"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* 加载状态 */}
@@ -182,7 +219,7 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin">
-                      <OrderTable orders={orders.slice(0, 5)} compact={true} />
+                      <OrderTable orders={orders} compact={true} />
                     </div>
                   )}
                 </>
@@ -197,15 +234,12 @@ export default function DashboardPage() {
       {showConfig && (
         <ConfigPanel
           refreshInterval={config.refreshInterval}
-          orderTimeRangeHours={config.orderTimeRange}
-          onSave={async (refreshInterval, orderTimeRangeHours) => {
-            const newOrderTimeRange = orderTimeRangeHours * 60 * 60 * 1000
-
+          onSave={async (refreshInterval) => {
             // 清除旧的缓存
-            await clearServerCache(config.orderTimeRange)
+            await clearServerCache()
 
             // 更新配置（useEffect 会自动触发数据重新获取）
-            updateConfig({ refreshInterval, orderTimeRange: newOrderTimeRange })
+            updateConfig({ refreshInterval })
 
             setShowConfig(false)
           }}

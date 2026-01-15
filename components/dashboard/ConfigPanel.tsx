@@ -9,10 +9,8 @@ import { useState } from 'react'
 interface ConfigPanelProps {
   /** 自动刷新间隔（秒） */
   refreshInterval: number
-  /** 订单查询时间范围（小时） */
-  orderTimeRangeHours: number
   /** 保存配置 */
-  onSave: (refreshInterval: number, orderTimeRangeHours: number) => void
+  onSave: (refreshInterval: number) => void
   /** 取消 */
   onCancel: () => void
 }
@@ -29,33 +27,17 @@ const REFRESH_INTERVALS = [
 ]
 
 /**
- * 订单时间范围选项（小时）
- */
-const ORDER_TIME_RANGES = [
-  { label: '30 分钟', value: 0.5 },
-  { label: '1 小时', value: 1 },
-  { label: '2 小时', value: 2 },
-  { label: '6 小时', value: 6 },
-  { label: '12 小时', value: 12 },
-  { label: '24 小时', value: 24 },
-]
-
-/**
  * 配置面板
  */
 export function ConfigPanel({
   refreshInterval,
-  orderTimeRangeHours,
   onSave,
   onCancel,
 }: ConfigPanelProps) {
   const [localRefreshInterval, setLocalRefreshInterval] = useState(refreshInterval / 1000)
-  const [localOrderTimeRange, setLocalOrderTimeRange] = useState(
-    orderTimeRangeHours / (60 * 60 * 1000)
-  )
 
   const handleSave = () => {
-    onSave(localRefreshInterval * 1000, localOrderTimeRange)
+    onSave(localRefreshInterval * 1000)
   }
 
   return (
@@ -93,28 +75,6 @@ export function ConfigPanel({
                   onClick={() => setLocalRefreshInterval(option.value)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     localRefreshInterval === option.value
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 订单查询时间范围 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              订单查询时间范围
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {ORDER_TIME_RANGES.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setLocalOrderTimeRange(option.value)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    localOrderTimeRange === option.value
                       ? 'bg-emerald-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}

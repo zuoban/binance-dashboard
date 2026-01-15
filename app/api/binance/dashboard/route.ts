@@ -10,90 +10,66 @@ import { getServerConfig } from '@/lib/config'
 import { checkRateLimit } from '@/lib/middleware/rate-limit'
 import { mapBinancePosition } from '@/lib/utils/binance-mapper'
 import { mapBinanceAccount } from '@/lib/utils/account-mapper'
-import { Order } from '@/types/binance'
 
 /**
- * 将 getUserTrades API 返回的数据映射为 Order 类型
+ * 简化的订单类型（只保留页面需要的字段）
  */
-function mapTradeToOrder(trade: any): Order {
+interface SimpleOrder {
+  orderId: number
+  symbol: string
+  price: string
+  origQty: string
+  executedQty: string
+  side: 'BUY' | 'SELL'
+  status: string
+  time: number
+  updateTime: number
+}
+
+/**
+ * 将 getUserTrades API 返回的数据映射为简化订单类型
+ */
+function mapTradeToOrder(trade: any): SimpleOrder {
   return {
-    id: trade.id,
     orderId: trade.orderId,
     symbol: trade.symbol,
-    clientOrderId: trade.orderId.toString(), // 使用 orderId 作为 clientOrderId
     price: trade.price,
-    origQty: trade.qty, // 使用成交数量作为原始数量
+    origQty: trade.qty,
     executedQty: trade.qty,
-    cumQuote: trade.quoteQty,
-    status: 'FILLED', // 成交记录都是已完成的
-    timeInForce: 'GTC',
-    type: trade.orderId ? 'LIMIT' : 'MARKET', // 假设有 orderId 的是限价单
-    side: trade.side, // 'BUY' or 'SELL'
-    stopPrice: '0',
-    icebergQty: '0',
+    side: trade.side,
+    status: 'FILLED',
     time: trade.time,
     updateTime: trade.time,
-    reduceOnly: false,
-    closePosition: false,
-    positionSide: 'BOTH',
-    workingType: 'CONTRACT_PRICE',
-    origType: 'LIMIT',
-    priceMatch: 'NONE',
-    selfTradePreventionMode: 'EXPIRE_NONE',
-    priceProtect: false,
   }
 }
 
 /**
- * 将 getOpenOrders API 返回的数据映射为 Order 类型
+ * 将 getOpenOrders API 返回的数据映射为简化订单类型
  */
-function mapOpenOrderToOrder(order: any): Order {
+function mapOpenOrderToOrder(order: any): SimpleOrder {
   return {
     orderId: order.orderId,
     symbol: order.symbol,
-    clientOrderId: order.clientOrderId,
     price: order.price,
     origQty: order.origQty,
     executedQty: order.executedQty,
-    cumQuote: order.cumQuote,
-    status: order.status,
-    timeInForce: order.timeInForce,
-    type: order.type,
     side: order.side,
-    stopPrice: order.stopPrice || '0',
-    icebergQty: order.icebergQty || '0',
+    status: order.status,
     time: order.time,
     updateTime: order.updateTime,
-    reduceOnly: order.reduceOnly || false,
-    closePosition: order.closePosition || false,
-    positionSide: order.positionSide || 'BOTH',
-    workingType: order.workingType || 'CONTRACT_PRICE',
-    origType: order.origType || order.type,
-    priceMatch: order.priceMatch || 'NONE',
-    selfTradePreventionMode: order.selfTradePreventionMode || 'EXPIRE_NONE',
-    priceProtect: order.priceProtect || false,
   }
 }
 
-/**
- * 默认订单时间范围（1小时）
- */
+/** 默认订单时间范围（1小时） */
 const DEFAULT_ORDER_TIME_RANGE = 60 * 60 * 1000
 
-/**
- * 缓存时间（10秒）
- */
+/** 缓存时间（10秒） */
 const CACHE_TTL = 10000
 
-/**
- * 内存缓存
- */
+/** 内存缓存 */
 const dashboardCache = new Map<string, { data: any; timestamp: number }>()
 
-/**
- * 每日快照存储（用于计算已实现盈亏）
- * 存储格式: { date: 'YYYY-MM-DD', balance: number, unrealizedProfit: number }
- */
+/** 每日快照存储（用于计算已实现盈亏） */
 let dailySnapshot: { date: string; balance: number; unrealizedProfit: number } | null = null
 
 /**
@@ -193,24 +169,8 @@ export async function GET(request: NextRequest) {
 
     let todayRealizedPnl = 0
 
-    // 先计算当前的余额和未实现盈亏（需要等 account 映射完成后）
-    // 我们会在后面处理这个逻辑
-
     // 映射账户数据
     const account = mapBinanceAccount(accountInfo)
-
-    // 计算总余额的 USD 价值（从所有资产汇总）
-    const calculateTotalUsdBalance = (assets: any[]) => {
-      return assets.reduce((total, asset) => {
-        const balance = parseFloat(asset.walletBalance || '0')
-        // 对于稳定币，直接使用余额
-        if (asset.asset === 'USDT' || asset.asset === 'USDC' || asset.asset === 'FDUSD' || asset.asset === 'BUSD') {
-          return total + balance
-        }
-        // 对于其他资产，需要获取价格（这里先返回 0，价格会在后面获取）
-        return total
-      }, 0)
-    }
 
     // 获取非稳定币的价格
     const nonStableCoins = accountInfo.assets?.filter((a: any) =>
@@ -260,7 +220,14 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // 只有稳定币，直接计算
-      const totalUsdBalance = calculateTotalUsdBalance(accountInfo.assets || [])
+      const totalUsdBalance = accountInfo.assets?.reduce((total: number, asset: any) => {
+        const balance = parseFloat(asset.walletBalance || '0')
+        if (asset.asset === 'USDT' || asset.asset === 'USDC' || asset.asset === 'FDUSD' || asset.asset === 'BUSD') {
+          return total + balance
+        }
+        return total
+      }, 0) || 0
+
       account.totalWalletBalance = totalUsdBalance.toString()
       account.availableBalance = totalUsdBalance.toString()
     }
@@ -323,45 +290,54 @@ export async function GET(request: NextRequest) {
     // 如果没有持仓，则不查询任何交易对
     const symbolsToCheck = symbols.length > 0 ? symbols : []
 
-    // 使用滑动窗口策略获取成交记录
+    // 使用滑动窗口策略获取成交记录（串行查询，优化性能）
     const windowSize = 6 * 60 * 60 * 1000 // 6小时窗口
-    await Promise.all(
-      symbolsToCheck.map(async (symbol: string) => {
-        let currentEndTime = orderEndTime
-        let hasMore = true
 
-        while (hasMore) {
-          const currentStartTime = Math.max(orderStartTime, currentEndTime - windowSize)
+    for (const symbol of symbolsToCheck) {
+      let currentEndTime = orderEndTime
+      let hasMore = true
 
-          try {
-            const trades = await client.getUserTrades(symbol, {
-              startTime: currentStartTime,
-              endTime: currentEndTime,
-              limit: 1000,
-            })
+      while (hasMore) {
+        const currentStartTime = Math.max(orderStartTime, currentEndTime - windowSize)
 
-            if (trades.length > 0) {
-              allTrades.push(...trades.map((t: any) => ({ ...t, symbol })))
-            }
+        try {
+          const trades = await client.getUserTrades(symbol, {
+            startTime: currentStartTime,
+            endTime: currentEndTime,
+            limit: 1000,
+          })
 
-            // 如果返回的记录少于限制值，说明没有更多数据了，停止查询
-            if (trades.length < 1000) {
-              hasMore = false
-            } else {
-              // 移动窗口
-              currentEndTime = currentStartTime - 1
-            }
+          if (trades.length > 0) {
+            allTrades.push(...trades.map((t: any) => ({ ...t, symbol })))
+          }
 
-            if (currentEndTime <= orderStartTime) {
-              hasMore = false
-            }
-          } catch (error) {
-            // 忽略没有交易的错误
+          // 如果已经收集到足够的订单，提前退出
+          if (allTrades.length >= 100) {
+            break
+          }
+
+          // 如果返回的记录少于限制值，说明没有更多数据了，停止查询
+          if (trades.length < 1000) {
+            hasMore = false
+          } else {
+            // 移动窗口
+            currentEndTime = currentStartTime - 1
+          }
+
+          if (currentEndTime <= orderStartTime) {
             hasMore = false
           }
+        } catch (error) {
+          // 忽略没有交易的错误
+          hasMore = false
         }
-      })
-    )
+      }
+
+      // 如果已经有足够的数据，就不再查询其他交易对
+      if (allTrades.length >= symbolsToCheck.length * 20) {
+        break
+      }
+    }
 
     // 去重：使用 id + symbol 作为唯一标识
     const uniqueTradesMap = new Map<string, any>()
@@ -376,19 +352,8 @@ export async function GET(request: NextRequest) {
     // 按时间排序（最新的在前）
     uniqueTrades.sort((a, b) => b.time - a.time)
 
-    // 映射为 Order 类型
-    const orders = uniqueTrades.map(mapTradeToOrder)
-
-    // 统计订单
-    const orderStats = {
-      total: orders.length,
-      buy: orders.filter((t: Order) => t.side === 'BUY').length,
-      sell: orders.filter((t: Order) => t.side === 'SELL').length,
-      filled: orders.length,
-      totalVolume: orders.reduce((sum: number, t: Order) => {
-        return sum + parseFloat(t.executedQty) * parseFloat(t.price)
-      }, 0),
-    }
+    // 只返回最近 5 条订单
+    const orders = uniqueTrades.slice(0, 5).map(mapTradeToOrder)
 
     // 统计当前委托订单
     const openOrdersStats = {
@@ -397,7 +362,7 @@ export async function GET(request: NextRequest) {
       sell: openOrdersInfo.filter((t: any) => t.side === 'SELL').length,
     }
 
-    // 映射当前委托订单为 Order 类型
+    // 映射当前委托订单为简化 Order 类型
     const openOrders = openOrdersInfo.map(mapOpenOrderToOrder)
 
     // 返回结果
@@ -405,7 +370,6 @@ export async function GET(request: NextRequest) {
       account,
       positions,
       orders, // 使用映射后的 orders
-      orderStats,
       openOrdersStats,
       openOrders, // 完整的当前委托订单数据
       todayRealizedPnl, // 今日已实现盈亏

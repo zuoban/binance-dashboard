@@ -12,13 +12,6 @@ interface DashboardData {
   account: AccountAsset | null
   positions: any[]
   orders: any[]
-  orderStats: {
-    total: number
-    buy: number
-    sell: number
-    filled: number
-    totalVolume: number
-  }
   openOrdersStats: {
     total: number
     buy: number
@@ -45,8 +38,6 @@ interface UseDashboardDataReturn {
   positions: any[]
   /** 订单数据 */
   orders: any[]
-  /** 订单统计 */
-  orderStats: DashboardData['orderStats']
   /** 当前委托订单统计 */
   openOrdersStats: DashboardData['openOrdersStats']
   /** 当前委托订单数据 */
@@ -76,13 +67,6 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     account: null,
     positions: [],
     orders: [],
-    orderStats: {
-      total: 0,
-      buy: 0,
-      sell: 0,
-      filled: 0,
-      totalVolume: 0,
-    },
     openOrdersStats: {
       total: 0,
       buy: 0,
@@ -144,13 +128,6 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
         account: result.data.account,
         positions: result.data.positions || [],
         orders: result.data.orders || [],
-        orderStats: result.data.orderStats || {
-          total: 0,
-          buy: 0,
-          sell: 0,
-          filled: 0,
-          totalVolume: 0,
-        },
         openOrdersStats: result.data.openOrdersStats || {
           total: 0,
           buy: 0,
@@ -231,7 +208,6 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     account: data.account,
     positions: data.positions,
     orders: data.orders,
-    orderStats: data.orderStats,
     openOrdersStats: data.openOrdersStats,
     openOrders: data.openOrders,
     todayRealizedPnl: data.todayRealizedPnl,

@@ -9,13 +9,10 @@ import { useState, useEffect } from 'react'
 interface DashboardConfig {
   /** 自动刷新间隔（毫秒） */
   refreshInterval: number
-  /** 订单查询时间范围（毫秒） */
-  orderTimeRange: number
 }
 
 const DEFAULT_CONFIG: DashboardConfig = {
   refreshInterval: 10000, // 10秒
-  orderTimeRange: 60 * 60 * 1000, // 1小时
 }
 
 const STORAGE_KEY = 'dashboard_config'
