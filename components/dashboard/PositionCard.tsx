@@ -6,6 +6,7 @@
 
 import { Position, Order } from '@/types/binance'
 import { useExchangeInfo } from '@/lib/hooks'
+import { useMemo } from 'react'
 
 interface PositionCardProps {
   /** 持仓数据 */
@@ -25,11 +26,7 @@ function getSymbolPrecision(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): number {
-  const precision = exchangeInfo[symbol]?.pricePrecision
-  if (precision !== undefined) {
-    return precision
-  }
-  return 2
+  return exchangeInfo[symbol]?.pricePrecision ?? 2
 }
 
 /**
@@ -41,8 +38,7 @@ function formatPrice(
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): string {
   const num = typeof price === 'string' ? parseFloat(price) : price
-  if (num === 0) return '0.00'
-  if (isNaN(num)) return '0.00'
+  if (num === 0 || Number.isNaN(num)) return '0.00'
   const precision = getSymbolPrecision(symbol, exchangeInfo)
   return num.toFixed(precision)
 }
@@ -56,10 +52,52 @@ function formatAmount(
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
 ): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
-  if (num === 0) return '0'
-  if (isNaN(num)) return '0'
-  const precision = exchangeInfo[symbol]?.quantityPrecision || 3
+  if (num === 0 || Number.isNaN(num)) return '0'
+  const precision = exchangeInfo[symbol]?.quantityPrecision ?? 3
   return num.toFixed(precision)
+}
+
+/**
+ * 计算价格百分比
+ */
+function calculatePercentage(basePrice: string, targetPrice: string): number {
+  const base = parseFloat(basePrice)
+  const target = parseFloat(targetPrice)
+  if (base === 0 || Number.isNaN(base) || Number.isNaN(target)) return 0
+  return ((target - base) / base) * 100
+}
+
+/**
+ * 判断是否为做多
+ */
+function isLongPosition(position: Position): boolean {
+  return (
+    position.positionSide === 'LONG' ||
+    (position.positionSide === 'BOTH' && parseFloat(position.positionAmount) > 0)
+  )
+}
+
+/**
+ * 获取最近的买卖单
+ */
+function getNearbyOrders(orders: Order[], symbol: string) {
+  const relatedOrders = orders.filter(order => order.symbol === symbol)
+
+  const nearbyBuyOrder = relatedOrders
+    .filter(
+      order =>
+        order.side === 'BUY' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
+    )
+    .sort((a, b) => parseFloat(b.price) - parseFloat(a.price))[0]
+
+  const nearbySellOrder = relatedOrders
+    .filter(
+      order =>
+        order.side === 'SELL' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
+    )
+    .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))[0]
+
+  return { nearbyBuyOrder, nearbySellOrder }
 }
 
 /**
@@ -71,184 +109,162 @@ export function PositionCard({
   openOrders = [],
   className = '',
 }: PositionCardProps) {
-  const unrealizedProfit = parseFloat(position.unrealizedProfit)
-  const leverage = parseFloat(position.leverage)
-  const positionAmount = parseFloat(position.positionAmount)
-  const entryPrice = parseFloat(position.entryPrice)
-  const positionValue = Math.abs(positionAmount) * entryPrice
+  const positionData = useMemo(() => {
+    const unrealizedProfit = parseFloat(position.unrealizedProfit)
+    const leverage = parseFloat(position.leverage)
+    const positionAmount = parseFloat(position.positionAmount)
+    const entryPrice = parseFloat(position.entryPrice)
+    const positionValue = Math.abs(positionAmount) * entryPrice
 
-  // 过滤出与当前持仓相关的委托订单
-  const relatedOpenOrders = openOrders.filter(order => order.symbol === position.symbol)
+    const isLong = isLongPosition(position)
+    const isProfit = unrealizedProfit >= 0
 
-  // 找到最近的买单（价格最高的买单）
-  const nearbyBuyOrder = relatedOpenOrders
-    .filter(
-      order =>
-        order.side === 'BUY' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
-    )
-    .sort((a, b) => parseFloat(b.price) - parseFloat(a.price))[0]
+    return {
+      unrealizedProfit,
+      leverage,
+      positionAmount,
+      entryPrice,
+      positionValue,
+      isLong,
+      isProfit,
+    }
+  }, [position])
 
-  // 找到最近的卖单（价格最低的卖单）
-  const nearbySellOrder = relatedOpenOrders
-    .filter(
-      order =>
-        order.side === 'SELL' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
-    )
-    .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))[0]
-
-  // 判断持仓方向：
-  // 1. 双向持仓模式：positionSide 为 LONG 或 SHORT
-  // 2. 单向持仓模式：positionSide 为 BOTH，通过 positionAmt 的正负判断（正数为做多，负数为做空）
-  const isLong =
-    position.positionSide === 'LONG' || (position.positionSide === 'BOTH' && positionAmount > 0)
-  const isProfit = unrealizedProfit >= 0
+  const { nearbyBuyOrder, nearbySellOrder } = useMemo(
+    () => getNearbyOrders(openOrders, position.symbol),
+    [openOrders, position.symbol]
+  )
 
   return (
     <div
-      className={`card p-2.5 transition-all duration-200 ${
-        isProfit
-          ? 'hover:border-[#10b981]/50 hover:glow-success'
-          : 'hover:border-[#ef4444]/50 hover:glow-danger'
+      className={`card relative p-3 transition-all duration-300 hover:scale-[1.02] ${
+        positionData.isProfit
+          ? 'hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10'
+          : 'hover:border-red-500/40 hover:shadow-lg hover:shadow-red-500/10'
       } ${className}`}
     >
-      {/* 头部 */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <h3 className="text-xs font-semibold text-[#f4f4f5]">{position.symbol}</h3>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-bold text-white tracking-wide">{position.symbol}</h3>
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-              isLong ? 'bg-[#10b981]/10 text-[#10b981]' : 'bg-[#ef4444]/10 text-[#ef4444]'
+            className={`px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide ${
+              positionData.isLong
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                : 'bg-red-500/15 text-red-400 border border-red-500/30'
             }`}
           >
-            {isLong ? '多' : '空'}
+            {positionData.isLong ? '做多' : '做空'}
           </span>
         </div>
 
-        <div className="flex items-center gap-0.5">
-          <span className="text-[10px] text-[#71717a] bg-[#1a1a2e] px-1.5 py-0.5 rounded">
-            {leverage}x
-          </span>
-        </div>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium text-slate-400 bg-slate-800/50 border border-slate-700/50">
+          {positionData.leverage}x
+        </span>
       </div>
 
-      {/* 数据 */}
-      <div className="space-y-1 mb-1.5">
-        <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-          <span className="text-[10px] text-[#71717a]">持仓金额</span>
-          <span className="text-[10px] font-semibold text-[#f4f4f5]">
-            ${positionValue.toFixed(2)}
+      <div className="space-y-2 mb-3">
+        <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+          <span className="text-xs text-slate-400 font-medium">持仓金额</span>
+          <span className="text-sm font-bold text-white">
+            ${positionData.positionValue.toFixed(2)}
           </span>
         </div>
 
-        <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-          <span className="text-[10px] text-[#71717a]">持仓数量</span>
-          <span className="text-[10px] font-medium text-[#f4f4f5]">
-            {formatAmount(Math.abs(positionAmount), position.symbol, exchangeInfo)}
+        <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+          <span className="text-xs text-slate-400 font-medium">持仓数量</span>
+          <span className="text-sm font-semibold text-slate-200">
+            {formatAmount(Math.abs(positionData.positionAmount), position.symbol, exchangeInfo)}
           </span>
         </div>
 
-        <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-          <span className="text-[10px] text-[#71717a]">入场价格</span>
-          <span className="text-[10px] font-medium text-[#f4f4f5]">
+        <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+          <span className="text-xs text-slate-400 font-medium">入场价格</span>
+          <span className="text-sm font-semibold text-slate-200">
             ${formatPrice(position.entryPrice, position.symbol, exchangeInfo)}
           </span>
         </div>
 
         {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 && (
-          <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-            <span className="text-[10px] text-[#71717a]">盈亏平衡价</span>
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-medium text-[#f59e0b]">
+          <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+            <span className="text-xs text-slate-400 font-medium">盈亏平衡价</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-amber-400">
                 ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
               </span>
               <span
-                className={`text-[10px] ${
+                className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                   parseFloat(position.breakEvenPrice) > parseFloat(position.markPrice)
-                    ? 'text-[#10b981]'
+                    ? 'text-emerald-400 bg-emerald-500/10'
                     : parseFloat(position.breakEvenPrice) < parseFloat(position.markPrice)
-                      ? 'text-[#ef4444]'
-                      : 'text-[#71717a]'
+                      ? 'text-red-400 bg-red-500/10'
+                      : 'text-slate-400 bg-slate-700/50'
                 }`}
               >
-                (
-                {(
-                  ((parseFloat(position.breakEvenPrice) - parseFloat(position.markPrice)) /
-                    parseFloat(position.markPrice)) *
-                  100
-                ).toFixed(2)}
-                %)
+                {calculatePercentage(position.markPrice, position.breakEvenPrice) > 0 ? '+' : ''}
+                {calculatePercentage(position.markPrice, position.breakEvenPrice).toFixed(2)}%
               </span>
             </div>
           </div>
         )}
 
         {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 && (
-          <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-            <span className="text-[10px] text-[#71717a]">强平价格</span>
-            <span className="text-[10px] font-medium text-[#ef4444]">
+          <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+            <span className="text-xs text-slate-400 font-medium">强平价格</span>
+            <span className="text-sm font-semibold text-red-400">
               ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
             </span>
           </div>
         )}
 
-        {/* 最近委托买单 */}
         {nearbyBuyOrder && (
-          <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-            <span className="text-[10px] text-[#71717a]">委托买价</span>
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-medium text-[#10b981]">
+          <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+            <span className="text-xs text-slate-400 font-medium">委托买价</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-emerald-400">
                 ${formatPrice(nearbyBuyOrder.price, position.symbol, exchangeInfo)}
               </span>
-              <span className="text-[10px] text-[#71717a]">
-                (
-                {(
-                  ((parseFloat(position.markPrice) - parseFloat(nearbyBuyOrder.price)) /
-                    parseFloat(position.markPrice)) *
-                  100
-                ).toFixed(2)}
-                %)
+              <span className="text-xs font-medium px-1.5 py-0.5 rounded text-slate-400 bg-slate-700/50">
+                {calculatePercentage(nearbyBuyOrder.price, position.markPrice) > 0 ? '+' : ''}
+                {calculatePercentage(nearbyBuyOrder.price, position.markPrice).toFixed(2)}%
               </span>
             </div>
           </div>
         )}
 
-        {/* 标记价格 */}
-        <div className="flex justify-between items-center py-0.5 border-b border-[#1e1e32]">
-          <span className="text-[10px] text-[#71717a]">标记价格</span>
-          <span className="text-[10px] font-medium text-[#3b82f6]">
+        <div className="flex items-center justify-between py-1 border-b border-slate-800/50">
+          <span className="text-xs text-slate-400 font-medium">标记价格</span>
+          <span className="text-sm font-semibold text-blue-400">
             ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
           </span>
         </div>
 
-        {/* 最近委托卖单 */}
         {nearbySellOrder && (
-          <div className="flex justify-between items-center py-0.5">
-            <span className="text-[10px] text-[#71717a]">委托卖价</span>
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-medium text-[#ef4444]">
+          <div className="flex items-center justify-between py-1">
+            <span className="text-xs text-slate-400 font-medium">委托卖价</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-red-400">
                 ${formatPrice(nearbySellOrder.price, position.symbol, exchangeInfo)}
               </span>
-              <span className="text-[10px] text-[#71717a]">
-                (
-                {(
-                  ((parseFloat(nearbySellOrder.price) - parseFloat(position.markPrice)) /
-                    parseFloat(position.markPrice)) *
-                  100
-                ).toFixed(2)}
-                %)
+              <span className="text-xs font-medium px-1.5 py-0.5 rounded text-slate-400 bg-slate-700/50">
+                {calculatePercentage(position.markPrice, nearbySellOrder.price) > 0 ? '+' : ''}
+                {calculatePercentage(position.markPrice, nearbySellOrder.price).toFixed(2)}%
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* 底部：未实现盈亏 */}
-      <div className="pt-1.5 border-t border-[#1e1e32]">
-        <div className="flex justify-between items-center">
-          <span className="text-[10px] text-[#71717a]">未实现盈亏</span>
-          <div className="flex items-center gap-0.5">
-            <span className={`text-xs font-bold ${isProfit ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>
-              {isProfit ? '+' : ''}${formatPrice(unrealizedProfit, position.symbol, exchangeInfo)}
+      <div className="pt-3 border-t border-slate-800/50">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400 font-medium">未实现盈亏</span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-base font-bold tracking-wide ${
+                positionData.isProfit ? 'text-emerald-400' : 'text-red-400'
+              }`}
+            >
+              {positionData.isProfit ? '+' : ''}$
+              {formatPrice(positionData.unrealizedProfit, position.symbol, exchangeInfo)}
             </span>
           </div>
         </div>
@@ -274,14 +290,24 @@ export function PositionCards({ positions, openOrders, className = '' }: Positio
 
   if (positions.length === 0) {
     return (
-      <div className={`text-center py-12 ${className}`}>
-        <p className="text-gray-500 dark:text-gray-400">暂无持仓</p>
+      <div className={`text-center py-16 ${className}`}>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 mb-4">
+          <svg
+            className="w-8 h-8 text-slate-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 12H4" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-400">暂无持仓</p>
       </div>
     )
   }
 
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`space-y-2 ${className}`}>
       {positions.map(position => (
         <PositionCard
           key={position.symbol}
