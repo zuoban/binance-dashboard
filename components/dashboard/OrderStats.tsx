@@ -89,6 +89,11 @@ export function OrderStats({
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">委托买</p>
               <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400">
                 {openOrdersStats.buy}
+                {openOrdersStats.total > 0 && (
+                  <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+                    ({((openOrdersStats.buy / openOrdersStats.total) * 100).toFixed(1)}%)
+                  </span>
+                )}
               </p>
             </div>
 
@@ -97,6 +102,11 @@ export function OrderStats({
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">委托卖</p>
               <p className="text-base font-semibold text-red-600 dark:text-red-400">
                 {openOrdersStats.sell}
+                {openOrdersStats.total > 0 && (
+                  <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+                    ({((openOrdersStats.sell / openOrdersStats.total) * 100).toFixed(1)}%)
+                  </span>
+                )}
               </p>
             </div>
           </div>

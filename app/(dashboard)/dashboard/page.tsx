@@ -124,12 +124,22 @@ export default function DashboardPage() {
                     <div className="text-center">
                       <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                         {openOrdersStats.buy}
+                        {openOrdersStats.total > 0 && (
+                          <span className="ml-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                            ({((openOrdersStats.buy / openOrdersStats.total) * 100).toFixed(1)}%)
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">委托买</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                         {openOrdersStats.sell}
+                        {openOrdersStats.total > 0 && (
+                          <span className="ml-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                            ({((openOrdersStats.sell / openOrdersStats.total) * 100).toFixed(1)}%)
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">委托卖</p>
                     </div>

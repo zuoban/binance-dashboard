@@ -154,6 +154,34 @@ export function PositionCard({
           </span>
         </div>
 
+        {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 && (
+          <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
+            <span className="text-xs text-gray-500 dark:text-gray-400">盈亏平衡价</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
+              </span>
+              <span
+                className={`text-xs ${
+                  parseFloat(position.breakEvenPrice) > parseFloat(position.markPrice)
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : parseFloat(position.breakEvenPrice) < parseFloat(position.markPrice)
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                (
+                {(
+                  ((parseFloat(position.breakEvenPrice) - parseFloat(position.markPrice)) /
+                    parseFloat(position.markPrice)) *
+                  100
+                ).toFixed(2)}
+                %)
+              </span>
+            </div>
+          </div>
+        )}
+
         {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 && (
           <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
             <span className="text-xs text-gray-500 dark:text-gray-400">强平价格</span>

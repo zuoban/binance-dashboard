@@ -18,6 +18,8 @@ export interface Position {
   unrealizedProfit: string
   /** 强平价格 */
   liquidationPrice: string
+  /** 盈亏平衡价 */
+  breakEvenPrice: string
   /** 杠杆倍数 */
   leverage: string
   /** 持仓方向 */

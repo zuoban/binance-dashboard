@@ -17,6 +17,7 @@ export function mapBinancePosition(data: any): Position {
     markPrice: data.markPrice || '0',
     unrealizedProfit: data.unRealizedProfit || '0',
     liquidationPrice: data.liquidationPrice || '0',
+    breakEvenPrice: data.breakEvenPrice || '0',
     leverage: data.leverage || '1',
     positionSide: data.positionSide || 'BOTH',
     marginType: data.marginType || 'cross',

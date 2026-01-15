@@ -370,61 +370,32 @@ export class DataManager {
     // 获取持仓中所有唯一的 symbol
     const symbols = Array.from(new Set(positions.map((p: any) => p.symbol)))
 
-    // 获取历史订单（只查询有持仓的交易对）
+    // 获取历史订单（只查询最近 5 条）
     const allTrades: any[] = []
 
-    // 串行查询，一旦获取到足够的订单就停止
-    for (const symbol of symbols) {
-      let currentEndTime = Date.now()
-      let hasMore = true
-
-      while (hasMore) {
-        const currentStartTime = currentEndTime - (24 * 60 * 60 * 1000) // 24小时窗口
-
-        try {
-          const trades = await client.getUserTrades(symbol, {
-            startTime: currentStartTime,
-            endTime: currentEndTime,
-            limit: 1000,
-          })
-
-          if (trades.length > 0) {
-            allTrades.push(...trades.map((t: any) => ({ ...t, symbol })))
-          }
-
-          // 如果已经收集到足够的订单，提前退出
-          if (allTrades.length >= 100) {
-            break
-          }
-
-          if (trades.length < 1000) {
-            hasMore = false
-          } else {
-            currentEndTime = currentStartTime - 1
-          }
-        } catch {
-          hasMore = false
-        }
+    // 并发查询所有持仓交易对的最近成交记录
+    const tradesPromises = symbols.map(async (symbol) => {
+      try {
+        const trades = await client.getUserTrades(symbol, {
+          limit: 5, // 只获取最近 5 条
+        })
+        return trades.map((t: any) => ({ ...t, symbol }))
+      } catch {
+        return []
       }
+    })
 
-      // 如果已经有足够的数据，就不再查询其他交易对
-      if (allTrades.length >= symbols.length * 20) {
-        break
-      }
-    }
+    const tradesResults = await Promise.all(tradesPromises)
+    tradesResults.forEach((trades) => {
+      allTrades.push(...trades)
+    })
 
-    // 去重并排序
-    const uniqueTradesMap = new Map<string, any>()
-    for (const trade of allTrades) {
-      const key = `${trade.id}_${trade.symbol}`
-      if (!uniqueTradesMap.has(key)) {
-        uniqueTradesMap.set(key, trade)
-      }
-    }
-    const uniqueTrades = Array.from(uniqueTradesMap.values()).sort((a, b) => b.time - a.time)
+    // 排序并取最近 5 条
+    const sortedTrades = allTrades
+      .sort((a, b) => b.time - a.time)
+      .slice(0, 5)
 
-    // 只返回最近 5 条订单
-    const orders = uniqueTrades.slice(0, 5).map(this.mapTradeToOrder)
+    const orders = sortedTrades.map(this.mapTradeToOrder)
 
     // 统计当前委托订单
     const openOrdersStats = {

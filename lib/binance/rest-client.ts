@@ -99,10 +99,22 @@ export class BinanceRestClient {
    */
   private responseInterceptor<T>(response: AxiosResponse<T>): T {
     if (this.enableLog) {
-      console.log(`[Binance API] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-        status: response.status,
-        data: response.data,
-      })
+      // 简化日志：只显示关键信息，不输出完整响应体
+      let dataInfo = ''
+
+      if (Array.isArray(response.data)) {
+        dataInfo = `Array(${response.data.length})`
+      } else if (typeof response.data === 'object' && response.data !== null) {
+        const keys = Object.keys(response.data)
+        dataInfo = `Object{${keys.length} keys}`
+      } else {
+        dataInfo = `${typeof response.data}`
+      }
+
+      console.log(
+        `[Binance API] ${response.config.method?.toUpperCase()} ${response.config.url} ` +
+        `→ ${response.status} (${dataInfo})`
+      )
     }
 
     return response.data
