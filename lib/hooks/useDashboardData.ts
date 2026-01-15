@@ -6,13 +6,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
+import { AccountAsset } from '@/types/binance'
 
 interface DashboardData {
-  account: {
-    totalWalletBalance: string
-    availableBalance: string
-    unrealizedProfit: string
-  } | null
+  account: AccountAsset | null
   positions: any[]
   orders: any[]
   orderStats: {
@@ -28,6 +25,8 @@ interface DashboardData {
     sell: number
   }
   openOrders: any[]
+  /** 今日已实现盈亏 */
+  todayRealizedPnl: number
 }
 
 interface UseDashboardDataOptions {
@@ -52,6 +51,8 @@ interface UseDashboardDataReturn {
   openOrdersStats: DashboardData['openOrdersStats']
   /** 当前委托订单数据 */
   openOrders: any[]
+  /** 今日已实现盈亏 */
+  todayRealizedPnl: number
   /** 加载状态 */
   loading: boolean
   /** 错误信息 */
@@ -88,6 +89,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       sell: 0,
     },
     openOrders: [],
+    todayRealizedPnl: 0,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -155,6 +157,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
           sell: 0,
         },
         openOrders: result.data.openOrders || [],
+        todayRealizedPnl: result.data.todayRealizedPnl || 0,
       })
 
       isFirstLoadRef.current = false
@@ -231,6 +234,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     orderStats: data.orderStats,
     openOrdersStats: data.openOrdersStats,
     openOrders: data.openOrders,
+    todayRealizedPnl: data.todayRealizedPnl,
     loading,
     error,
     countdown,

@@ -91,6 +91,12 @@ const CACHE_TTL = 10000
 const dashboardCache = new Map<string, { data: any; timestamp: number }>()
 
 /**
+ * 每日快照存储（用于计算已实现盈亏）
+ * 存储格式: { date: 'YYYY-MM-DD', balance: number, unrealizedProfit: number }
+ */
+let dailySnapshot: { date: string; balance: number; unrealizedProfit: number } | null = null
+
+/**
  * 清除所有缓存
  */
 export function clearCache() {
@@ -128,8 +134,8 @@ export async function GET(request: NextRequest) {
 
     // 检查缓存
     const cached = dashboardCache.get(cacheKey)
-    const now = Date.now()
-    if (cached && now - cached.timestamp < CACHE_TTL) {
+    const currentTime = Date.now()
+    if (cached && currentTime - cached.timestamp < CACHE_TTL) {
       console.log('[Dashboard API] Returning cached data')
       return NextResponse.json({
         success: true,
@@ -140,7 +146,7 @@ export async function GET(request: NextRequest) {
 
     // 清理过期缓存
     for (const [key, value] of dashboardCache.entries()) {
-      if (now - value.timestamp >= CACHE_TTL) {
+      if (currentTime - value.timestamp >= CACHE_TTL) {
         dashboardCache.delete(key)
       }
     }
@@ -180,8 +186,123 @@ export async function GET(request: NextRequest) {
       client.getOpenOrders(),
     ])
 
+    // 计算今日已实现盈亏（使用余额变化法）
+    const now = new Date()
+    const todayDate = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    const todayDateString = new Date(todayDate).toISOString().split('T')[0]
+
+    let todayRealizedPnl = 0
+
+    // 先计算当前的余额和未实现盈亏（需要等 account 映射完成后）
+    // 我们会在后面处理这个逻辑
+
     // 映射账户数据
     const account = mapBinanceAccount(accountInfo)
+
+    // 计算总余额的 USD 价值（从所有资产汇总）
+    const calculateTotalUsdBalance = (assets: any[]) => {
+      return assets.reduce((total, asset) => {
+        const balance = parseFloat(asset.walletBalance || '0')
+        // 对于稳定币，直接使用余额
+        if (asset.asset === 'USDT' || asset.asset === 'USDC' || asset.asset === 'FDUSD' || asset.asset === 'BUSD') {
+          return total + balance
+        }
+        // 对于其他资产，需要获取价格（这里先返回 0，价格会在后面获取）
+        return total
+      }, 0)
+    }
+
+    // 获取非稳定币的价格
+    const nonStableCoins = accountInfo.assets?.filter((a: any) =>
+      !['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(a.asset)
+    ) || []
+
+    let pricesMap: Record<string, number> = {}
+
+    if (nonStableCoins.length > 0) {
+      try {
+        // 获取价格 - 使用 24hr ticker API
+        const symbols = nonStableCoins.map((a: any) => `${a.asset}USDT`)
+        const pricePromises = symbols.map(async (symbol: string) => {
+          try {
+            const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`)
+            if (!res.ok) return null
+            return await res.json()
+          } catch {
+            return null
+          }
+        })
+        const priceResults = await Promise.all(pricePromises)
+
+        priceResults.forEach((result) => {
+          if (result && result.symbol && result.price) {
+            const asset = result.symbol.replace('USDT', '')
+            pricesMap[asset] = parseFloat(result.price)
+          }
+        })
+
+        // 重新计算总余额
+        const totalUsdBalance = accountInfo.assets?.reduce((total: number, asset: any) => {
+          const balance = parseFloat(asset.walletBalance || '0')
+          if (asset.asset === 'USDT' || asset.asset === 'USDC' || asset.asset === 'FDUSD' || asset.asset === 'BUSD') {
+            return total + balance
+          }
+          return total + (balance * (pricesMap[asset.asset] || 0))
+        }, 0) || 0
+
+        // 更新 account 对象中的余额字段
+        account.totalWalletBalance = totalUsdBalance.toString()
+        account.availableBalance = totalUsdBalance.toString()
+
+        console.log('[Dashboard API] Calculated total USD balance:', totalUsdBalance)
+      } catch (error) {
+        console.error('[Dashboard API] Failed to fetch prices:', error)
+      }
+    } else {
+      // 只有稳定币，直接计算
+      const totalUsdBalance = calculateTotalUsdBalance(accountInfo.assets || [])
+      account.totalWalletBalance = totalUsdBalance.toString()
+      account.availableBalance = totalUsdBalance.toString()
+    }
+
+    // 计算实际未实现盈亏（从持仓数据汇总）
+    const totalUnrealizedProfit = positionsInfo.reduce((total: number, pos: any) => {
+      // 币安 API 返回的字段名是 unRealizedProfit（注意大写 R）
+      const unrealizedProfit = parseFloat(pos.unRealizedProfit || '0')
+      return total + unrealizedProfit
+    }, 0)
+
+    // 更新未实现盈亏字段
+    account.unrealizedProfit = totalUnrealizedProfit.toString()
+
+    console.log('[Dashboard API] Total unrealized profit from positions:', totalUnrealizedProfit)
+
+    // 计算今日已实现盈亏（余额变化法）
+    // 公式: 今日已实现盈亏 = (当前余额 - 当前未实现盈亏) - (今日0点余额 - 今日0点未实现盈亏)
+    const currentBalance = parseFloat(account.totalWalletBalance || '0')
+    const currentUnrealizedProfit = totalUnrealizedProfit
+    const currentEquity = currentBalance - currentUnrealizedProfit
+
+    if (!dailySnapshot || dailySnapshot.date !== todayDateString) {
+      // 新的一天：创建今日0点快照
+      dailySnapshot = {
+        date: todayDateString,
+        balance: currentBalance,
+        unrealizedProfit: currentUnrealizedProfit,
+      }
+      console.log('[Dashboard API] Created new daily snapshot:', dailySnapshot)
+      todayRealizedPnl = 0 // 新的一天刚开始，还没有已实现盈亏
+    } else {
+      // 已经有今日快照：计算从0点到现在已实现盈亏
+      const snapshotEquity = dailySnapshot.balance - dailySnapshot.unrealizedProfit
+      todayRealizedPnl = currentEquity - snapshotEquity
+      console.log('[Dashboard API] Today realized PNL (from snapshot):', {
+        snapshot: dailySnapshot,
+        currentEquity,
+        snapshotEquity,
+        todayRealizedPnl,
+      })
+    }
 
     // 映射持仓数据，过滤掉空仓位
     const positions = positionsInfo
@@ -287,6 +408,7 @@ export async function GET(request: NextRequest) {
       orderStats,
       openOrdersStats,
       openOrders, // 完整的当前委托订单数据
+      todayRealizedPnl, // 今日已实现盈亏
       timestamp: Date.now(),
     }
 

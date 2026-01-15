@@ -43,6 +43,18 @@ export const BinanceEndpoints = {
     weight: 20,
   } as ApiEndpoint,
 
+  /**
+   * 获取收益历史（USER_DATA）
+   * 权重: 30
+   */
+  INCOME_HISTORY: {
+    path: '/fapi/v1/income',
+    method: 'GET',
+    signed: true,
+    needKey: true,
+    weight: 30,
+  } as ApiEndpoint,
+
   // ==================== 持仓信息 ====================
 
   /**

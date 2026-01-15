@@ -6,12 +6,10 @@
 
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useDashboardData, useDashboardConfig } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderTable } from '@/components/dashboard/OrderTable'
-import { OrderStats } from '@/components/dashboard/OrderStats'
-import { AssetOverview } from '@/components/dashboard/AssetOverview'
 import { ConfigPanel } from '@/components/dashboard/ConfigPanel'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -47,7 +45,6 @@ export default function DashboardPage() {
     account,
     positions,
     orders,
-    orderStats,
     openOrdersStats,
     openOrders,
     loading,
@@ -57,27 +54,6 @@ export default function DashboardPage() {
     refreshInterval: config.refreshInterval,
     orderTimeRange: config.orderTimeRange,
   })
-
-  // 计算风险等级
-  const riskLevel = useMemo(() => {
-    if (!account) return 'low'
-    const balance = parseFloat(account.totalWalletBalance)
-    const profit = parseFloat(account.unrealizedProfit)
-    const profitPercentage = (profit / balance) * 100
-
-    if (profitPercentage < -10) return 'high'
-    if (profitPercentage < -5) return 'medium'
-    return 'low'
-  }, [account])
-
-  // 计算盈亏百分比
-  const profitPercentage = useMemo(() => {
-    if (!account) return '0'
-    const balance = parseFloat(account.totalWalletBalance)
-    const profit = parseFloat(account.unrealizedProfit)
-    if (balance === 0) return '0'
-    return ((profit / balance) * 100).toFixed(2)
-  }, [account])
 
   return (
     <div className="space-y-4">
@@ -120,43 +96,69 @@ export default function DashboardPage() {
 
       {/* 主要内容 */}
       {(!loading || positions.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* 左侧：账户概览 + 持仓 */}
-          <div className="lg:col-span-3 space-y-4">
-            {/* 账户概览 */}
-            {account && (
-              <AssetOverview
-                balance={account.totalWalletBalance}
-                availableBalance={account.availableBalance}
-                profit={account.unrealizedProfit}
-                profitPercentage={profitPercentage}
-                riskLevel={riskLevel as 'low' | 'medium' | 'high'}
-                loading={loading}
-              />
-            )}
+        <>
+          {/* 权益总额 */}
+          {account && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-6 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">权益总额</p>
+              <p className="text-4xl font-bold text-gray-900 dark:text-white">
+                ${(parseFloat(account.totalWalletBalance) + parseFloat(account.unrealizedProfit)).toFixed(2)}
+              </p>
+            </div>
+          )}
 
-            {/* 持仓列表 */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  当前持仓
-                  {positions.length > 0 && (
-                    <span className="ml-2 text-xs font-normal text-gray-400">
-                      {positions.length} 个
-                    </span>
-                  )}
-                </h2>
-              </div>
-
-              {positions.length === 0 ? (
-                <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <PositionCards positions={positions} openOrders={openOrders} />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {/* 左侧：委托统计 + 持仓 */}
+            <div className="lg:col-span-3 space-y-4">
+              {/* 当前委托统计 */}
+              {openOrdersStats && openOrdersStats.total > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">当前委托</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {openOrdersStats.total}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">委托总数</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {openOrdersStats.buy}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">委托买</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        {openOrdersStats.sell}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">委托卖</p>
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* 持仓列表 */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    当前持仓
+                    {positions.length > 0 && (
+                      <span className="ml-2 text-xs font-normal text-gray-400">
+                        {positions.length} 个
+                      </span>
+                    )}
+                  </h2>
+                </div>
+
+                {positions.length === 0 ? (
+                  <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <PositionCards positions={positions} openOrders={openOrders} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
           {/* 右侧：订单列表（从顶部开始） */}
           <div className="lg:col-span-1">
@@ -164,10 +166,7 @@ export default function DashboardPage() {
               {/* 标题 */}
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  最近订单
-                  <span className="ml-2 text-xs font-normal text-gray-400">
-                    最近 {config.orderTimeRange / (60 * 60 * 1000)} 小时
-                  </span>
+                  最近 5 条订单
                 </h2>
               </div>
               {loading && orders.length === 0 ? (
@@ -176,15 +175,6 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <>
-                  {/* 订单统计 */}
-                  <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                    <OrderStats
-                      stats={orderStats}
-                      openOrdersStats={openOrdersStats}
-                      compact={true}
-                    />
-                  </div>
-
                   {/* 订单列表 */}
                   {orders.length === 0 ? (
                     <div className="p-6 text-center">
@@ -192,7 +182,7 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin">
-                      <OrderTable orders={orders} compact={true} />
+                      <OrderTable orders={orders.slice(0, 5)} compact={true} />
                     </div>
                   )}
                 </>
@@ -200,6 +190,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        </>
       )}
 
       {/* 配置面板 */}

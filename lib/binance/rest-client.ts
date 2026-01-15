@@ -232,6 +232,25 @@ export class BinanceRestClient {
   }
 
   /**
+   * 获取收益历史（包含已实现盈亏）
+   */
+  async getIncomeHistory(options?: {
+    symbol?: string
+    incomeType?: string
+    startTime?: number
+    endTime?: number
+    limit?: number
+  }): Promise<any[]> {
+    const params: Record<string, any> = {}
+    if (options?.symbol) params.symbol = options.symbol
+    if (options?.incomeType) params.incomeType = options.incomeType
+    if (options?.startTime) params.startTime = options.startTime
+    if (options?.endTime) params.endTime = options.endTime
+    if (options?.limit) params.limit = options.limit
+    return this.get(BinanceEndpoints.INCOME_HISTORY.path, params, true)
+  }
+
+  /**
    * 获取持仓信息
    */
   async getPositions(symbol?: string): Promise<any[]> {
