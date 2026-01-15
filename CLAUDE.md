@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 这是一个基于 Next.js 16 的币安合约交易信息查看系统，采用现代化技术栈构建。核心特性是实时数据推送和账户资产监控。
 
 ### 技术栈
+
 - **框架**: Next.js 16.1+ (App Router)
 - **语言**: TypeScript 5.9+ (严格模式)
 - **样式**: Tailwind CSS 4.x
@@ -105,12 +106,14 @@ app/
 ### 1. 环境变量验证
 
 所有环境变量通过 `lib/config/env.ts` 中的 Zod schema 验证：
+
 - 开发环境：缺失配置时显示警告
 - 生产环境：缺失必需配置会抛出错误并阻止启动
 
 ### 2. 币安 API 调用
 
 **服务端**（API Routes）：
+
 ```typescript
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
@@ -123,6 +126,7 @@ const client = new BinanceRestClient({
 ```
 
 **客户端**（通过 API 代理）：
+
 ```typescript
 // 使用 useDashboardWebSocket Hook 订阅 SSE 数据流
 // 避免直接调用币安 API
@@ -131,6 +135,7 @@ const client = new BinanceRestClient({
 ### 3. 访问码认证
 
 当设置 `ACCESS_CODE` 环境变量时：
+
 - `middleware.ts` 拦截所有 API 请求
 - 验证 `x-access-code` 请求头
 - `/api/auth/verify` 为公开端点（用于验证）
@@ -138,6 +143,7 @@ const client = new BinanceRestClient({
 ### 4. 数据映射
 
 币安 API 返回的数据格式复杂，使用 mapper 工具转换为简化类型：
+
 - `lib/utils/binance-mapper.ts`: 持仓数据映射
 - `lib/utils/account-mapper.ts`: 账户数据映射
 
@@ -171,6 +177,7 @@ const client = new BinanceRestClient({
 ### 调试 SSE 连接
 
 在开发环境中，SSE 和 DataManager 会输出详细日志：
+
 ```
 [DataManager] Data fetched and broadcasted (123ms, subscribers: 2)
 [ConnectionManager] Connection abc123... registered. Total: 1

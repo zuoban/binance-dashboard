@@ -189,6 +189,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     return () => {
       disconnect()
     }
+    // 只在 autoConnect 变化时重新执行，避免因为 connect/disconnect 函数引用变化导致重连
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoConnect])
 
   return {

@@ -14,7 +14,13 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  TooltipProps,
 } from 'recharts'
+
+// Recharts Tooltip 的 payload 类型
+interface TooltipPayload {
+  payload: PnLDataPoint
+}
 
 interface PnLDataPoint {
   /** 时间戳 */
@@ -35,6 +41,49 @@ interface PnLChartProps {
 }
 
 /**
+ * 自定义 Tooltip 组件
+ */
+function CustomTooltip({
+  active,
+  payload,
+}: TooltipProps<number, string> & { payload?: TooltipPayload[] }) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
+        <p className={`text-sm font-semibold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          盈亏: ${data.pnl.toFixed(2)}
+        </p>
+        <p className="text-sm text-gray-900 dark:text-white">余额: ${data.balance.toFixed(2)}</p>
+      </div>
+    )
+  }
+  return null
+}
+
+/**
+ * 简化版自定义 Tooltip 组件
+ */
+function SimpleTooltip({
+  active,
+  payload,
+}: TooltipProps<number, string> & { payload?: TooltipPayload[] }) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
+        <p className={`text-sm font-semibold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          盈亏: ${data.pnl.toFixed(2)}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
+/**
  * PnL 收益曲线图
  * 显示账户盈亏随时间的变化趋势
  */
@@ -47,25 +96,6 @@ export function PnLChart({ data, className = '' }: PnLChartProps) {
       balance: parseFloat(point.balance.toFixed(2)),
     }))
   }, [data])
-
-  // 自定义 Tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
-          <p
-            className={`text-sm font-semibold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}
-          >
-            盈亏: ${data.pnl.toFixed(2)}
-          </p>
-          <p className="text-sm text-gray-900 dark:text-white">余额: ${data.balance.toFixed(2)}</p>
-        </div>
-      )
-    }
-    return null
-  }
 
   if (chartData.length === 0) {
     return (
@@ -133,23 +163,6 @@ export function SimplePnLChart({ data, className = '' }: PnLChartProps) {
     }))
   }, [data])
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
-          <p
-            className={`text-sm font-semibold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}
-          >
-            盈亏: ${data.pnl.toFixed(2)}
-          </p>
-        </div>
-      )
-    }
-    return null
-  }
-
   if (chartData.length === 0) {
     return (
       <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 ${className}`}>
@@ -171,7 +184,7 @@ export function SimplePnLChart({ data, className = '' }: PnLChartProps) {
             tick={{ fill: '#9CA3AF', fontSize: 12 }}
             tickFormatter={value => `$${value.toFixed(0)}`}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<SimpleTooltip />} />
           <Line
             type="monotone"
             dataKey="pnl"

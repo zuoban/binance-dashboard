@@ -61,10 +61,10 @@ export function useDebounce<T>(value: T, delay: number = 500): T {
  * );
  * ```
  */
-export function useDebouncedCallback<T extends (...args: any[]) => any>(
+export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number = 500,
-  deps: any[] = []
+  deps: unknown[] = []
 ): T {
   const [debouncedValue, setDebouncedValue] = useState<(() => void) | null>(null)
 
@@ -76,6 +76,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
     return () => {
       clearTimeout(handler)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callback, delay, ...deps])
 
   return (debouncedValue || callback) as unknown as T

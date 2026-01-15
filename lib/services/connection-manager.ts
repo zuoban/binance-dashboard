@@ -33,7 +33,7 @@ export class ConnectionManager {
   private constructor() {
     this.dataManager = DataManager.getInstance()
     this.config = {
-      maxConnections: 100,         // 最大 100 个并发连接
+      maxConnections: 100, // 最大 100 个并发连接
       enableLog: process.env.NODE_ENV === 'development',
     }
 
@@ -82,7 +82,7 @@ export class ConnectionManager {
     this.connections.set(id, connection)
     this.log(
       `[ConnectionManager] Connection ${id.slice(0, 8)}... registered. ` +
-      `Total: ${this.connections.size}`
+        `Total: ${this.connections.size}`
     )
 
     // 增加数据管理器引用计数
@@ -94,7 +94,7 @@ export class ConnectionManager {
     }
 
     // 订阅数据更新
-    const unsubscribe = this.dataManager.subscribe((data) => {
+    const unsubscribe = this.dataManager.subscribe(data => {
       this.sendToConnection(connection, data)
     })
 
@@ -114,7 +114,7 @@ export class ConnectionManager {
     if (this.connections.delete(id)) {
       this.log(
         `[ConnectionManager] Connection ${id.slice(0, 8)}... unregistered. ` +
-        `Total: ${this.connections.size}`
+          `Total: ${this.connections.size}`
       )
 
       // 减少数据管理器引用计数
@@ -146,9 +146,7 @@ export class ConnectionManager {
       connection.controller.enqueue(connection.encoder.encode(message))
     } catch (error) {
       // 发送失败，移除故障连接
-      this.log(
-        `[ConnectionManager] Error sending to ${connection.id.slice(0, 8)}...: ${error}`
-      )
+      this.log(`[ConnectionManager] Error sending to ${connection.id.slice(0, 8)}...: ${error}`)
       this.unregisterConnection(connection.id)
     }
   }
@@ -169,9 +167,7 @@ export class ConnectionManager {
 
       connection.controller.enqueue(connection.encoder.encode(message))
     } catch (err) {
-      this.log(
-        `[ConnectionManager] Error sending error to ${connection.id.slice(0, 8)}...: ${err}`
-      )
+      this.log(`[ConnectionManager] Error sending error to ${connection.id.slice(0, 8)}...: ${err}`)
       this.unregisterConnection(connection.id)
     }
   }

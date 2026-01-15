@@ -6,20 +6,14 @@
 
 'use client'
 
-import { useEffect } from 'react'
 import { useDashboardWebSocket } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderTable } from '@/components/dashboard/OrderTable'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
+import { format } from 'date-fns'
 
 export default function DashboardPage() {
-  // 客户端挂载后才能显示动态内容
-  useEffect(() => {
-    // 确保客户端渲染完成
-  }, [])
-
-  // 使用 WebSocket 接收实时数据
   const {
     account,
     positions,
@@ -33,10 +27,10 @@ export default function DashboardPage() {
     reconnect,
   } = useDashboardWebSocket({
     autoConnect: true,
-    onError: (err) => {
+    onError: err => {
       console.error('[Dashboard] WebSocket error:', err)
     },
-    onConnectionChange: (connected) => {
+    onConnectionChange: connected => {
       console.log('[Dashboard] Connection state changed:', connected)
     },
   })
@@ -54,21 +48,17 @@ export default function DashboardPage() {
                 isConnecting
                   ? 'bg-yellow-400 animate-pulse'
                   : isConnected
-                  ? 'bg-green-400'
-                  : 'bg-red-400'
+                    ? 'bg-green-400'
+                    : 'bg-red-400'
               }`}
               title={isConnecting ? '连接中...' : isConnected ? '已连接' : '未连接'}
             />
             <span className="text-xs text-gray-400">
-              {isConnecting
-                ? '连接中...'
-                : isConnected
-                ? '实时连接'
-                : '连接断开'}
+              {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
             </span>
             {lastUpdate && (
               <span className="text-xs text-gray-500">
-                · 更新于 {new Date(lastUpdate).toLocaleTimeString()}
+                · 更新于 {format(new Date(lastUpdate), 'HH:mm:ss')}
               </span>
             )}
           </div>
@@ -102,7 +92,10 @@ export default function DashboardPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-6 mb-4">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">权益总额</p>
               <p className="text-4xl font-bold text-gray-900 dark:text-white">
-                ${(parseFloat(account.totalWalletBalance) + parseFloat(account.unrealizedProfit)).toFixed(2)}
+                $
+                {(
+                  parseFloat(account.totalWalletBalance) + parseFloat(account.unrealizedProfit)
+                ).toFixed(2)}
               </p>
             </div>
           )}
@@ -113,7 +106,9 @@ export default function DashboardPage() {
               {/* 当前委托统计 */}
               {openOrdersStats && openOrdersStats.total > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">当前委托</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                    当前委托
+                  </h3>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -170,36 +165,36 @@ export default function DashboardPage() {
               </div>
             </div>
 
-          {/* 右侧：订单列表（从顶部开始） */}
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden sticky top-4">
-              {/* 标题 */}
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  最近 5 条订单
-                </h2>
-              </div>
-              {loading && orders.length === 0 ? (
-                <div className="flex justify-center py-8">
-                  <LoadingSpinner size="sm" />
+            {/* 右侧：订单列表（从顶部开始） */}
+            <div className="lg:col-span-1">
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden sticky top-4">
+                {/* 标题 */}
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    最近 5 条订单
+                  </h2>
                 </div>
-              ) : (
-                <>
-                  {/* 订单列表 */}
-                  {orders.length === 0 ? (
-                    <div className="p-6 text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">无订单记录</p>
-                    </div>
-                  ) : (
-                    <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin">
-                      <OrderTable orders={orders} compact={true} />
-                    </div>
-                  )}
-                </>
-              )}
+                {loading && orders.length === 0 ? (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner size="sm" />
+                  </div>
+                ) : (
+                  <>
+                    {/* 订单列表 */}
+                    {orders.length === 0 ? (
+                      <div className="p-6 text-center">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">无订单记录</p>
+                      </div>
+                    ) : (
+                      <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin">
+                        <OrderTable orders={orders} compact={true} />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         </>
       )}
     </div>

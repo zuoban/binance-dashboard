@@ -137,7 +137,9 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       }
 
       const queryString = new URLSearchParams(params).toString()
-      const response = await fetchWithAuth(`/api/binance/orders${queryString ? `?${queryString}` : ''}`)
+      const response = await fetchWithAuth(
+        `/api/binance/orders${queryString ? `?${queryString}` : ''}`
+      )
       const result = await response.json()
 
       if (!result.success) {

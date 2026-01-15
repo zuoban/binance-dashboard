@@ -40,6 +40,34 @@ interface PriceChartProps {
 }
 
 /**
+ * 自定义 Tooltip 组件
+ */
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: PriceDataPoint }>
+}
+
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+          价格: ${data.price.toFixed(2)}
+        </p>
+        {data.volume && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            成交量: {data.volume.toFixed(2)}
+          </p>
+        )}
+      </div>
+    )
+  }
+  return null
+}
+
+/**
  * 实时价格走势图
  * 显示交易对的实时价格变化
  */
@@ -61,27 +89,6 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
     const percentage = (value / firstPrice) * 100
     return { value, percentage }
   }, [chartData])
-
-  // 自定义 Tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">
-            价格: ${data.price.toFixed(2)}
-          </p>
-          {data.volume && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              成交量: {data.volume.toFixed(2)}
-            </p>
-          )}
-        </div>
-      )
-    }
-    return null
-  }
 
   if (chartData.length === 0) {
     return (

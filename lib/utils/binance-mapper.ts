@@ -5,24 +5,27 @@
  */
 
 import { Position } from '@/types/binance'
+import type { BinancePosition } from '@/types/binance-api'
 
 /**
  * 将币安 positionRisk API 响应转换为我们的 Position 类型
  */
-export function mapBinancePosition(data: any): Position {
+export function mapBinancePosition(
+  data: BinancePosition | Partial<Record<string, unknown>>
+): Position {
   return {
-    symbol: data.symbol,
-    positionAmount: data.positionAmt || '0',
-    entryPrice: data.entryPrice || '0',
-    markPrice: data.markPrice || '0',
-    unrealizedProfit: data.unRealizedProfit || '0',
-    liquidationPrice: data.liquidationPrice || '0',
-    breakEvenPrice: data.breakEvenPrice || '0',
-    leverage: data.leverage || '1',
-    positionSide: data.positionSide || 'BOTH',
-    marginType: data.marginType || 'cross',
-    notional: data.notional || '0',
-    isolatedWallet: data.isolatedWallet || '0',
+    symbol: (data.symbol as string) || '',
+    positionAmount: (data.positionAmount as string) || (data.positionAmt as string) || '0',
+    entryPrice: (data.entryPrice as string) || '0',
+    markPrice: (data.markPrice as string) || '0',
+    unrealizedProfit: (data.unRealizedProfit as string) || '0',
+    liquidationPrice: (data.liquidationPrice as string) || '0',
+    breakEvenPrice: (data.breakEvenPrice as string) || '0',
+    leverage: (data.leverage as string) || '1',
+    positionSide: (data.positionSide as 'LONG' | 'SHORT' | 'BOTH') || 'BOTH',
+    marginType: (data.marginType as 'cross' | 'isolated') || 'cross',
+    notional: (data.notional as string) || '0',
+    isolatedWallet: (data.isolatedWallet as string) || '0',
     dualSide: data.dualSide === true || data.dualSide === 'true',
   }
 }
@@ -30,7 +33,9 @@ export function mapBinancePosition(data: any): Position {
 /**
  * 批量转换持仓数据
  */
-export function mapBinancePositions(dataArray: any[]): Position[] {
+export function mapBinancePositions(
+  dataArray: (BinancePosition | Partial<Record<string, unknown>>)[]
+): Position[] {
   if (!Array.isArray(dataArray)) {
     console.warn('[mapBinancePositions] Input is not an array:', dataArray)
     return []

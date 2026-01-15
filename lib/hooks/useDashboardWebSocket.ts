@@ -6,18 +6,18 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { AccountAsset } from '@/types/binance'
+import { AccountAsset, Position, Order } from '@/types/binance'
 
 interface DashboardData {
   account: AccountAsset | null
-  positions: any[]
-  orders: any[]
+  positions: Position[]
+  orders: Order[]
   openOrdersStats: {
     total: number
     buy: number
     sell: number
   }
-  openOrders: any[]
+  openOrders: Order[]
   todayRealizedPnl: number
 }
 
@@ -36,13 +36,13 @@ interface UseDashboardWebSocketReturn {
   /** 账户数据 */
   account: DashboardData['account'] | null
   /** 持仓数据 */
-  positions: any[]
+  positions: Position[]
   /** 订单数据 */
-  orders: any[]
+  orders: Order[]
   /** 当前委托订单统计 */
   openOrdersStats: DashboardData['openOrdersStats']
   /** 当前委托订单数据 */
-  openOrders: any[]
+  openOrders: Order[]
   /** 今日已实现盈亏 */
   todayRealizedPnl: number
   /** 加载状态 */
@@ -168,7 +168,7 @@ export function useDashboardWebSocket(
       })
 
       // 连接错误
-      eventSource.onerror = (err) => {
+      eventSource.onerror = err => {
         console.error('[useDashboardWebSocket] Connection error:', err)
         setError('Connection error')
         setIsConnecting(false)
@@ -220,7 +220,9 @@ export function useDashboardWebSocket(
     return () => {
       cleanup()
     }
-  }, [autoConnect]) // 只在 autoConnect 变化时执行
+    // 只在 autoConnect 变化时重新执行，避免因为 connect/cleanup 函数引用变化导致重连
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConnect])
 
   return {
     account: data.account,

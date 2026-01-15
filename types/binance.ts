@@ -106,6 +106,14 @@ export interface Order {
   selfTradePreventionMode: 'EXPIRE_NONE' | 'EXPIRE_TAKER' | 'EXPIRE_MAKER' | 'EXPIRE_BOTH'
   /** GPU 失败原因 */
   priceProtect: boolean
+  /** 手续费 */
+  commission?: string
+  /** 手续费计价单位 */
+  commissionAsset?: string
+  /** 实现盈亏 */
+  realizedPnl?: string
+  /** 是否买方 */
+  buyer?: boolean
 }
 
 // ==================== 账户资产信息 ====================
@@ -250,7 +258,7 @@ export interface WebSocketMessage {
   /** 交易对 */
   s?: string
   /** 数据 */
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface PositionUpdateMessage extends WebSocketMessage {

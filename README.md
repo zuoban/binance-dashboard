@@ -365,15 +365,15 @@ pnpm check
 
 ## 环境变量参考
 
-| 变量名 | 必需 | 说明 | 默认值 |
-|--------|------|------|--------|
-| `BINANCE_API_KEY` | ✅ | 币安 API Key | - |
-| `BINANCE_API_SECRET` | ✅ | 币安 API Secret | - |
-| `NEXT_PUBLIC_BINANCE_REST_API` | ❌ | REST API 端点 | `https://fapi.binance.com` |
-| `NEXT_PUBLIC_BINANCE_WS_API` | ❌ | WebSocket API 端点 | `wss://fstream.binance.com/ws` |
-| `NEXT_PUBLIC_APP_URL` | ❌ | 应用访问地址 | `http://localhost:3000` |
-| `ACCESS_CODE` | ❌ | 访问码（留空则不启用） | - |
-| `BINANCE_TESTNET` | ❌ | 使用测试网 | - |
+| 变量名                         | 必需 | 说明                   | 默认值                         |
+| ------------------------------ | ---- | ---------------------- | ------------------------------ |
+| `BINANCE_API_KEY`              | ✅   | 币安 API Key           | -                              |
+| `BINANCE_API_SECRET`           | ✅   | 币安 API Secret        | -                              |
+| `NEXT_PUBLIC_BINANCE_REST_API` | ❌   | REST API 端点          | `https://fapi.binance.com`     |
+| `NEXT_PUBLIC_BINANCE_WS_API`   | ❌   | WebSocket API 端点     | `wss://fstream.binance.com/ws` |
+| `NEXT_PUBLIC_APP_URL`          | ❌   | 应用访问地址           | `http://localhost:3000`        |
+| `ACCESS_CODE`                  | ❌   | 访问码（留空则不启用） | -                              |
+| `BINANCE_TESTNET`              | ❌   | 使用测试网             | -                              |
 
 ---
 

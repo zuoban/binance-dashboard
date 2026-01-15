@@ -59,6 +59,57 @@ function getPositionSideLabel(side: 'LONG' | 'SHORT' | 'BOTH'): string {
 }
 
 /**
+ * 自定义 Tooltip 组件
+ */
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: PositionDistributionData }>
+  totalValue: number
+}
+
+function CustomTooltip({ active, payload, totalValue }: CustomTooltipProps) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    const percentage = ((data.value / totalValue) * 100).toFixed(1)
+
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{data.name}</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+          {getPositionSideLabel(data.side)}
+        </p>
+        <p className="text-sm text-gray-900 dark:text-white">价值: ${data.value.toFixed(2)}</p>
+        <p className="text-sm text-gray-900 dark:text-white">占比: {percentage}%</p>
+      </div>
+    )
+  }
+  return null
+}
+
+/**
+ * 自定义 Legend 组件
+ */
+interface CustomLegendProps {
+  payload?: Array<{ color: string; value: string }>
+}
+
+function CustomLegend({ payload }: CustomLegendProps) {
+  return (
+    <div className="flex flex-wrap justify-center gap-3 mt-4">
+      {payload?.map((entry, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+        >
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span>{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
  * 持仓分布饼图
  * 显示各币种持仓的占比分布
  */
@@ -84,43 +135,6 @@ export function PositionDistribution({ positions, className = '' }: PositionDist
   const totalValue = useMemo(() => {
     return chartData.reduce((sum, item) => sum + item.value, 0)
   }, [chartData])
-
-  // 自定义 Tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      const percentage = ((data.value / totalValue) * 100).toFixed(1)
-
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{data.name}</p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-            {getPositionSideLabel(data.side)}
-          </p>
-          <p className="text-sm text-gray-900 dark:text-white">价值: ${data.value.toFixed(2)}</p>
-          <p className="text-sm text-gray-900 dark:text-white">占比: {percentage}%</p>
-        </div>
-      )
-    }
-    return null
-  }
-
-  // 自定义 Legend
-  const CustomLegend = ({ payload }: any) => {
-    return (
-      <div className="flex flex-wrap justify-center gap-3 mt-4">
-        {payload.map((entry: any, index: number) => (
-          <div
-            key={index}
-            className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
-          >
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span>{entry.value}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
 
   if (chartData.length === 0) {
     return (
@@ -157,7 +171,7 @@ export function PositionDistribution({ positions, className = '' }: PositionDist
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip totalValue={totalValue} />} />
           <Legend content={<CustomLegend />} />
         </PieChart>
       </ResponsiveContainer>

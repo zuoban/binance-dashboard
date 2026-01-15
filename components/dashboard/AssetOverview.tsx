@@ -51,7 +51,10 @@ export function AssetOverview({
   const profit = externalProfit ?? internal.profit
   const riskLevel = externalRiskLevel ?? internal.riskLevel
   const loading = externalLoading ?? internal.loading
-  const assets = useMemo(() => externalAssets ?? internal.assets ?? [], [externalAssets, internal.assets])
+  const assets = useMemo(
+    () => externalAssets ?? internal.assets ?? [],
+    [externalAssets, internal.assets]
+  )
 
   // 获取资产价格
   const [prices, setPrices] = useState<Record<string, number>>({})
@@ -77,15 +80,19 @@ export function AssetOverview({
   }, [assets])
 
   // 计算资产在 USD 中的价值
-  const assetsWithUsdValue = useMemo(() => assets.map(asset => {
-    const price = prices[asset.asset] || 0
-    const quantity = parseFloat(asset.walletBalance)
-    const usdValue = quantity * price
-    return {
-      ...asset,
-      usdValue,
-    }
-  }), [assets, prices])
+  const assetsWithUsdValue = useMemo(
+    () =>
+      assets.map(asset => {
+        const price = prices[asset.asset] || 0
+        const quantity = parseFloat(asset.walletBalance)
+        const usdValue = quantity * price
+        return {
+          ...asset,
+          usdValue,
+        }
+      }),
+    [assets, prices]
+  )
 
   const getProfitColor = () => {
     const profitNum = parseFloat(profit)
@@ -166,12 +173,15 @@ export function AssetOverview({
 
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">今日已实现盈亏</p>
-            <p className={`text-sm font-semibold ${todayRealizedPnl && todayRealizedPnl >= 0
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : todayRealizedPnl && todayRealizedPnl < 0
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}>
+            <p
+              className={`text-sm font-semibold ${
+                todayRealizedPnl && todayRealizedPnl >= 0
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : todayRealizedPnl && todayRealizedPnl < 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
               ${todayRealizedPnl ? todayRealizedPnl.toFixed(2) : '0.00'}
             </p>
           </div>
@@ -197,9 +207,7 @@ export function AssetOverview({
                     key={asset.asset}
                     className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
                   >
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      {asset.asset}
-                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{asset.asset}</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       ${asset.usdValue.toFixed(2)}
                     </p>

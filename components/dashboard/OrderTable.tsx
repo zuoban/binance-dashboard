@@ -162,7 +162,9 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
 
           return (
             <div
-              key={order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`}
+              key={
+                order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`
+              }
               className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
             >
               {/* 第一行：交易对 + 方向 + 类型 */}
@@ -210,7 +212,33 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
                 </div>
               </div>
 
-              {/* 第三行：时间 */}
+              {/* 第三行：手续费 + 实现盈亏 */}
+              {(order.commission !== undefined || order.realizedPnl !== undefined) && (
+                <div className="flex items-center justify-between text-xs mt-1">
+                  {order.commission !== undefined && (
+                    <span className="text-gray-500 dark:text-gray-400">
+                      手续费:{' '}
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {parseFloat(order.commission).toFixed(4)}
+                        {order.commissionAsset && ` ${order.commissionAsset}`}
+                      </span>
+                    </span>
+                  )}
+                  {order.realizedPnl !== undefined && (
+                    <span
+                      className={`font-medium ${
+                        parseFloat(order.realizedPnl) >= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      实现盈亏: {parseFloat(order.realizedPnl).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* 第四行：时间 */}
               <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                 {formatDistanceToNow(order.time)}
               </div>
@@ -261,6 +289,12 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               已成交
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              手续费
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              实现盈亏
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               状态
             </th>
           </tr>
@@ -269,7 +303,12 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
         {/* 表体 */}
         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {sortedOrders.map((order, index) => (
-            <tr key={order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+            <tr
+              key={
+                order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`
+              }
+              className="hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                 {formatDistanceToNow(order.time)}
               </td>
@@ -298,6 +337,31 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                 {parseFloat(order.executedQty).toFixed(4)}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                {order.commission !== undefined ? (
+                  <>
+                    {parseFloat(order.commission).toFixed(4)}
+                    {order.commissionAsset && ` ${order.commissionAsset}`}
+                  </>
+                ) : (
+                  '-'
+                )}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                {order.realizedPnl !== undefined ? (
+                  <span
+                    className={
+                      parseFloat(order.realizedPnl) >= 0
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }
+                  >
+                    {parseFloat(order.realizedPnl).toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <OrderStatusBadge status={order.status} />

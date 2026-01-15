@@ -131,7 +131,7 @@ export type SSEEventType = 'data' | 'heartbeat' | 'error'
 /**
  * SSE 消息
  */
-export interface SSEMessage<T = any> {
+export interface SSEMessage<T = unknown> {
   /** 消息类型 */
   type: SSEEventType
   /** 消息数据 */

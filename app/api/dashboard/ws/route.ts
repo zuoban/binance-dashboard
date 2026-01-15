@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       /**
        * 发送 SSE 事件
        */
-      const sendEvent = (data: any, event = 'data') => {
+      const sendEvent = (data: Record<string, unknown>, event = 'data') => {
         const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
         controller.enqueue(encoder.encode(message))
       }
@@ -48,11 +48,7 @@ export async function GET(request: NextRequest) {
 
         // 2. 注册连接到 ConnectionManager
         // 连接会自动接收后续的数据广播
-        const cleanup = connectionManager.registerConnection(
-          connectionId,
-          controller,
-          encoder
-        )
+        const cleanup = connectionManager.registerConnection(connectionId, controller, encoder)
 
         // 3. 设置断开清理
         request.signal.addEventListener('abort', () => {
@@ -63,7 +59,7 @@ export async function GET(request: NextRequest) {
 
         console.log(
           `[Dashboard WS] Connection ${connectionId.slice(0, 8)}... established. ` +
-          `Active: ${connectionManager.getConnectionCount()}`
+            `Active: ${connectionManager.getConnectionCount()}`
         )
       } catch (error) {
         // 注册失败（如连接数超限）
@@ -85,7 +81,7 @@ export async function GET(request: NextRequest) {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     },
   })

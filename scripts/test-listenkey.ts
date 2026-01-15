@@ -86,12 +86,15 @@ async function main() {
       console.log('  1. Open http://localhost:3000 in your browser')
       console.log('  2. Check browser console for WebSocket connection logs')
       console.log('  3. Look for messages starting with [WebSocketProvider]')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('\n========================================')
       console.error('❌ Test failed!')
       console.error('========================================\n')
-      console.error('Error:', error.message)
-      console.error('Code:', error.code)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      const code =
+        error instanceof Error && 'code' in error ? (error as { code: string }).code : 'UNKNOWN'
+      console.error('Error:', message)
+      console.error('Code:', code)
       console.error('\nPossible issues:')
       console.error('  1. API Key or Secret is incorrect')
       console.error('  2. API Key does not have "Enable Reading" permission')

@@ -10,6 +10,15 @@ import { useState, useEffect } from 'react'
 import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
 
 /**
+ * 币安交易对符号信息
+ */
+interface BinanceSymbol {
+  symbol: string
+  pricePrecision: number
+  quantityPrecision: number
+}
+
+/**
  * 交易对精度信息
  */
 export interface SymbolPrecision {
@@ -106,7 +115,7 @@ export function useExchangeInfo(): UseExchangeInfoReturn {
         const precisionMap: ExchangeInfoData = {}
 
         if (result.data && result.data.symbols) {
-          result.data.symbols.forEach((symbol: any) => {
+          result.data.symbols.forEach((symbol: BinanceSymbol) => {
             precisionMap[symbol.symbol] = {
               pricePrecision: symbol.pricePrecision || 2,
               quantityPrecision: symbol.quantityPrecision || 3,
@@ -117,9 +126,10 @@ export function useExchangeInfo(): UseExchangeInfoReturn {
         globalCache.data = precisionMap
         globalCache.loading = false
         notifyListeners()
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : '获取交易规则失败'
         console.error('[ExchangeInfo] 获取失败:', err)
-        globalCache.error = err.message || '获取交易规则失败'
+        globalCache.error = message
         globalCache.loading = false
         notifyListeners()
       }

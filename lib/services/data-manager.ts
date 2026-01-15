@@ -19,6 +19,13 @@ import type {
   DataManagerConfig,
   SimpleOrder,
 } from './types'
+import type { Position } from '@/types/binance'
+import type {
+  BinancePosition,
+  BinanceUserTrade,
+  BinanceOrder,
+  BinanceAsset,
+} from '@/types/binance-api'
 
 /**
  * 数据管理器类（单例模式）
@@ -59,9 +66,9 @@ export class DataManager {
    */
   private constructor() {
     this.config = {
-      refreshInterval: 5000,      // 5 秒刷新间隔
-      heartbeatInterval: 30000,   // 30 秒心跳间隔
-      maxRetries: 3,              // 最大重试 3 次
+      refreshInterval: 5000, // 5 秒刷新间隔
+      heartbeatInterval: 30000, // 30 秒心跳间隔
+      maxRetries: 3, // 最大重试 3 次
       enableLog: process.env.NODE_ENV === 'development',
     }
 
@@ -214,14 +221,14 @@ export class DataManager {
 
       this.log(
         `[DataManager] Data fetched and broadcasted (${elapsed}ms, ` +
-        `subscribers: ${this.subscribers.size})`
+          `subscribers: ${this.subscribers.size})`
       )
     } catch (error) {
       this.metrics.failedFetches++
       this.log(`[DataManager] Fetch failed: ${error}`)
 
       // 广播错误给订阅者
-      this.broadcastError(error instanceof Error ? error.message : 'Unknown error')
+      this.broadcastError()
     }
   }
 
@@ -238,9 +245,9 @@ export class DataManager {
         const delay = Math.pow(2, this.retryCount) * 1000
         this.log(
           `[DataManager] Fetch failed, retrying in ${delay}ms ` +
-          `(attempt ${this.retryCount}/${this.config.maxRetries})`
+            `(attempt ${this.retryCount}/${this.config.maxRetries})`
         )
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        await new Promise(resolve => setTimeout(resolve, delay))
         return this.fetchWithRetry()
       }
 
@@ -283,16 +290,19 @@ export class DataManager {
     const account = mapBinanceAccount(accountInfo)
 
     // 获取非稳定币并计算价格
-    const nonStableCoins = accountInfo.assets?.filter((a: any) =>
-      !['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(a.asset)
-    ) || []
+    const nonStableCoins =
+      accountInfo.assets?.filter(
+        (a: BinanceAsset) => !['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(a.asset)
+      ) || []
 
     if (nonStableCoins.length > 0) {
       try {
-        const symbols = nonStableCoins.map((a: any) => `${a.asset}USDT`)
+        const symbols = nonStableCoins.map((a: BinanceAsset) => `${a.asset}USDT`)
         const pricePromises = symbols.map(async (symbol: string) => {
           try {
-            const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`)
+            const res = await fetch(
+              `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`
+            )
             if (!res.ok) return null
             return await res.json()
           } catch {
@@ -302,20 +312,21 @@ export class DataManager {
         const priceResults = await Promise.all(pricePromises)
 
         const pricesMap: Record<string, number> = {}
-        priceResults.forEach((result) => {
+        priceResults.forEach(result => {
           if (result?.symbol && result.price) {
             pricesMap[result.symbol.replace('USDT', '')] = parseFloat(result.price)
           }
         })
 
         // 重新计算总余额
-        const totalUsdBalance = accountInfo.assets?.reduce((total: number, asset: any) => {
-          const balance = parseFloat(asset.walletBalance || '0')
-          if (['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(asset.asset)) {
-            return total + balance
-          }
-          return total + (balance * (pricesMap[asset.asset] || 0))
-        }, 0) || 0
+        const totalUsdBalance =
+          accountInfo.assets?.reduce((total: number, asset: BinanceAsset) => {
+            const balance = parseFloat(asset.walletBalance || '0')
+            if (['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(asset.asset)) {
+              return total + balance
+            }
+            return total + balance * (pricesMap[asset.asset] || 0)
+          }, 0) || 0
 
         account.totalWalletBalance = totalUsdBalance.toString()
         account.availableBalance = totalUsdBalance.toString()
@@ -324,20 +335,21 @@ export class DataManager {
       }
     } else {
       // 只有稳定币
-      const totalUsdBalance = accountInfo.assets?.reduce((total: number, asset: any) => {
-        const balance = parseFloat(asset.walletBalance || '0')
-        if (['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(asset.asset)) {
-          return total + balance
-        }
-        return total
-      }, 0) || 0
+      const totalUsdBalance =
+        accountInfo.assets?.reduce((total: number, asset: BinanceAsset) => {
+          const balance = parseFloat(asset.walletBalance || '0')
+          if (['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(asset.asset)) {
+            return total + balance
+          }
+          return total
+        }, 0) || 0
       account.totalWalletBalance = totalUsdBalance.toString()
       account.availableBalance = totalUsdBalance.toString()
     }
 
     // 计算总未实现盈亏
     const totalUnrealizedProfit = positionsInfo.reduce(
-      (total: number, pos: any) => total + parseFloat(pos.unRealizedProfit || '0'),
+      (total: number, pos: BinancePosition) => total + parseFloat(pos.unRealizedProfit || '0'),
       0
     )
     account.unrealizedProfit = totalUnrealizedProfit.toString()
@@ -364,44 +376,42 @@ export class DataManager {
 
     // 映射并过滤持仓数据
     const positions = positionsInfo
-      .map((p: any) => mapBinancePosition(p))
-      .filter((p: any) => parseFloat(p.positionAmount) !== 0)
+      .map((p: BinancePosition) => mapBinancePosition(p))
+      .filter((p: Position) => parseFloat(p.positionAmount) !== 0)
 
     // 获取持仓中所有唯一的 symbol
-    const symbols = Array.from(new Set(positions.map((p: any) => p.symbol)))
+    const symbols = Array.from(new Set(positions.map((p: Position) => p.symbol)))
 
     // 获取历史订单（只查询最近 5 条）
-    const allTrades: any[] = []
+    const allTrades: (BinanceUserTrade & { symbol: string })[] = []
 
     // 并发查询所有持仓交易对的最近成交记录
-    const tradesPromises = symbols.map(async (symbol) => {
+    const tradesPromises = symbols.map(async symbol => {
       try {
         const trades = await client.getUserTrades(symbol, {
           limit: 5, // 只获取最近 5 条
         })
-        return trades.map((t: any) => ({ ...t, symbol }))
+        return trades.map((t: BinanceUserTrade) => ({ ...t, symbol }))
       } catch {
         return []
       }
     })
 
     const tradesResults = await Promise.all(tradesPromises)
-    tradesResults.forEach((trades) => {
+    tradesResults.forEach(trades => {
       allTrades.push(...trades)
     })
 
     // 排序并取最近 5 条
-    const sortedTrades = allTrades
-      .sort((a, b) => b.time - a.time)
-      .slice(0, 5)
+    const sortedTrades = allTrades.sort((a, b) => b.time - a.time).slice(0, 5)
 
     const orders = sortedTrades.map(this.mapTradeToOrder)
 
     // 统计当前委托订单
     const openOrdersStats = {
       total: openOrdersInfo.length,
-      buy: openOrdersInfo.filter((t: any) => t.side === 'BUY').length,
-      sell: openOrdersInfo.filter((t: any) => t.side === 'SELL').length,
+      buy: openOrdersInfo.filter((t: BinanceOrder) => t.side === 'BUY').length,
+      sell: openOrdersInfo.filter((t: BinanceOrder) => t.side === 'SELL').length,
     }
 
     const openOrders = openOrdersInfo.map(this.mapOpenOrderToOrder)
@@ -420,7 +430,7 @@ export class DataManager {
   /**
    * 将 getUserTrades API 返回的数据映射为简化订单类型
    */
-  private mapTradeToOrder(trade: any): SimpleOrder {
+  private mapTradeToOrder(trade: BinanceUserTrade & { symbol: string }): SimpleOrder {
     return {
       id: trade.id,
       orderId: trade.orderId,
@@ -438,7 +448,7 @@ export class DataManager {
   /**
    * 将 getOpenOrders API 返回的数据映射为简化订单类型
    */
-  private mapOpenOrderToOrder(order: any): SimpleOrder {
+  private mapOpenOrderToOrder(order: BinanceOrder): SimpleOrder {
     return {
       orderId: order.orderId,
       symbol: order.symbol,
@@ -460,7 +470,7 @@ export class DataManager {
     let successCount = 0
     let failCount = 0
 
-    this.subscribers.forEach((callback) => {
+    this.subscribers.forEach(callback => {
       try {
         callback(data)
         successCount++
@@ -478,10 +488,10 @@ export class DataManager {
   /**
    * 广播错误给所有订阅者
    */
-  private broadcastError(_error: string): void {
+  private broadcastError(): void {
     // 使用缓存数据广播，标记为错误状态
     if (this.data) {
-      this.subscribers.forEach((callback) => {
+      this.subscribers.forEach(callback => {
         try {
           callback({ ...this.data!, timestamp: Date.now() })
         } catch (err) {
@@ -504,18 +514,19 @@ export class DataManager {
   private logMetrics(): void {
     const successRate =
       this.metrics.totalFetches > 0
-        ? ((this.metrics.totalFetches - this.metrics.failedFetches) / this.metrics.totalFetches) * 100
+        ? ((this.metrics.totalFetches - this.metrics.failedFetches) / this.metrics.totalFetches) *
+          100
         : 100
 
     this.log(
       `[DataManager] Metrics: ` +
-      `total=${this.metrics.totalFetches}, ` +
-      `failed=${this.metrics.failedFetches}, ` +
-      `successRate=${successRate.toFixed(1)}%, ` +
-      `avgTime=${this.metrics.avgFetchTime.toFixed(0)}ms, ` +
-      `broadcasts=${this.metrics.broadcastsSent}, ` +
-      `subscribers=${this.subscribers.size}, ` +
-      `refs=${this.refCount}`
+        `total=${this.metrics.totalFetches}, ` +
+        `failed=${this.metrics.failedFetches}, ` +
+        `successRate=${successRate.toFixed(1)}%, ` +
+        `avgTime=${this.metrics.avgFetchTime.toFixed(0)}ms, ` +
+        `broadcasts=${this.metrics.broadcastsSent}, ` +
+        `subscribers=${this.subscribers.size}, ` +
+        `refs=${this.refCount}`
     )
   }
 

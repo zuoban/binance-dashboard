@@ -6,18 +6,19 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchWithAuth } from '@/lib/utils/fetch-with-auth'
-import { AccountAsset } from '@/types/binance'
+import { AccountAsset, Position } from '@/types/binance'
+import type { SimpleOrder } from '@/lib/services/types'
 
 interface DashboardData {
   account: AccountAsset | null
-  positions: any[]
-  orders: any[]
+  positions: Position[]
+  orders: SimpleOrder[]
   openOrdersStats: {
     total: number
     buy: number
     sell: number
   }
-  openOrders: any[]
+  openOrders: SimpleOrder[]
   /** 今日已实现盈亏 */
   todayRealizedPnl: number
 }
@@ -35,13 +36,13 @@ interface UseDashboardDataReturn {
   /** 账户数据 */
   account: DashboardData['account'] | null
   /** 持仓数据 */
-  positions: any[]
+  positions: Position[]
   /** 订单数据 */
-  orders: any[]
+  orders: SimpleOrder[]
   /** 当前委托订单统计 */
   openOrdersStats: DashboardData['openOrdersStats']
   /** 当前委托订单数据 */
-  openOrders: any[]
+  openOrders: SimpleOrder[]
   /** 今日已实现盈亏 */
   todayRealizedPnl: number
   /** 加载状态 */
