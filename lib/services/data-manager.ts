@@ -1,0 +1,573 @@
+/**
+ * 数据管理器
+ *
+ * 全局单例，负责：
+ * - 统一的数据刷新循环
+ * - 币安 API 调用和数据聚合
+ * - 订阅模式的数据广播
+ * - 生命周期管理（基于引用计数）
+ */
+
+import { BinanceRestClient } from '../binance/rest-client'
+import { getServerConfig } from '../config'
+import { mapBinancePosition } from '../utils/binance-mapper'
+import { mapBinanceAccount } from '../utils/account-mapper'
+import type {
+  DashboardData,
+  DataCallback,
+  DataManagerMetrics,
+  DataManagerConfig,
+  SimpleOrder,
+} from './types'
+
+/**
+ * 数据管理器类（单例模式）
+ */
+export class DataManager {
+  /** 单例实例 */
+  private static instance: DataManager | null = null
+
+  /** 当前数据 */
+  private data: DashboardData | null = null
+
+  /** 刷新定时器 */
+  private refreshIntervalId: NodeJS.Timeout | null = null
+
+  /** 心跳定时器 */
+  private heartbeatIntervalId: NodeJS.Timeout | null = null
+
+  /** 订阅者集合 */
+  private subscribers: Set<DataCallback> = new Set()
+
+  /** 引用计数 */
+  private refCount = 0
+
+  /** 配置 */
+  private config: DataManagerConfig
+
+  /** 指标 */
+  private metrics: DataManagerMetrics
+
+  /** 每日快照（用于计算已实现盈亏） */
+  private dailySnapshot: { date: string; balance: number; unrealizedProfit: number } | null = null
+
+  /** 重试次数 */
+  private retryCount = 0
+
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    this.config = {
+      refreshInterval: 5000,      // 5 秒刷新间隔
+      heartbeatInterval: 30000,   // 30 秒心跳间隔
+      maxRetries: 3,              // 最大重试 3 次
+      enableLog: process.env.NODE_ENV === 'development',
+    }
+
+    this.metrics = {
+      totalFetches: 0,
+      failedFetches: 0,
+      avgFetchTime: 0,
+      lastFetchTime: 0,
+      broadcastsSent: 0,
+    }
+
+    this.log('[DataManager] Initialized')
+  }
+
+  /**
+   * 获取单例实例
+   */
+  static getInstance(): DataManager {
+    if (!this.instance) {
+      this.instance = new DataManager()
+    }
+    return this.instance
+  }
+
+  /**
+   * 增加引用计数
+   */
+  incrementRef(): void {
+    this.refCount++
+    this.log(`[DataManager] Ref count increased to ${this.refCount}`)
+
+    // 第一个引用，启动刷新循环
+    if (this.refCount === 1) {
+      this.start()
+    }
+  }
+
+  /**
+   * 减少引用计数
+   */
+  decrementRef(): void {
+    this.refCount--
+    this.log(`[DataManager] Ref count decreased to ${this.refCount}`)
+
+    // 最后一个引用，停止刷新循环
+    if (this.refCount <= 0) {
+      this.stop()
+      this.refCount = 0
+    }
+  }
+
+  /**
+   * 启动数据刷新循环
+   */
+  private start(): void {
+    this.log('[DataManager] Starting data refresh loop')
+
+    // 立即获取一次数据
+    this.fetchAndBroadcast()
+
+    // 启动定时刷新
+    this.refreshIntervalId = setInterval(() => {
+      this.fetchAndBroadcast()
+    }, this.config.refreshInterval)
+
+    // 启动心跳
+    this.heartbeatIntervalId = setInterval(() => {
+      this.sendHeartbeat()
+    }, this.config.heartbeatInterval)
+
+    // 启动指标日志（每分钟）
+    if (this.config.enableLog) {
+      setInterval(() => {
+        this.logMetrics()
+      }, 60000)
+    }
+  }
+
+  /**
+   * 停止数据刷新循环
+   */
+  private stop(): void {
+    this.log('[DataManager] Stopping data refresh loop')
+
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId)
+      this.refreshIntervalId = null
+    }
+
+    if (this.heartbeatIntervalId) {
+      clearInterval(this.heartbeatIntervalId)
+      this.heartbeatIntervalId = null
+    }
+
+    // 清空订阅者
+    this.subscribers.clear()
+  }
+
+  /**
+   * 订阅数据更新
+   *
+   * @param callback 数据更新回调函数
+   * @returns 取消订阅函数
+   */
+  subscribe(callback: DataCallback): () => void {
+    this.subscribers.add(callback)
+    this.log(`[DataManager] New subscriber added. Total: ${this.subscribers.size}`)
+
+    // 新订阅者立即获得当前数据
+    if (this.data) {
+      callback(this.data)
+    }
+
+    // 返回取消订阅函数
+    return () => {
+      this.subscribers.delete(callback)
+      this.log(`[DataManager] Subscriber removed. Total: ${this.subscribers.size}`)
+    }
+  }
+
+  /**
+   * 获取当前数据（同步）
+   */
+  getCurrentData(): DashboardData | null {
+    return this.data
+  }
+
+  /**
+   * 获取并广播数据
+   */
+  private async fetchAndBroadcast(): Promise<void> {
+    const startTime = Date.now()
+
+    try {
+      // 获取数据（带重试）
+      const data = await this.fetchWithRetry()
+      this.data = data
+      this.retryCount = 0
+
+      // 更新指标
+      const elapsed = Date.now() - startTime
+      this.metrics.totalFetches++
+      this.metrics.avgFetchTime =
+        (this.metrics.avgFetchTime * (this.metrics.totalFetches - 1) + elapsed) /
+        this.metrics.totalFetches
+      this.metrics.lastFetchTime = Date.now()
+
+      // 广播给所有订阅者
+      this.broadcast(data)
+
+      this.log(
+        `[DataManager] Data fetched and broadcasted (${elapsed}ms, ` +
+        `subscribers: ${this.subscribers.size})`
+      )
+    } catch (error) {
+      this.metrics.failedFetches++
+      this.log(`[DataManager] Fetch failed: ${error}`)
+
+      // 广播错误给订阅者
+      this.broadcastError(error instanceof Error ? error.message : 'Unknown error')
+    }
+  }
+
+  /**
+   * 带重试的数据获取
+   */
+  private async fetchWithRetry(): Promise<DashboardData> {
+    try {
+      return await this.fetchDashboardData()
+    } catch (error) {
+      this.retryCount++
+
+      if (this.retryCount <= this.config.maxRetries) {
+        const delay = Math.pow(2, this.retryCount) * 1000
+        this.log(
+          `[DataManager] Fetch failed, retrying in ${delay}ms ` +
+          `(attempt ${this.retryCount}/${this.config.maxRetries})`
+        )
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        return this.fetchWithRetry()
+      }
+
+      // 重试次数用尽，使用缓存数据
+      this.log(`[DataManager] Max retries exceeded, using cached data`)
+      if (this.data) {
+        return this.data
+      }
+
+      // 如果连缓存都没有，返回空数据
+      throw error
+    }
+  }
+
+  /**
+   * 获取看板数据
+   *
+   * 从原 ws/route.ts 移植过来的逻辑
+   */
+  private async fetchDashboardData(): Promise<DashboardData> {
+    // 获取服务端配置
+    const config = getServerConfig()
+
+    // 创建 REST 客户端
+    const client = new BinanceRestClient({
+      apiKey: config.binance.apiKey,
+      apiSecret: config.binance.apiSecret,
+      baseUrl: config.binance.restApi,
+      enableLog: config.app.isDevelopment,
+    })
+
+    // 并发获取所有数据
+    const [accountInfo, positionsInfo, openOrdersInfo] = await Promise.all([
+      client.getAccountInfo(),
+      client.getPositions(),
+      client.getOpenOrders(),
+    ])
+
+    // 映射账户数据
+    const account = mapBinanceAccount(accountInfo)
+
+    // 获取非稳定币并计算价格
+    const nonStableCoins = accountInfo.assets?.filter((a: any) =>
+      !['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(a.asset)
+    ) || []
+
+    if (nonStableCoins.length > 0) {
+      try {
+        const symbols = nonStableCoins.map((a: any) => `${a.asset}USDT`)
+        const pricePromises = symbols.map(async (symbol: string) => {
+          try {
+            const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`)
+            if (!res.ok) return null
+            return await res.json()
+          } catch {
+            return null
+          }
+        })
+        const priceResults = await Promise.all(pricePromises)
+
+        const pricesMap: Record<string, number> = {}
+        priceResults.forEach((result) => {
+          if (result?.symbol && result.price) {
+            pricesMap[result.symbol.replace('USDT', '')] = parseFloat(result.price)
+          }
+        })
+
+        // 重新计算总余额
+        const totalUsdBalance = accountInfo.assets?.reduce((total: number, asset: any) => {
+          const balance = parseFloat(asset.walletBalance || '0')
+          if (['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(asset.asset)) {
+            return total + balance
+          }
+          return total + (balance * (pricesMap[asset.asset] || 0))
+        }, 0) || 0
+
+        account.totalWalletBalance = totalUsdBalance.toString()
+        account.availableBalance = totalUsdBalance.toString()
+      } catch (error) {
+        this.log(`[DataManager] Failed to fetch prices: ${error}`)
+      }
+    } else {
+      // 只有稳定币
+      const totalUsdBalance = accountInfo.assets?.reduce((total: number, asset: any) => {
+        const balance = parseFloat(asset.walletBalance || '0')
+        if (['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(asset.asset)) {
+          return total + balance
+        }
+        return total
+      }, 0) || 0
+      account.totalWalletBalance = totalUsdBalance.toString()
+      account.availableBalance = totalUsdBalance.toString()
+    }
+
+    // 计算总未实现盈亏
+    const totalUnrealizedProfit = positionsInfo.reduce(
+      (total: number, pos: any) => total + parseFloat(pos.unRealizedProfit || '0'),
+      0
+    )
+    account.unrealizedProfit = totalUnrealizedProfit.toString()
+
+    // 计算今日已实现盈亏
+    const now = new Date()
+    const todayDate = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    const todayDateString = new Date(todayDate).toISOString().split('T')[0]
+
+    const currentBalance = parseFloat(account.totalWalletBalance || '0')
+    const currentEquity = currentBalance - totalUnrealizedProfit
+    let todayRealizedPnl = 0
+
+    if (!this.dailySnapshot || this.dailySnapshot.date !== todayDateString) {
+      this.dailySnapshot = {
+        date: todayDateString,
+        balance: currentBalance,
+        unrealizedProfit: totalUnrealizedProfit,
+      }
+    } else {
+      const snapshotEquity = this.dailySnapshot.balance - this.dailySnapshot.unrealizedProfit
+      todayRealizedPnl = currentEquity - snapshotEquity
+    }
+
+    // 映射并过滤持仓数据
+    const positions = positionsInfo
+      .map((p: any) => mapBinancePosition(p))
+      .filter((p: any) => parseFloat(p.positionAmount) !== 0)
+
+    // 获取持仓中所有唯一的 symbol
+    const symbols = Array.from(new Set(positions.map((p: any) => p.symbol)))
+
+    // 获取历史订单（只查询有持仓的交易对）
+    const allTrades: any[] = []
+
+    // 串行查询，一旦获取到足够的订单就停止
+    for (const symbol of symbols) {
+      let currentEndTime = Date.now()
+      let hasMore = true
+
+      while (hasMore) {
+        const currentStartTime = currentEndTime - (24 * 60 * 60 * 1000) // 24小时窗口
+
+        try {
+          const trades = await client.getUserTrades(symbol, {
+            startTime: currentStartTime,
+            endTime: currentEndTime,
+            limit: 1000,
+          })
+
+          if (trades.length > 0) {
+            allTrades.push(...trades.map((t: any) => ({ ...t, symbol })))
+          }
+
+          // 如果已经收集到足够的订单，提前退出
+          if (allTrades.length >= 100) {
+            break
+          }
+
+          if (trades.length < 1000) {
+            hasMore = false
+          } else {
+            currentEndTime = currentStartTime - 1
+          }
+        } catch {
+          hasMore = false
+        }
+      }
+
+      // 如果已经有足够的数据，就不再查询其他交易对
+      if (allTrades.length >= symbols.length * 20) {
+        break
+      }
+    }
+
+    // 去重并排序
+    const uniqueTradesMap = new Map<string, any>()
+    for (const trade of allTrades) {
+      const key = `${trade.id}_${trade.symbol}`
+      if (!uniqueTradesMap.has(key)) {
+        uniqueTradesMap.set(key, trade)
+      }
+    }
+    const uniqueTrades = Array.from(uniqueTradesMap.values()).sort((a, b) => b.time - a.time)
+
+    // 只返回最近 5 条订单
+    const orders = uniqueTrades.slice(0, 5).map(this.mapTradeToOrder)
+
+    // 统计当前委托订单
+    const openOrdersStats = {
+      total: openOrdersInfo.length,
+      buy: openOrdersInfo.filter((t: any) => t.side === 'BUY').length,
+      sell: openOrdersInfo.filter((t: any) => t.side === 'SELL').length,
+    }
+
+    const openOrders = openOrdersInfo.map(this.mapOpenOrderToOrder)
+
+    return {
+      account,
+      positions,
+      orders,
+      openOrdersStats,
+      openOrders,
+      todayRealizedPnl,
+      timestamp: Date.now(),
+    }
+  }
+
+  /**
+   * 将 getUserTrades API 返回的数据映射为简化订单类型
+   */
+  private mapTradeToOrder(trade: any): SimpleOrder {
+    return {
+      id: trade.id,
+      orderId: trade.orderId,
+      symbol: trade.symbol,
+      price: trade.price,
+      origQty: trade.qty,
+      executedQty: trade.qty,
+      side: trade.side,
+      status: 'FILLED',
+      time: trade.time,
+      updateTime: trade.time,
+    }
+  }
+
+  /**
+   * 将 getOpenOrders API 返回的数据映射为简化订单类型
+   */
+  private mapOpenOrderToOrder(order: any): SimpleOrder {
+    return {
+      orderId: order.orderId,
+      symbol: order.symbol,
+      price: order.price,
+      origQty: order.origQty,
+      executedQty: order.executedQty,
+      side: order.side,
+      status: order.status,
+      time: order.time,
+      updateTime: order.updateTime,
+    }
+  }
+
+  /**
+   * 广播数据更新给所有订阅者
+   */
+  private broadcast(data: DashboardData): void {
+    this.metrics.broadcastsSent++
+    let successCount = 0
+    let failCount = 0
+
+    this.subscribers.forEach((callback) => {
+      try {
+        callback(data)
+        successCount++
+      } catch (error) {
+        failCount++
+        this.log(`[DataManager] Callback error: ${error}`)
+      }
+    })
+
+    if (failCount > 0) {
+      this.log(`[DataManager] Broadcast completed: ${successCount} success, ${failCount} failed`)
+    }
+  }
+
+  /**
+   * 广播错误给所有订阅者
+   */
+  private broadcastError(_error: string): void {
+    // 使用缓存数据广播，标记为错误状态
+    if (this.data) {
+      this.subscribers.forEach((callback) => {
+        try {
+          callback({ ...this.data!, timestamp: Date.now() })
+        } catch (err) {
+          this.log(`[DataManager] Error callback failed: ${err}`)
+        }
+      })
+    }
+  }
+
+  /**
+   * 发送心跳
+   */
+  private sendHeartbeat(): void {
+    this.log(`[DataManager] Heartbeat (subscribers: ${this.subscribers.size})`)
+  }
+
+  /**
+   * 输出指标日志
+   */
+  private logMetrics(): void {
+    const successRate =
+      this.metrics.totalFetches > 0
+        ? ((this.metrics.totalFetches - this.metrics.failedFetches) / this.metrics.totalFetches) * 100
+        : 100
+
+    this.log(
+      `[DataManager] Metrics: ` +
+      `total=${this.metrics.totalFetches}, ` +
+      `failed=${this.metrics.failedFetches}, ` +
+      `successRate=${successRate.toFixed(1)}%, ` +
+      `avgTime=${this.metrics.avgFetchTime.toFixed(0)}ms, ` +
+      `broadcasts=${this.metrics.broadcastsSent}, ` +
+      `subscribers=${this.subscribers.size}, ` +
+      `refs=${this.refCount}`
+    )
+  }
+
+  /**
+   * 获取指标
+   */
+  getMetrics(): DataManagerMetrics {
+    return { ...this.metrics }
+  }
+
+  /**
+   * 日志输出
+   */
+  private log(message: string): void {
+    if (this.config.enableLog) {
+      console.log(message)
+    }
+  }
+}
+
+/**
+ * 导出单例获取函数
+ */
+export function getDataManager(): DataManager {
+  return DataManager.getInstance()
+}
