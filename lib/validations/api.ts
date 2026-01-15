@@ -90,6 +90,34 @@ export const ordersQuerySchema = z.object({
 })
 
 /**
+ * 用户成交记录查询参数 Schema
+ */
+export const userTradesQuerySchema = z.object({
+  symbol: symbolSchema.optional(),
+  limit: z
+    .string()
+    .optional()
+    .transform(val => (val ? parseInt(val, 10) : 50))
+    .pipe(
+      z
+        .number()
+        .int('Limit must be an integer')
+        .min(1, 'Limit must be at least 1')
+        .max(1000, 'Limit cannot exceed 1000')
+    ),
+  startTime: z
+    .string()
+    .optional()
+    .transform(val => (val ? parseInt(val, 10) : undefined))
+    .pipe(z.number().int().positive().optional()),
+  endTime: z
+    .string()
+    .optional()
+    .transform(val => (val ? parseInt(val, 10) : undefined))
+    .pipe(z.number().int().positive().optional()),
+})
+
+/**
  * WebSocket 监听 Key 操作 Schema
  */
 export const listenKeyActionSchema = z.enum(['start', 'keepAlive', 'stop'])
@@ -141,7 +169,7 @@ export function validateQueryParams<T>(
 /**
  * 从 Zod 错误生成 Next.js 响应
  */
-export function validationErrorResponse(validation: ReturnType<typeof validateQueryParams<any>>) {
+export function validationErrorResponse<T>(validation: ReturnType<typeof validateQueryParams<T>>) {
   if (validation.success) {
     return null
   }
