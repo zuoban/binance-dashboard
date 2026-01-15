@@ -29,7 +29,10 @@ export function middleware(request: NextRequest) {
   }
 
   // 验证访问码
-  const accessCode = request.headers.get('x-access-code')
+  // 支持两种方式：请求头（fetch API）和查询参数（EventSource）
+  const codeFromHeader = request.headers.get('x-access-code')
+  const codeFromQuery = request.nextUrl.searchParams.get('code')
+  const accessCode = codeFromHeader || codeFromQuery
 
   if (!accessCode || accessCode !== authConfig.accessCode) {
     return new NextResponse(

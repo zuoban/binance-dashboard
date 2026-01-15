@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AccountAsset, Position, Order } from '@/types/binance'
+import { getStoredAccessCode } from '@/lib/utils/fetch-with-auth'
 
 interface DashboardData {
   account: AccountAsset | null
@@ -120,8 +121,15 @@ export function useDashboardWebSocket(
       setIsConnecting(true)
       setError(null)
 
-      // 构建 SSE URL
-      const url = `/api/dashboard/ws`
+      // 获取访问码并构建 SSE URL
+      const accessCode = getStoredAccessCode()
+      if (!accessCode) {
+        throw new Error('未找到访问码，请先登录')
+      }
+
+      // 将访问码作为查询参数传递
+      // 注意：EventSource 不支持自定义请求头，只能通过 URL 传递
+      const url = `/api/dashboard/ws?code=${encodeURIComponent(accessCode)}`
 
       console.log('[useDashboardWebSocket] Connecting to:', url)
 
@@ -155,22 +163,21 @@ export function useDashboardWebSocket(
         }
       })
 
-      // 接收错误消息
-      eventSource.addEventListener('error', (event: MessageEvent) => {
-        try {
-          const message = JSON.parse(event.data)
-          console.error('[useDashboardWebSocket] Server error:', message.error)
-          setError(message.error)
-          onError?.(message.error)
-        } catch (err) {
-          console.error('[useDashboardWebSocket] Error parsing error message:', err)
-        }
-      })
-
-      // 连接错误
+      // 连接错误（EventSource 的原生 onerror 回调）
       eventSource.onerror = err => {
         console.error('[useDashboardWebSocket] Connection error:', err)
-        setError('Connection error')
+        console.error('[useDashboardWebSocket] EventSource readyState:', eventSource.readyState)
+        console.error('[useDashboardWebSocket] EventSource URL:', url)
+
+        // 根据 readyState 提供更详细的错误信息
+        let errorMessage = 'Connection error'
+        if (eventSource.readyState === EventSource.CLOSED) {
+          errorMessage = 'Connection closed'
+        } else if (eventSource.readyState === EventSource.CONNECTING) {
+          errorMessage = 'Connection failed - unable to establish connection'
+        }
+
+        setError(errorMessage)
         setIsConnecting(false)
         setIsConnected(false)
         onConnectionChange?.(false)
