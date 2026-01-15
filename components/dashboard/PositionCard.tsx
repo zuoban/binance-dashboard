@@ -105,21 +105,19 @@ export function PositionCard({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4 transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 ${
-        isProfit ? 'shadow-emerald-500/5' : 'shadow-red-500/5'
+      className={`card p-4 transition-all duration-200 ${
+        isProfit
+          ? 'hover:border-[#10b981]/50 hover:glow-success'
+          : 'hover:border-[#ef4444]/50 hover:glow-danger'
       } ${className}`}
     >
       {/* 头部 */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-            {position.symbol}
-          </h3>
+          <h3 className="text-base font-semibold text-[#f4f4f5]">{position.symbol}</h3>
           <span
             className={`px-2 py-0.5 rounded text-xs font-medium ${
-              isLong
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              isLong ? 'bg-[#10b981]/10 text-[#10b981]' : 'bg-[#ef4444]/10 text-[#ef4444]'
             }`}
           >
             {isLong ? '做多' : '做空'}
@@ -127,47 +125,45 @@ export function PositionCard({
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400">{leverage}x</span>
+          <span className="text-xs text-[#71717a] bg-[#1a1a2e] px-2 py-1 rounded">{leverage}x</span>
         </div>
       </div>
 
       {/* 数据 */}
-      <div className="space-y-2 mb-3">
-        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-          <span className="text-xs text-gray-500 dark:text-gray-400">持仓金额</span>
-          <span className="text-xs font-semibold text-gray-900 dark:text-white">
-            ${positionValue.toFixed(2)}
-          </span>
+      <div className="space-y-2.5 mb-4">
+        <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+          <span className="text-xs text-[#71717a]">持仓金额</span>
+          <span className="text-xs font-semibold text-[#f4f4f5]">${positionValue.toFixed(2)}</span>
         </div>
 
-        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-          <span className="text-xs text-gray-500 dark:text-gray-400">持仓数量</span>
-          <span className="text-xs font-medium text-gray-900 dark:text-white">
+        <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+          <span className="text-xs text-[#71717a]">持仓数量</span>
+          <span className="text-xs font-medium text-[#f4f4f5]">
             {formatAmount(Math.abs(positionAmount), position.symbol, exchangeInfo)}
           </span>
         </div>
 
-        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-          <span className="text-xs text-gray-500 dark:text-gray-400">入场价格</span>
-          <span className="text-xs font-medium text-gray-900 dark:text-white">
+        <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+          <span className="text-xs text-[#71717a]">入场价格</span>
+          <span className="text-xs font-medium text-[#f4f4f5]">
             ${formatPrice(position.entryPrice, position.symbol, exchangeInfo)}
           </span>
         </div>
 
         {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 && (
-          <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-            <span className="text-xs text-gray-500 dark:text-gray-400">盈亏平衡价</span>
+          <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+            <span className="text-xs text-[#71717a]">盈亏平衡价</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+              <span className="text-xs font-medium text-[#f59e0b]">
                 ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
               </span>
               <span
                 className={`text-xs ${
                   parseFloat(position.breakEvenPrice) > parseFloat(position.markPrice)
-                    ? 'text-emerald-600 dark:text-emerald-400'
+                    ? 'text-[#10b981]'
                     : parseFloat(position.breakEvenPrice) < parseFloat(position.markPrice)
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-gray-500 dark:text-gray-400'
+                      ? 'text-[#ef4444]'
+                      : 'text-[#71717a]'
                 }`}
               >
                 (
@@ -183,9 +179,9 @@ export function PositionCard({
         )}
 
         {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 && (
-          <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-            <span className="text-xs text-gray-500 dark:text-gray-400">强平价格</span>
-            <span className="text-xs font-medium text-red-600 dark:text-red-400">
+          <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+            <span className="text-xs text-[#71717a]">强平价格</span>
+            <span className="text-xs font-medium text-[#ef4444]">
               ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
             </span>
           </div>
@@ -193,13 +189,13 @@ export function PositionCard({
 
         {/* 最近委托买单 */}
         {nearbyBuyOrder && (
-          <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-            <span className="text-xs text-gray-500 dark:text-gray-400">委托买价</span>
+          <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+            <span className="text-xs text-[#71717a]">委托买价</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="text-xs font-medium text-[#10b981]">
                 ${formatPrice(nearbyBuyOrder.price, position.symbol, exchangeInfo)}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-[#71717a]">
                 (
                 {(
                   ((parseFloat(position.markPrice) - parseFloat(nearbyBuyOrder.price)) /
@@ -213,9 +209,9 @@ export function PositionCard({
         )}
 
         {/* 标记价格 */}
-        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700">
-          <span className="text-xs text-gray-500 dark:text-gray-400">标记价格</span>
-          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+        <div className="flex justify-between items-center py-1.5 border-b border-[#1e1e32]">
+          <span className="text-xs text-[#71717a]">标记价格</span>
+          <span className="text-xs font-medium text-[#3b82f6]">
             ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
           </span>
         </div>
@@ -223,12 +219,12 @@ export function PositionCard({
         {/* 最近委托卖单 */}
         {nearbySellOrder && (
           <div className="flex justify-between items-center py-1.5">
-            <span className="text-xs text-gray-500 dark:text-gray-400">委托卖价</span>
+            <span className="text-xs text-[#71717a]">委托卖价</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-red-600 dark:text-red-400">
+              <span className="text-xs font-medium text-[#ef4444]">
                 ${formatPrice(nearbySellOrder.price, position.symbol, exchangeInfo)}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-[#71717a]">
                 (
                 {(
                   ((parseFloat(nearbySellOrder.price) - parseFloat(position.markPrice)) /
@@ -243,17 +239,11 @@ export function PositionCard({
       </div>
 
       {/* 底部：未实现盈亏 */}
-      <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+      <div className="pt-3 border-t border-[#1e1e32]">
         <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400">未实现盈亏</span>
+          <span className="text-xs text-[#71717a]">未实现盈亏</span>
           <div className="flex items-center gap-1">
-            <span
-              className={`text-sm font-bold ${
-                isProfit
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}
-            >
+            <span className={`text-sm font-bold ${isProfit ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>
               {isProfit ? '+' : ''}${formatPrice(unrealizedProfit, position.symbol, exchangeInfo)}
             </span>
           </div>

@@ -442,6 +442,10 @@ export class DataManager {
       status: 'FILLED',
       time: trade.time,
       updateTime: trade.time,
+      commission: trade.commission,
+      commissionAsset: trade.commissionAsset,
+      realizedPnl: trade.realizedPnl,
+      buyer: trade.buyer,
     }
   }
 

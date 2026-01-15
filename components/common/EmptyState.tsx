@@ -22,7 +22,7 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon, title, description, action, className = '' }: EmptyStateProps) {
   const defaultIcon = (
-    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-16 h-16 text-[#71717a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -38,13 +38,11 @@ export function EmptyState({ icon, title, description, action, className = '' }:
       <div className="mb-4">{icon || defaultIcon}</div>
 
       {/* 标题 */}
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
+      <h3 className="text-lg font-semibold text-[#f4f4f5] mb-2">{title}</h3>
 
       {/* 描述 */}
       {description && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
-          {description}
-        </p>
+        <p className="text-sm text-[#71717a] mb-6 text-center max-w-md">{description}</p>
       )}
 
       {/* 操作按钮 */}

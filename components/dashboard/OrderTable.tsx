@@ -56,42 +56,42 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
       case 'FILLED':
         return {
           label: '已完成',
-          className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+          className: 'bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30',
         }
       case 'CANCELED':
         return {
           label: '已撤销',
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+          className: 'bg-[#71717a]/10 text-[#71717a] border border-[#71717a]/30',
         }
       case 'NEW':
         return {
           label: '新建',
-          className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+          className: 'bg-[#3b82f6]/10 text-[#3b82f6] border border-[#3b82f6]/30',
         }
       case 'PARTIALLY_FILLED':
         return {
           label: '部分成交',
-          className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+          className: 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30',
         }
       case 'PENDING_CANCEL':
         return {
           label: '撤销中',
-          className: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+          className: 'bg-[#f97316]/10 text-[#f97316] border border-[#f97316]/30',
         }
       case 'REJECTED':
         return {
           label: '已拒绝',
-          className: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+          className: 'bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30',
         }
       case 'EXPIRED':
         return {
           label: '已过期',
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+          className: 'bg-[#71717a]/10 text-[#71717a] border border-[#71717a]/30',
         }
       default:
         return {
           label: status,
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+          className: 'bg-[#71717a]/10 text-[#71717a] border border-[#71717a]/30',
         }
     }
   }
@@ -99,7 +99,7 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
   const config = getStatusConfig()
 
   return (
-    <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${config.className}`}>
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${config.className}`}>
       {config.label}
     </span>
   )
@@ -154,7 +154,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
   // 紧凑模式：只显示关键列
   if (compact) {
     return (
-      <div className={`space-y-1.5 ${className}`}>
+      <div className={`space-y-2 ${className}`}>
         {orders.map((order, index) => {
           const executedQty = parseFloat(order.executedQty)
           const price = parseFloat(order.price)
@@ -165,60 +165,55 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               key={
                 order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`
               }
-              className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+              className="px-4 py-3 bg-[#1a1a2e] rounded-lg hover:bg-[#1e1e32] transition-all duration-200"
             >
               {/* 第一行：交易对 + 方向 + 类型 */}
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="font-semibold text-gray-900 dark:text-white text-xs">
-                  {order.symbol}
-                </span>
-                <span
-                  className={`text-xs font-medium ${
-                    order.side === 'BUY'
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {order.side === 'BUY' ? '买' : '卖'}
-                </span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                  {order.type === 'MARKET' ? '市价' : order.type === 'LIMIT' ? '限价' : order.type}
-                </span>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-[#f4f4f5] text-xs">{order.symbol}</span>
+                  <span
+                    className={`text-xs font-medium ${
+                      order.side === 'BUY' ? 'text-[#10b981]' : 'text-[#ef4444]'
+                    }`}
+                  >
+                    {order.side === 'BUY' ? '买' : '卖'}
+                  </span>
+                  <span className="text-[10px] text-[#71717a] bg-[#0a0a0f] px-1.5 py-0.5 rounded">
+                    {order.type === 'MARKET'
+                      ? '市价'
+                      : order.type === 'LIMIT'
+                        ? '限价'
+                        : order.type}
+                  </span>
+                </div>
+                <OrderStatusBadge status={order.status} />
               </div>
 
               {/* 第二行：价格 + 数量 + 金额 */}
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    价格:{' '}
-                    <span className="font-medium text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <div className="flex items-center gap-4">
+                  <span className="text-[#71717a]">
+                    <span className="font-medium text-[#f4f4f5]">
                       ${formatPrice(price, order.symbol, exchangeInfo)}
                     </span>
                   </span>
-                  <span className="text-gray-500 dark:text-gray-400">
-                    数量:{' '}
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {executedQty.toFixed(4)}
-                    </span>
+                  <span className="text-[#71717a]">
+                    <span className="font-medium text-[#f4f4f5]">{executedQty.toFixed(4)}</span>
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    金额:{' '}
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      ${totalAmount.toFixed(2)}
-                    </span>
+                  <span className="text-[#71717a]">
+                    <span className="font-semibold text-[#f59e0b]">${totalAmount.toFixed(2)}</span>
                   </span>
                 </div>
               </div>
 
               {/* 第三行：手续费 + 实现盈亏 */}
               {(order.commission !== undefined || order.realizedPnl !== undefined) && (
-                <div className="flex items-center justify-between text-xs mt-1">
+                <div className="flex items-center justify-between text-xs mb-1.5">
                   {order.commission !== undefined && (
-                    <span className="text-gray-500 dark:text-gray-400">
-                      手续费:{' '}
-                      <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="text-[#71717a]">
+                      <span className="font-medium text-[#f4f4f5]">
                         {parseFloat(order.commission).toFixed(4)}
                         {order.commissionAsset && ` ${order.commissionAsset}`}
                       </span>
@@ -227,21 +222,18 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
                   {order.realizedPnl !== undefined && (
                     <span
                       className={`font-medium ${
-                        parseFloat(order.realizedPnl) >= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-red-600 dark:text-red-400'
+                        parseFloat(order.realizedPnl) >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'
                       }`}
                     >
-                      实现盈亏: {parseFloat(order.realizedPnl).toFixed(2)}
+                      {parseFloat(order.realizedPnl) >= 0 ? '+' : ''}
+                      {parseFloat(order.realizedPnl).toFixed(2)}
                     </span>
                   )}
                 </div>
               )}
 
               {/* 第四行：时间 */}
-              <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                {formatDistanceToNow(order.time)}
-              </div>
+              <div className="text-[10px] text-[#71717a]">{formatDistanceToNow(order.time)}</div>
             </div>
           )
         })}

@@ -11,4 +11,3 @@ import { DashboardView } from './DashboardView'
 export function DashboardContent() {
   return <DashboardView />
 }
-

@@ -30,6 +30,14 @@ export interface SimpleOrder {
   time: number
   /** 订单更新时间 */
   updateTime: number
+  /** 手续费 */
+  commission?: string
+  /** 手续费计价单位 */
+  commissionAsset?: string
+  /** 实现盈亏 */
+  realizedPnl?: string
+  /** 是否买方 */
+  buyer?: boolean
 }
 
 /**
