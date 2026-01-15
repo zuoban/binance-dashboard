@@ -105,15 +105,15 @@ export function AssetOverview({
   if (loading) {
     return (
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4 ${className}`}
+        className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-2.5 ${className}`}
       >
-        <div className="animate-pulse space-y-3">
-          <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="h-8 bg-gray-100 dark:bg-gray-700 rounded"></div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded"></div>
-            <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded"></div>
-            <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded"></div>
+        <div className="animate-pulse space-y-2">
+          <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded w-1/4"></div>
+          <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded"></div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded"></div>
           </div>
         </div>
       </div>
@@ -122,15 +122,15 @@ export function AssetOverview({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4 ${className}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-2.5 ${className}`}
     >
       {/* 标题 */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">账户概览</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">风险</span>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-[10px] font-semibold text-gray-900 dark:text-white">账户概览</h2>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-gray-500 dark:text-gray-400">风险</span>
           <span
-            className={`px-2 py-0.5 rounded text-xs font-medium ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
               riskLevel === 'high'
                 ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                 : riskLevel === 'medium'
@@ -144,37 +144,37 @@ export function AssetOverview({
       </div>
 
       {/* 主要数据 */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {/* 总余额 */}
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">总余额</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">总余额</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">
             ${parseFloat(balance || '0').toFixed(2)}
           </p>
         </div>
 
         {/* 可用余额、未实现盈亏、今日已实现盈亏 */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">可用余额</p>
-            <p className="text-base font-semibold text-gray-900 dark:text-white">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-md px-2 py-1">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">可用余额</p>
+            <p className="text-xs font-semibold text-gray-900 dark:text-white">
               ${parseFloat(availableBalance || '0').toFixed(2)}
             </p>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">未实现盈亏</p>
-            <div className="flex items-center gap-1">
-              <p className={`text-sm font-semibold ${getProfitColor()}`}>
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-md px-2 py-1">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">未实现盈亏</p>
+            <div className="flex items-center gap-0.5">
+              <p className={`text-[10px] font-semibold ${getProfitColor()}`}>
                 ${isNaN(parseFloat(profit)) ? '0.00' : parseFloat(profit).toFixed(2)}
               </p>
             </div>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">今日已实现盈亏</p>
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-md px-2 py-1">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">今日已实现</p>
             <p
-              className={`text-sm font-semibold ${
+              className={`text-[10px] font-semibold ${
                 todayRealizedPnl && todayRealizedPnl >= 0
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : todayRealizedPnl && todayRealizedPnl < 0
@@ -188,9 +188,9 @@ export function AssetOverview({
         </div>
 
         {/* 权益总额 */}
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">权益总额</p>
-          <p className={`text-base font-semibold ${getProfitColor()}`}>
+        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-md px-2 py-1">
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">权益总额</p>
+          <p className={`text-xs font-semibold ${getProfitColor()}`}>
             ${(parseFloat(balance || '0') + parseFloat(profit || '0')).toFixed(2)}
           </p>
         </div>
@@ -198,17 +198,19 @@ export function AssetOverview({
         {/* 资产明细 */}
         {assets.length > 0 && (
           <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">资产明细 (&gt;$1)</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1">资产明细 (&gt;$1)</p>
+            <div className="grid grid-cols-2 gap-2">
               {assetsWithUsdValue
                 .filter(asset => asset.usdValue > 1)
                 .map(asset => (
                   <div
                     key={asset.asset}
-                    className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
+                    className="bg-gray-50 dark:bg-gray-700/50 rounded-md px-2 py-1"
                   >
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{asset.asset}</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">
+                      {asset.asset}
+                    </p>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">
                       ${asset.usdValue.toFixed(2)}
                     </p>
                   </div>

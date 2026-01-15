@@ -22,7 +22,7 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon, title, description, action, className = '' }: EmptyStateProps) {
   const defaultIcon = (
-    <svg className="w-16 h-16 text-[#71717a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-10 h-10 text-[#71717a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -33,20 +33,20 @@ export function EmptyState({ icon, title, description, action, className = '' }:
   )
 
   return (
-    <div className={`flex flex-col items-center justify-center py-12 px-4 ${className}`}>
+    <div className={`flex flex-col items-center justify-center py-8 px-3 ${className}`}>
       {/* 图标 */}
-      <div className="mb-4">{icon || defaultIcon}</div>
+      <div className="mb-2">{icon || defaultIcon}</div>
 
       {/* 标题 */}
-      <h3 className="text-lg font-semibold text-[#f4f4f5] mb-2">{title}</h3>
+      <h3 className="text-sm font-semibold text-[#f4f4f5] mb-1">{title}</h3>
 
       {/* 描述 */}
       {description && (
-        <p className="text-sm text-[#71717a] mb-6 text-center max-w-md">{description}</p>
+        <p className="text-xs text-[#71717a] mb-3 text-center max-w-md">{description}</p>
       )}
 
       {/* 操作按钮 */}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   )
 }

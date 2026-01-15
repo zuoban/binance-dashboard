@@ -99,7 +99,7 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
   const config = getStatusConfig()
 
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${config.className}`}>
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${config.className}`}>
       {config.label}
     </span>
   )
@@ -154,7 +154,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
   // 紧凑模式：只显示关键列
   if (compact) {
     return (
-      <div className={`space-y-2 ${className}`}>
+      <div className={`space-y-1 ${className}`}>
         {orders.map((order, index) => {
           const executedQty = parseFloat(order.executedQty)
           const price = parseFloat(order.price)
@@ -165,20 +165,20 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               key={
                 order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`
               }
-              className="px-4 py-3 bg-[#1a1a2e] rounded-lg hover:bg-[#1e1e32] transition-all duration-200"
+              className="px-2 py-1.5 bg-[#1a1a2e] rounded hover:bg-[#1e1e32] transition-all duration-200"
             >
               {/* 第一行：交易对 + 方向 + 类型 */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-[#f4f4f5] text-xs">{order.symbol}</span>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1">
+                  <span className="font-semibold text-[#f4f4f5] text-[10px]">{order.symbol}</span>
                   <span
-                    className={`text-xs font-medium ${
+                    className={`text-[10px] font-medium ${
                       order.side === 'BUY' ? 'text-[#10b981]' : 'text-[#ef4444]'
                     }`}
                   >
                     {order.side === 'BUY' ? '买' : '卖'}
                   </span>
-                  <span className="text-[10px] text-[#71717a] bg-[#0a0a0f] px-1.5 py-0.5 rounded">
+                  <span className="text-[9px] text-[#71717a] bg-[#0a0a0f] px-1 py-0.5 rounded">
                     {order.type === 'MARKET'
                       ? '市价'
                       : order.type === 'LIMIT'
@@ -190,8 +190,8 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               </div>
 
               {/* 第二行：价格 + 数量 + 金额 */}
-              <div className="flex items-center justify-between text-xs mb-2">
-                <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between text-[10px] mb-1">
+                <div className="flex items-center gap-2">
                   <span className="text-[#71717a]">
                     <span className="font-medium text-[#f4f4f5]">
                       ${formatPrice(price, order.symbol, exchangeInfo)}
@@ -209,8 +209,9 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               </div>
 
               {/* 第三行：手续费 + 实现盈亏 */}
-              {(order.commission !== undefined || order.realizedPnl !== undefined) && (
-                <div className="flex items-center justify-between text-xs mb-1.5">
+              {(order.commission !== undefined ||
+                (order.realizedPnl !== undefined && order.side === 'SELL')) && (
+                <div className="flex items-center justify-between text-[10px] mb-0.5">
                   {order.commission !== undefined && (
                     <span className="text-[#71717a]">
                       <span className="font-medium text-[#f4f4f5]">
@@ -219,7 +220,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
                       </span>
                     </span>
                   )}
-                  {order.realizedPnl !== undefined && (
+                  {order.realizedPnl !== undefined && order.side === 'SELL' && (
                     <span
                       className={`font-medium ${
                         parseFloat(order.realizedPnl) >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'
@@ -233,7 +234,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               )}
 
               {/* 第四行：时间 */}
-              <div className="text-[10px] text-[#71717a]">{formatDistanceToNow(order.time)}</div>
+              <div className="text-[9px] text-[#71717a]">{formatDistanceToNow(order.time)}</div>
             </div>
           )
         })}

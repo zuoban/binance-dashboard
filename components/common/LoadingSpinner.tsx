@@ -15,9 +15,9 @@ interface LoadingSpinnerProps {
 
 /** 尺寸类名映射表（使用常量避免引用变化） */
 const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'w-4 h-4',
-  md: 'w-8 h-8',
-  lg: 'w-12 h-12',
+  sm: 'w-3 h-3',
+  md: 'w-6 h-6',
+  lg: 'w-8 h-8',
 }
 
 /**
@@ -38,11 +38,11 @@ export function LoadingSpinner({
     <div className={wrapperClassName}>
       {/* Spinner */}
       <div
-        className={`${spinnerSizeClass} border-4 border-[#1e1e32] border-t-[#f59e0b] rounded-full animate-spin`}
+        className={`${spinnerSizeClass} border-2 border-[#1e1e32] border-t-[#f59e0b] rounded-full animate-spin`}
       />
 
       {/* 文本 */}
-      {showText && <p className="text-sm text-[#71717a]">{text}</p>}
+      {showText && <p className="text-xs text-[#71717a]">{text}</p>}
     </div>
   )
 }
@@ -63,9 +63,9 @@ export function PageLoading({ text = '加载中...' }: { text?: string }) {
  */
 export function InlineLoading({ className = '' }: { className?: string }) {
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
-      <div className="w-4 h-4 border-2 border-[#1e1e32] border-t-[#f59e0b] rounded-full animate-spin" />
-      <span className="text-sm text-[#71717a]">加载中...</span>
+    <div className={`inline-flex items-center gap-1 ${className}`}>
+      <div className="w-3 h-3 border-2 border-[#1e1e32] border-t-[#f59e0b] rounded-full animate-spin" />
+      <span className="text-xs text-[#71717a]">加载中...</span>
     </div>
   )
 }

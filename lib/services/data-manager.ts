@@ -382,14 +382,14 @@ export class DataManager {
     // 获取持仓中所有唯一的 symbol
     const symbols = Array.from(new Set(positions.map((p: Position) => p.symbol)))
 
-    // 获取历史订单（只查询最近 5 条）
+    // 获取历史订单（只查询最近 10 条）
     const allTrades: (BinanceUserTrade & { symbol: string })[] = []
 
     // 并发查询所有持仓交易对的最近成交记录
     const tradesPromises = symbols.map(async symbol => {
       try {
         const trades = await client.getUserTrades(symbol, {
-          limit: 5, // 只获取最近 5 条
+          limit: 10, // 只获取最近 10 条
         })
         return trades.map((t: BinanceUserTrade) => ({ ...t, symbol }))
       } catch {
@@ -402,8 +402,8 @@ export class DataManager {
       allTrades.push(...trades)
     })
 
-    // 排序并取最近 5 条
-    const sortedTrades = allTrades.sort((a, b) => b.time - a.time).slice(0, 5)
+    // 排序并取最近 10 条
+    const sortedTrades = allTrades.sort((a, b) => b.time - a.time).slice(0, 10)
 
     const orders = sortedTrades.map(this.mapTradeToOrder)
 
