@@ -13,6 +13,13 @@ interface LoadingSpinnerProps {
   className?: string
 }
 
+/** 尺寸类名映射表（使用常量避免引用变化） */
+const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
+  sm: 'w-4 h-4',
+  md: 'w-8 h-8',
+  lg: 'w-12 h-12',
+}
+
 /**
  * 加载动画
  */
@@ -22,22 +29,17 @@ export function LoadingSpinner({
   text = '加载中...',
   className = '',
 }: LoadingSpinnerProps) {
-  const getSizeClass = () => {
-    switch (size) {
-      case 'sm':
-        return 'w-4 h-4'
-      case 'lg':
-        return 'w-12 h-12'
-      default:
-        return 'w-8 h-8'
-    }
-  }
+  const spinnerSizeClass = SIZE_CLASSES[size]
+  // 使用 clsx 或简单拼接确保 className 稳定
+  const wrapperClassName = className
+    ? `flex flex-col items-center justify-center gap-3 ${className}`
+    : 'flex flex-col items-center justify-center gap-3'
 
   return (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
+    <div className={wrapperClassName}>
       {/* Spinner */}
       <div
-        className={`${getSizeClass()} border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin`}
+        className={`${spinnerSizeClass} border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin`}
       />
 
       {/* 文本 */}

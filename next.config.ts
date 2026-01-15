@@ -8,12 +8,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, // Docker 部署时禁用图片优化
   },
-
-  // 实验性功能
-  experimental: {
-    // 禁用字体优化以避免构建时网络请求
-    optimizeCss: false,
-  },
 }
 
 export default nextConfig
