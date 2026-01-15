@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { clearCache, clearCacheByTimeRange } from '../route'
+import { getErrorMessage } from '@/lib/utils/error-handler'
 
 /**
  * DELETE /api/binance/dashboard/cache
@@ -31,14 +32,14 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: 'Cache cleared successfully',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Dashboard Cache] Error:', error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          message: error.message || 'Failed to clear cache',
+          message: getErrorMessage(error) || 'Failed to clear cache',
         },
       },
       { status: 500 }

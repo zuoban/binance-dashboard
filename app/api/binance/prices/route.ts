@@ -6,6 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/middleware/rate-limit'
+import { getErrorMessage } from '@/lib/utils/error-handler'
+
+interface BinanceTicker {
+  symbol: string
+  lastPrice: string
+}
 
 /**
  * GET /api/binance/prices
@@ -75,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     // 解析 ticker 数据
     if (Array.isArray(tickerData)) {
-      tickerData.forEach((ticker: any) => {
+      tickerData.forEach((ticker: BinanceTicker) => {
         const symbol = ticker.symbol
         const asset = symbol.replace('USDT', '')
         prices[asset] = parseFloat(ticker.lastPrice)
@@ -86,15 +92,15 @@ export async function GET(request: NextRequest) {
       success: true,
       data: prices,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Prices API] Error:', error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to fetch prices',
+          code: -1,
+          message: getErrorMessage(error) || 'Failed to fetch prices',
         },
       },
       { status: 500 }

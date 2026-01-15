@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
+import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
 
 /**
  * POST /api/binance/listen-key
@@ -82,23 +83,26 @@ export async function POST(request: NextRequest) {
       success: true,
       data: result,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Listen Key API] ❌ Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
+
     console.error('[Listen Key API] Error details:', {
-      code: error.code,
-      message: error.message,
-      stack: error.stack,
+      code: errorCode,
+      message: errorMessage,
     })
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to manage listen key',
+          code: errorCode,
+          message: errorMessage || 'Failed to manage listen key',
         },
       },
-      { status: error.code === -1021 ? 401 : 500 }
+      { status: errorCode === -1021 ? 401 : 500 }
     )
   }
 }
@@ -166,18 +170,21 @@ export async function DELETE(request: NextRequest) {
       success: true,
       data: { message: 'Listen key closed successfully' },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Listen Key API] Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to close listen key',
+          code: errorCode,
+          message: errorMessage || 'Failed to close listen key',
         },
       },
-      { status: error.code === -1021 ? 401 : 500 }
+      { status: errorCode === -1021 ? 401 : 500 }
     )
   }
 }

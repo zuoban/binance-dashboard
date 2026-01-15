@@ -4,13 +4,14 @@
  * 获取交易对的精度、交易规则等信息
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getServerConfig } from '@/lib/config'
+import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
 
 /**
  * 交易规则缓存
  */
-let exchangeInfoCache: any = null
+let exchangeInfoCache: Record<string, unknown> | null = null
 let cacheTime: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 
@@ -18,7 +19,7 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
  * GET /api/binance/exchange-info
  * 获取交易规则和精度信息
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // 检查缓存
     const now = Date.now()
@@ -69,15 +70,18 @@ export async function GET(_request: NextRequest) {
       success: true,
       data: result,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Exchange Info API] Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to fetch exchange info',
+          code: errorCode,
+          message: errorMessage || 'Failed to fetch exchange info',
         },
       },
       { status: 500 }

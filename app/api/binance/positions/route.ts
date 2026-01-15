@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
+import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
+import type { BinancePosition } from '@/types/binance-api'
 
 /**
  * GET /api/binance/positions?symbol=BTCUSDT
@@ -47,25 +49,30 @@ export async function GET(request: NextRequest) {
     const positions = await client.getPositions(symbol)
 
     // 过滤掉持仓为 0 的数据
-    const filteredPositions = positions.filter((p: any) => parseFloat(p.positionAmt) !== 0)
+    const filteredPositions = positions.filter(
+      (p: BinancePosition) => parseFloat(p.positionAmount) !== 0
+    )
 
     // 返回结果
     return NextResponse.json({
       success: true,
       data: filteredPositions,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Positions API] Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to fetch positions',
+          code: errorCode,
+          message: errorMessage || 'Failed to fetch positions',
         },
       },
-      { status: error.code === -1021 ? 401 : 500 }
+      { status: errorCode === -1021 ? 401 : 500 }
     )
   }
 }

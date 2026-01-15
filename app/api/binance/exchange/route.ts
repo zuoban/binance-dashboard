@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
+import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
 
 /**
  * GET /api/binance/exchange/info
@@ -82,15 +83,18 @@ export async function GET(request: NextRequest) {
       success: true,
       data,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Exchange API] Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to fetch exchange data',
+          code: errorCode,
+          message: errorMessage || 'Failed to fetch exchange data',
         },
       },
       { status: 500 }

@@ -13,6 +13,7 @@ import {
   validationErrorResponse,
   ordersQuerySchema,
 } from '@/lib/validations/api'
+import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
 
 /**
  * GET /api/binance/orders?symbol=BTCUSDT&limit=50
@@ -81,18 +82,21 @@ export async function GET(request: NextRequest) {
       success: true,
       data: orders,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Orders API] Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to fetch orders',
+          code: errorCode,
+          message: errorMessage || 'Failed to fetch orders',
         },
       },
-      { status: error.code === -1021 ? 401 : 500 }
+      { status: errorCode === -1021 ? 401 : 500 }
     )
   }
 }

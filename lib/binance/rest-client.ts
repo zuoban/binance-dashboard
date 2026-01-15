@@ -13,6 +13,45 @@ import axios, {
 } from 'axios'
 import { BinanceSignature } from './signature'
 import { BinanceEndpoints, BinanceErrorCode } from './endpoints'
+import type {
+  BinanceAccountInfo,
+  BinancePosition,
+  BinanceOrder,
+  BinanceUserTrade,
+  BinanceTicker24hr,
+  BinanceErrorResponse,
+} from '@/types/binance-api'
+
+/**
+ * 币安 API 收益历史记录类型
+ */
+export interface BinanceIncome {
+  symbol: string
+  incomeType: string
+  income: string
+  asset: string
+  info: string
+  time: number
+  tranId: number
+  tradeId: string
+}
+
+/**
+ * 币安 K 线数据类型
+ */
+export interface BinanceKline {
+  openTime: number
+  open: string
+  high: string
+  low: string
+  close: string
+  volume: string
+  closeTime: number
+  quoteAssetVolume: string
+  numberOfTrades: number
+  takerBuyBaseAssetVolume: string
+  takerBuyQuoteAssetVolume: string
+}
 
 /**
  * 币安 API 错误类
@@ -21,7 +60,7 @@ export class BinanceApiError extends Error {
   constructor(
     public code: number,
     message: string,
-    public details?: any
+    public details?: BinanceErrorResponse | unknown
   ) {
     super(message)
     this.name = 'BinanceApiError'
@@ -113,7 +152,7 @@ export class BinanceRestClient {
 
       console.log(
         `[Binance API] ${response.config.method?.toUpperCase()} ${response.config.url} ` +
-        `→ ${response.status} (${dataInfo})`
+          `→ ${response.status} (${dataInfo})`
       )
     }
 
@@ -123,7 +162,7 @@ export class BinanceRestClient {
   /**
    * 响应错误处理器 - 处理错误响应
    */
-  private async responseErrorHandler(error: AxiosError): Promise<never> {
+  private async responseErrorHandler(error: AxiosError<unknown>): Promise<never> {
     if (this.enableLog) {
       console.error('[Binance API] Error:', {
         message: error.message,
@@ -137,10 +176,10 @@ export class BinanceRestClient {
 
     // 币安 API 错误
     if (error.response?.data) {
-      const data = error.response.data as any
+      const data = error.response.data as BinanceErrorResponse
       throw new BinanceApiError(
         data.code || error.response.status,
-        data.msg || data.message || 'Unknown error',
+        data.msg || 'Unknown error',
         data
       )
     }
@@ -239,7 +278,7 @@ export class BinanceRestClient {
   /**
    * 获取账户信息
    */
-  async getAccountInfo(): Promise<any> {
+  async getAccountInfo(): Promise<BinanceAccountInfo> {
     return this.get(BinanceEndpoints.ACCOUNT.path, {}, true)
   }
 
@@ -252,8 +291,8 @@ export class BinanceRestClient {
     startTime?: number
     endTime?: number
     limit?: number
-  }): Promise<any[]> {
-    const params: Record<string, any> = {}
+  }): Promise<BinanceIncome[]> {
+    const params: Record<string, string | number | undefined> = {}
     if (options?.symbol) params.symbol = options.symbol
     if (options?.incomeType) params.incomeType = options.incomeType
     if (options?.startTime) params.startTime = options.startTime
@@ -265,7 +304,7 @@ export class BinanceRestClient {
   /**
    * 获取持仓信息
    */
-  async getPositions(symbol?: string): Promise<any[]> {
+  async getPositions(symbol?: string): Promise<BinancePosition[]> {
     const params = symbol ? { symbol } : {}
     return this.get(BinanceEndpoints.POSITION_RISK.path, params, true)
   }
@@ -273,7 +312,7 @@ export class BinanceRestClient {
   /**
    * 获取当前订单
    */
-  async getOpenOrders(symbol?: string): Promise<any[]> {
+  async getOpenOrders(symbol?: string): Promise<BinanceOrder[]> {
     const params = symbol ? { symbol } : {}
     return this.get(BinanceEndpoints.OPEN_ORDERS.path, params, true)
   }
@@ -289,7 +328,7 @@ export class BinanceRestClient {
       endTime?: number
       limit?: number
     }
-  ): Promise<any[]> {
+  ): Promise<BinanceOrder[]> {
     const params: Record<string, string | number | undefined> = {
       symbol,
       ...options,
@@ -308,7 +347,7 @@ export class BinanceRestClient {
       fromId?: number
       limit?: number
     }
-  ): Promise<any[]> {
+  ): Promise<BinanceUserTrade[]> {
     const params: Record<string, string | number | undefined> = {
       symbol,
       ...options,
@@ -319,7 +358,11 @@ export class BinanceRestClient {
   /**
    * 获取单个订单
    */
-  async getOrder(symbol: string, orderId?: number, origClientOrderId?: string): Promise<any> {
+  async getOrder(
+    symbol: string,
+    orderId?: number,
+    origClientOrderId?: string
+  ): Promise<BinanceOrder> {
     const params: Record<string, string | number | undefined> = {
       symbol,
       orderId,
@@ -331,7 +374,7 @@ export class BinanceRestClient {
   /**
    * 获取交易对信息
    */
-  async getExchangeInfo(): Promise<any> {
+  async getExchangeInfo(): Promise<Record<string, unknown>> {
     return this.get(BinanceEndpoints.EXCHANGE_INFO.path)
   }
 
@@ -346,7 +389,7 @@ export class BinanceRestClient {
       startTime?: number
       endTime?: number
     }
-  ): Promise<any[]> {
+  ): Promise<BinanceKline[]> {
     const params: Record<string, string | number | undefined> = {
       symbol,
       interval,
@@ -358,7 +401,7 @@ export class BinanceRestClient {
   /**
    * 获取 24 小时价格变动统计
    */
-  async get24hrTicker(symbol?: string): Promise<any | any[]> {
+  async get24hrTicker(symbol?: string): Promise<BinanceTicker24hr | BinanceTicker24hr[]> {
     const params = symbol ? { symbol } : {}
     return this.get(BinanceEndpoints.TICKER_24HR.path, params)
   }

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
 import { checkRateLimit } from '@/lib/middleware/rate-limit'
+import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
 
 /**
  * GET /api/binance/account
@@ -54,18 +55,21 @@ export async function GET(request: NextRequest) {
       success: true,
       data: accountInfo,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Account API] Error:', error)
+
+    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
+    const errorMessage = getBinanceErrorMessage(error)
 
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: error.code || -1,
-          message: error.message || 'Failed to fetch account information',
+          code: errorCode,
+          message: errorMessage,
         },
       },
-      { status: error.code === -1021 ? 401 : 500 }
+      { status: errorCode === -1021 ? 401 : 500 }
     )
   }
 }

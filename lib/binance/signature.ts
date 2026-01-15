@@ -58,7 +58,7 @@ export class BinanceSignature {
     // 添加时间戳
     const paramsWithTimestamp: Record<string, string> = {
       ...(Object.fromEntries(
-        Object.entries(params).filter(([_, value]) => value !== undefined)
+        Object.entries(params).filter(([, value]) => value !== undefined)
       ) as Record<string, string>),
       timestamp: this.getTimestamp(),
     }
