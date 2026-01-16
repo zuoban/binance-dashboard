@@ -276,7 +276,6 @@ export class DataManager {
       apiKey: config.binance.apiKey,
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
-      enableLog: config.app.isDevelopment,
     })
 
     // 并发获取所有数据
@@ -544,9 +543,8 @@ export class DataManager {
   /**
    * 日志输出
    */
-  private log(message: string): void {
+  private log(_message: string): void {
     if (this.config.enableLog) {
-      console.log(message)
     }
   }
 }

@@ -56,49 +56,49 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
       case 'FILLED':
         return {
           label: '已完成',
-          className: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-          dot: 'bg-emerald-500',
+          className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+          dot: 'bg-emerald-500 shadow-emerald-500/30',
         }
       case 'CANCELED':
         return {
           label: '已撤销',
-          className: 'bg-slate-100 text-slate-600 border border-slate-200',
+          className: 'bg-slate-100 text-slate-600 border-slate-200',
           dot: 'bg-slate-500',
         }
       case 'NEW':
         return {
           label: '新建',
-          className: 'bg-blue-100 text-blue-700 border border-blue-200',
-          dot: 'bg-blue-500',
+          className: 'bg-blue-100 text-blue-700 border-blue-200',
+          dot: 'bg-blue-500 shadow-blue-500/30',
         }
       case 'PARTIALLY_FILLED':
         return {
           label: '部分成交',
-          className: 'bg-amber-100 text-amber-700 border border-amber-200',
-          dot: 'bg-amber-500',
+          className: 'bg-amber-100 text-amber-700 border-amber-200',
+          dot: 'bg-amber-500 shadow-amber-500/30',
         }
       case 'PENDING_CANCEL':
         return {
           label: '撤销中',
-          className: 'bg-orange-100 text-orange-700 border border-orange-200',
+          className: 'bg-orange-100 text-orange-700 border-orange-200',
           dot: 'bg-orange-500',
         }
       case 'REJECTED':
         return {
           label: '已拒绝',
-          className: 'bg-red-100 text-red-700 border border-red-200',
-          dot: 'bg-red-500',
+          className: 'bg-red-100 text-red-700 border-red-200',
+          dot: 'bg-red-500 shadow-red-500/30',
         }
       case 'EXPIRED':
         return {
           label: '已过期',
-          className: 'bg-slate-100 text-slate-600 border border-slate-200',
+          className: 'bg-slate-100 text-slate-600 border-slate-200',
           dot: 'bg-slate-500',
         }
       default:
         return {
           label: status,
-          className: 'bg-slate-100 text-slate-600 border border-slate-200',
+          className: 'bg-slate-100 text-slate-600 border-slate-200',
           dot: 'bg-slate-500',
         }
     }
@@ -108,9 +108,9 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold ${config.className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.className}`}
     >
-      <div className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+      <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${config.dot}`} />
       {config.label}
     </span>
   )
@@ -180,92 +180,108 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
   // 紧凑模式：只显示关键列
   if (compact) {
     return (
-      <div className={`space-y-2 ${className}`}>
+      <div className={`space-y-2 ${className} bg-transparent`}>
         {orders.map((order, index) => {
           const executedQty = parseFloat(order.executedQty)
           const price = parseFloat(order.price)
           const totalAmount = executedQty * price
+          const pnl = order.realizedPnl !== undefined ? parseFloat(order.realizedPnl) : null
+          const isPnlPositive = pnl !== null && pnl >= 0
 
           return (
             <div
               key={
                 order.id ? `${order.id}` : `${order.orderId}-${order.symbol}-${order.time}-${index}`
               }
-              className="group px-3 py-2.5 bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all duration-200"
+              className="group overflow-hidden border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-md transition-all duration-300"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 text-xs">{order.symbol}</span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${
-                      order.side === 'BUY'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {order.side === 'BUY' ? '买' : '卖'}
-                  </span>
-                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-medium">
-                    {order.type === 'MARKET'
-                      ? '市价'
-                      : order.type === 'LIMIT'
-                        ? '限价'
-                        : order.type}
-                  </span>
-                </div>
-                <OrderStatusBadge status={order.status} />
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-400 text-[10px]">价格</span>
-                    <span className="font-semibold text-slate-900">
-                      ${formatPrice(price, order.symbol, exchangeInfo)}
+              <div className="px-3 py-2.5 border-b border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-slate-900 tracking-wide">
+                      {order.symbol}
+                    </h4>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide ${
+                        order.side === 'BUY'
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                      }`}
+                    >
+                      {order.side === 'BUY' ? '买入' : '卖出'}
+                    </span>
+                    <span
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                        order.type === 'MARKET'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}
+                    >
+                      {order.type === 'MARKET' ? '市价' : '限价'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-400 text-[10px]">数量</span>
-                    <span className="font-semibold text-slate-900">{executedQty.toFixed(4)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-slate-400 text-[10px]">金额</span>
-                  <span className="font-semibold text-slate-900">${totalAmount.toFixed(2)}</span>
+                  <OrderStatusBadge status={order.status} />
                 </div>
               </div>
 
-              {(order.commission !== undefined ||
-                (order.realizedPnl !== undefined && order.side === 'SELL')) && (
-                <div className="flex items-center justify-between text-[10px] mb-1.5 pt-1.5 border-t border-slate-100">
-                  {order.commission !== undefined && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-slate-400">手续费</span>
-                      <span className="font-medium text-slate-700">
-                        {parseFloat(order.commission).toFixed(4)}
-                        {order.commissionAsset && ` ${order.commissionAsset}`}
-                      </span>
-                    </div>
-                  )}
-                  {order.realizedPnl !== undefined && order.side === 'SELL' && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-slate-400">盈亏</span>
-                      <span
-                        className={`font-semibold ${
-                          parseFloat(order.realizedPnl) >= 0
-                            ? 'text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded'
-                            : 'text-red-600 bg-red-50 px-1.5 py-0.5 rounded'
-                        }`}
-                      >
-                        {parseFloat(order.realizedPnl) >= 0 ? '+' : ''}
-                        {parseFloat(order.realizedPnl).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
+              <div className="px-3 py-2.5 space-y-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-slate-400 font-medium">成交价格</span>
+                    <p className="text-sm font-bold text-slate-900 tracking-tight">
+                      ${formatPrice(price, order.symbol, exchangeInfo)}
+                    </p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-slate-400 font-medium">成交数量</span>
+                    <p className="text-sm font-bold text-slate-700 tracking-tight">
+                      {executedQty.toFixed(4)}
+                    </p>
+                  </div>
                 </div>
-              )}
 
-              <div className="text-[10px] text-slate-400">{formatDistanceToNow(order.time)}</div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-slate-400 font-medium">成交金额</span>
+                    <p className="text-sm font-semibold text-slate-900 tracking-tight">
+                      ${totalAmount.toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {order.commission !== undefined && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-slate-400">手续费</span>
+                        <span className="text-xs font-medium text-slate-700">
+                          {parseFloat(order.commission).toFixed(4)}
+                          {order.commissionAsset && ` ${order.commissionAsset}`}
+                        </span>
+                      </div>
+                    )}
+                    {pnl !== null && order.side === 'SELL' && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-slate-400">盈亏</span>
+                        <span
+                          className={`text-sm font-bold px-2 py-0.5 rounded ${
+                            isPnlPositive
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {isPnlPositive ? '+' : ''}
+                          {pnl.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-3 py-2 bg-slate-50/50 border-t border-slate-100">
+                <div className="text-[10px] text-slate-400 font-medium">
+                  {formatDistanceToNow(order.time)}
+                </div>
+              </div>
             </div>
           )
         })}
@@ -275,7 +291,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
 
   return (
     <div className={`overflow-x-auto ${className}`}>
-      <table className="min-w-full divide-y divide-slate-200 bg-white rounded-lg overflow-hidden shadow-sm">
+      <table className="min-w-full divide-y divide-slate-200 rounded-lg overflow-hidden shadow-sm">
         <thead className="bg-slate-50">
           <tr>
             <th

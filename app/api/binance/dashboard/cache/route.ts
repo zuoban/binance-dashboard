@@ -21,11 +21,9 @@ export async function DELETE(request: NextRequest) {
       // 清除指定时间范围的缓存
       const range = parseInt(orderTimeRange, 10)
       clearCacheByTimeRange(range)
-      console.log(`[Dashboard Cache] Cleared cache for orderTimeRange: ${range}`)
     } else {
       // 清除所有缓存
       clearCache()
-      console.log('[Dashboard Cache] Cleared all cache')
     }
 
     return NextResponse.json({
@@ -33,7 +31,6 @@ export async function DELETE(request: NextRequest) {
       message: 'Cache cleared successfully',
     })
   } catch (error: unknown) {
-    console.error('[Dashboard Cache] Error:', error)
 
     return NextResponse.json(
       {

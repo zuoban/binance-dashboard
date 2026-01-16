@@ -130,7 +130,6 @@ export async function GET(request: NextRequest) {
     const cached = dashboardCache.get(cacheKey)
     const currentTime = Date.now()
     if (cached && currentTime - cached.timestamp < CACHE_TTL) {
-      console.log('[Dashboard API] Returning cached data')
       return NextResponse.json({
         success: true,
         data: cached.data,
@@ -167,7 +166,6 @@ export async function GET(request: NextRequest) {
       apiKey: config.binance.apiKey,
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
-      enableLog: config.app.isDevelopment,
     })
 
     // 并发获取所有数据
@@ -240,11 +238,7 @@ export async function GET(request: NextRequest) {
         // 更新 account 对象中的余额字段
         account.totalWalletBalance = totalUsdBalance.toString()
         account.availableBalance = totalUsdBalance.toString()
-
-        console.log('[Dashboard API] Calculated total USD balance:', totalUsdBalance)
-      } catch (error) {
-        console.error('[Dashboard API] Failed to fetch prices:', error)
-      }
+      } catch (error) {}
     } else {
       // 只有稳定币，直接计算
       const totalUsdBalance =
@@ -275,8 +269,6 @@ export async function GET(request: NextRequest) {
     // 更新未实现盈亏字段
     account.unrealizedProfit = totalUnrealizedProfit.toString()
 
-    console.log('[Dashboard API] Total unrealized profit from positions:', totalUnrealizedProfit)
-
     // 计算今日已实现盈亏（余额变化法）
     // 公式: 今日已实现盈亏 = (当前余额 - 当前未实现盈亏) - (今日0点余额 - 今日0点未实现盈亏)
     const currentBalance = parseFloat(account.totalWalletBalance || '0')
@@ -290,18 +282,11 @@ export async function GET(request: NextRequest) {
         balance: currentBalance,
         unrealizedProfit: currentUnrealizedProfit,
       }
-      console.log('[Dashboard API] Created new daily snapshot:', dailySnapshot)
       todayRealizedPnl = 0 // 新的一天刚开始，还没有已实现盈亏
     } else {
       // 已经有今日快照：计算从0点到现在已实现盈亏
       const snapshotEquity = dailySnapshot.balance - dailySnapshot.unrealizedProfit
       todayRealizedPnl = currentEquity - snapshotEquity
-      console.log('[Dashboard API] Today realized PNL (from snapshot):', {
-        snapshot: dailySnapshot,
-        currentEquity,
-        snapshotEquity,
-        todayRealizedPnl,
-      })
     }
 
     // 映射持仓数据，过滤掉空仓位
@@ -421,8 +406,6 @@ export async function GET(request: NextRequest) {
       cached: false,
     })
   } catch (error: unknown) {
-    console.error('[Dashboard API] Error:', error)
-
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
 

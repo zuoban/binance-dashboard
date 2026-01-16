@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
       apiKey: config.binance.apiKey,
       apiSecret: '', // 公开接口不需要 Secret
       baseUrl: config.binance.restApi,
-      enableLog: config.app.isDevelopment,
     })
 
     let data
@@ -84,8 +83,6 @@ export async function GET(request: NextRequest) {
       data,
     })
   } catch (error: unknown) {
-    console.error('[Exchange API] Error:', error)
-
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
 

@@ -37,7 +37,6 @@ export function mapBinancePositions(
   dataArray: (BinancePosition | Partial<Record<string, unknown>>)[]
 ): Position[] {
   if (!Array.isArray(dataArray)) {
-    console.warn('[mapBinancePositions] Input is not an array:', dataArray)
     return []
   }
 

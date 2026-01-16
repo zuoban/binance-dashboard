@@ -7,6 +7,7 @@
 export * from './useBinancePositions'
 export * from './useBinanceOrders'
 export * from './useBinanceAccount'
+export * from './useBinanceKlines'
 export * from './useDebounce'
 export * from './useExchangeInfo'
 export * from './useDashboardData'

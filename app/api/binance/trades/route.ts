@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
       apiKey: config.binance.apiKey,
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
-      enableLog: config.app.isDevelopment,
     })
 
     const trades = await client.getUserTrades(params.symbol, {
@@ -75,8 +74,6 @@ export async function GET(request: NextRequest) {
       data: trades,
     })
   } catch (error: unknown) {
-    console.error('[Trades API] Error:', error)
-
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
 

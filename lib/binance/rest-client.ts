@@ -79,8 +79,6 @@ export interface RestClientConfig {
   baseUrl?: string
   /** 请求超时时间（毫秒） */
   timeout?: number
-  /** 是否启用请求日志 */
-  enableLog?: boolean
 }
 
 /**
@@ -90,12 +88,10 @@ export class BinanceRestClient {
   private client: AxiosInstance
   private apiKey: string
   private apiSecret: string
-  private enableLog: boolean
 
   constructor(config: RestClientConfig) {
     this.apiKey = config.apiKey
     this.apiSecret = config.apiSecret
-    this.enableLog = config.enableLog ?? process.env.NODE_ENV === 'development'
 
     // 创建 Axios 实断
     this.client = axios.create({
@@ -137,25 +133,6 @@ export class BinanceRestClient {
    * 响应拦截器 - 处理成功响应
    */
   private responseInterceptor<T>(response: AxiosResponse<T>): T {
-    if (this.enableLog) {
-      // 简化日志：只显示关键信息，不输出完整响应体
-      let dataInfo = ''
-
-      if (Array.isArray(response.data)) {
-        dataInfo = `Array(${response.data.length})`
-      } else if (typeof response.data === 'object' && response.data !== null) {
-        const keys = Object.keys(response.data)
-        dataInfo = `Object{${keys.length} keys}`
-      } else {
-        dataInfo = `${typeof response.data}`
-      }
-
-      console.log(
-        `[Binance API] ${response.config.method?.toUpperCase()} ${response.config.url} ` +
-          `→ ${response.status} (${dataInfo})`
-      )
-    }
-
     return response.data
   }
 
@@ -163,17 +140,6 @@ export class BinanceRestClient {
    * 响应错误处理器 - 处理错误响应
    */
   private async responseErrorHandler(error: AxiosError<unknown>): Promise<never> {
-    if (this.enableLog) {
-      console.error('[Binance API] Error:', {
-        message: error.message,
-        response: error.response?.data,
-        config: {
-          method: error.config?.method?.toUpperCase(),
-          url: error.config?.url,
-        },
-      })
-    }
-
     // 币安 API 错误
     if (error.response?.data) {
       const data = error.response.data as BinanceErrorResponse

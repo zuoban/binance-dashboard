@@ -41,7 +41,6 @@ interface UseWebSocketOptions {
  *   autoConnect: true,
  *   onMessage: (event) => {
  *     const data = JSON.parse(event.data);
- *     console.log('Received:', data);
  *   },
  * });
  * ```
@@ -141,7 +140,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
         onError?.(event)
       }
     } catch (error) {
-      console.error('[useWebSocket] Connection error:', error)
       setDisconnected()
     }
   }, [
@@ -176,7 +174,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
       const message = typeof data === 'string' ? data : JSON.stringify(data)
       wsRef.current.send(message)
     } else {
-      console.warn('[useWebSocket] Cannot send message: WebSocket is not connected')
     }
   }, [])
 

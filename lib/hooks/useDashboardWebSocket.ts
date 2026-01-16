@@ -113,7 +113,6 @@ export function useDashboardWebSocket(
    */
   const connect = useCallback(() => {
     if (eventSourceRef.current?.readyState === EventSource.OPEN) {
-      console.log('[useDashboardWebSocket] Already connected')
       return
     }
 
@@ -131,14 +130,11 @@ export function useDashboardWebSocket(
       // 注意：EventSource 不支持自定义请求头，只能通过 URL 传递
       const url = `/api/dashboard/ws?code=${encodeURIComponent(accessCode)}`
 
-      console.log('[useDashboardWebSocket] Connecting to:', url)
-
       const eventSource = new EventSource(url)
       eventSourceRef.current = eventSource
 
       // 连接成功（SSE 没有显式的 open 事件，第一次收到消息就是连接成功）
       eventSource.onopen = () => {
-        console.log('[useDashboardWebSocket] Connected')
         setIsConnected(true)
         setIsConnecting(false)
         setError(null)
@@ -148,8 +144,13 @@ export function useDashboardWebSocket(
       // 接收数据消息
       eventSource.addEventListener('data', (event: MessageEvent) => {
         try {
-          const message = JSON.parse(event.data)
-          console.log('[useDashboardWebSocket] Data received:', message)
+          const rawData = event.data
+
+          if (!rawData || rawData.trim() === '') {
+            return
+          }
+
+          const message = JSON.parse(rawData)
 
           if (message.type === 'data') {
             setData(message.data)
@@ -158,17 +159,12 @@ export function useDashboardWebSocket(
             setLastUpdate(message.timestamp)
             onDataUpdate?.(message.data)
           }
-        } catch (err) {
-          console.error('[useDashboardWebSocket] Error parsing message:', err)
+        } catch {
         }
       })
 
       // 连接错误（EventSource 的原生 onerror 回调）
-      eventSource.onerror = err => {
-        console.error('[useDashboardWebSocket] Connection error:', err)
-        console.error('[useDashboardWebSocket] EventSource readyState:', eventSource.readyState)
-        console.error('[useDashboardWebSocket] EventSource URL:', url)
-
+      eventSource.onerror = () => {
         // 根据 readyState 提供更详细的错误信息
         let errorMessage = 'Connection error'
         if (eventSource.readyState === EventSource.CLOSED) {
@@ -181,14 +177,8 @@ export function useDashboardWebSocket(
         setIsConnecting(false)
         setIsConnected(false)
         onConnectionChange?.(false)
-
-        // EventSource 会自动重连，但我们可以在这里处理一些逻辑
-        if (eventSource.readyState === EventSource.CLOSED) {
-          console.log('[useDashboardWebSocket] Connection closed')
-        }
       }
     } catch (err) {
-      console.error('[useDashboardWebSocket] Connection error:', err)
       setError(err instanceof Error ? err.message : 'Connection failed')
       setIsConnecting(false)
       cleanup()
@@ -199,18 +189,13 @@ export function useDashboardWebSocket(
    * 断开连接
    */
   const disconnect = useCallback(() => {
-    console.log('[useDashboardWebSocket] Disconnecting...')
     cleanup()
     setIsConnected(false)
     setIsConnecting(false)
     onConnectionChange?.(false)
   }, [cleanup, onConnectionChange])
 
-  /**
-   * 手动重连
-   */
   const reconnect = useCallback(() => {
-    console.log('[useDashboardWebSocket] Manual reconnect...')
     disconnect()
     // 短暂延迟后重连
     reconnectTimeoutRef.current = setTimeout(() => {

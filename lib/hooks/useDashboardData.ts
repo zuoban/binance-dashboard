@@ -90,13 +90,11 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
   const fetchData = useCallback(async () => {
     // 防止重复请求
     if (isRequestingRef.current) {
-      console.log('[useDashboardData] Request already in progress, skipping')
       return
     }
 
     // 检查是否已取消
     if (isCancelledRef.current) {
-      console.log('[useDashboardData] Request cancelled')
       return
     }
 
@@ -117,7 +115,6 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
 
       // 检查是否在请求期间被取消
       if (isCancelledRef.current) {
-        console.log('[useDashboardData] Request cancelled after fetch')
         return
       }
 
@@ -145,7 +142,6 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       if (!isCancelledRef.current) {
         const message = err instanceof Error ? err.message : 'Unknown error'
         setError(message)
-        console.error('[useDashboardData] Error:', err)
       }
     } finally {
       // 只在未取消时设置 loading 和重置请求标志
@@ -196,12 +192,10 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
-      if (countdownRef.current) {
+        if (countdownRef.current) {
         clearInterval(countdownRef.current)
         countdownRef.current = null
       }
-
-      console.log('[useDashboardData] Cleanup completed')
     }
   }, [autoFetch, refreshInterval, orderTimeRange]) // 直接依赖 orderTimeRange
 

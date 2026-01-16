@@ -67,7 +67,6 @@ export function useBinancePositions(options: UseBinancePositionsOptions = {}) {
   // 处理错误
   useEffect(() => {
     if (error) {
-      console.error('[useBinancePositions] Error:', error)
     }
   }, [error])
 

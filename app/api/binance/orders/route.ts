@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
       apiKey: config.binance.apiKey,
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
-      enableLog: config.app.isDevelopment,
     })
 
     // 查询所有订单（使用验证后的参数）
@@ -83,8 +82,6 @@ export async function GET(request: NextRequest) {
       data: orders,
     })
   } catch (error: unknown) {
-    console.error('[Orders API] Error:', error)
-
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
 

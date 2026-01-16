@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
       apiKey: config.binance.apiKey,
       apiSecret: config.binance.apiSecret,
       baseUrl: config.binance.restApi,
-      enableLog: config.app.isDevelopment,
     })
 
     // 调用币安 API
@@ -56,8 +55,6 @@ export async function GET(request: NextRequest) {
       data: accountInfo,
     })
   } catch (error: unknown) {
-    console.error('[Account API] Error:', error)
-
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
 

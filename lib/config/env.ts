@@ -108,9 +108,6 @@ export const isTestnet = env.BINANCE_TESTNET === true
  * 在开发环境下打印环境变量警告
  */
 if (!envValidation.success && isDevelopment) {
-  console.warn('⚠️  环境变量验证失败:')
-  console.warn(envValidation.error)
-  console.warn('请检查 .env.local 文件配置')
 }
 
 /**

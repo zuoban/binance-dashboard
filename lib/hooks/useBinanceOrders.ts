@@ -100,7 +100,6 @@ export function useBinanceOrders(options: UseBinanceOrdersOptions) {
   // 处理错误
   useEffect(() => {
     if (error) {
-      console.error('[useBinanceOrders] Error:', error)
     }
   }, [error])
 

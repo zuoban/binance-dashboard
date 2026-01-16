@@ -128,7 +128,6 @@ export function useExchangeInfo(): UseExchangeInfoReturn {
         notifyListeners()
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : '获取交易规则失败'
-        console.error('[ExchangeInfo] 获取失败:', err)
         globalCache.error = message
         globalCache.loading = false
         notifyListeners()

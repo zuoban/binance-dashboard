@@ -109,7 +109,6 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setError(message)
-      console.error('[Account Store] Error fetching account:', error)
     } finally {
       setLoading(false)
     }

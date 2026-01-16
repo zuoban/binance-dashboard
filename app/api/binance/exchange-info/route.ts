@@ -71,7 +71,6 @@ export async function GET() {
       data: result,
     })
   } catch (error: unknown) {
-    console.error('[Exchange Info API] Error:', error)
 
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)

@@ -152,7 +152,6 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setError(message)
-      console.error('[Orders Store] Error fetching orders:', error)
     } finally {
       setLoading(false)
     }

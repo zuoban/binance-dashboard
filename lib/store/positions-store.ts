@@ -88,13 +88,11 @@ export const usePositionsStore = create<PositionsState>((set, get) => ({
 
       // 使用映射函数转换数据
       const mappedPositions = mapBinancePositions(result.data || [])
-      console.log('[Positions Store] Fetched positions:', mappedPositions)
 
       setPositions(mappedPositions)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setError(message)
-      console.error('[Positions Store] Error fetching positions:', error)
     } finally {
       setLoading(false)
     }

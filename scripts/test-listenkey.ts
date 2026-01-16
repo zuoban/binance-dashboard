@@ -62,7 +62,6 @@ async function main() {
         apiKey: config.binance.apiKey,
         apiSecret: config.binance.apiSecret,
         baseUrl: config.binance.restApi,
-        enableLog: true,
       })
 
       // 获取 Listen Key

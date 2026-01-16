@@ -67,7 +67,7 @@ export interface BinanceAccountInfo {
 export interface BinancePosition {
   symbol: string
   positionAmount: string
-  positionAmt?: string // 币安 API 可能使用的另一个字段名
+  positionAmt?: string
   entryPrice: string
   breakEvenPrice: string
   unRealizedProfit: string
@@ -172,4 +172,29 @@ export interface BinanceTicker24hr {
   firstId: number
   lastId: number
   count: number
+}
+
+/**
+ * 币安 WebSocket K 线数据
+ */
+export interface BinanceKlineWSMessage {
+  e: 'kline'
+  E: number
+  s: string
+  k: {
+    t: number
+    T: number
+    s: string
+    i: string
+    o: string
+    c: string
+    h: string
+    l: string
+    v: string
+    n: number
+    x: boolean
+    q: string
+    V: string
+    Q: string
+  }
 }

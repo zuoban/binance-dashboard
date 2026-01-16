@@ -5,8 +5,9 @@
 'use client'
 
 import { Position, Order } from '@/types/binance'
-import { useExchangeInfo } from '@/lib/hooks'
+import { useExchangeInfo, useBinanceKlines } from '@/lib/hooks'
 import { useMemo } from 'react'
+import { KlineChart } from './KlineChart'
 
 interface PositionCardProps {
   /** 持仓数据 */
@@ -58,16 +59,6 @@ function formatAmount(
 }
 
 /**
- * 计算价格百分比
- */
-function calculatePercentage(basePrice: string, targetPrice: string): number {
-  const base = parseFloat(basePrice)
-  const target = parseFloat(targetPrice)
-  if (base === 0 || Number.isNaN(base) || Number.isNaN(target)) return 0
-  return ((target - base) / base) * 100
-}
-
-/**
  * 判断是否为做多
  */
 function isLongPosition(position: Position): boolean {
@@ -75,29 +66,6 @@ function isLongPosition(position: Position): boolean {
     position.positionSide === 'LONG' ||
     (position.positionSide === 'BOTH' && parseFloat(position.positionAmount) > 0)
   )
-}
-
-/**
- * 获取最近的买卖单
- */
-function getNearbyOrders(orders: Order[], symbol: string) {
-  const relatedOrders = orders.filter(order => order.symbol === symbol)
-
-  const nearbyBuyOrder = relatedOrders
-    .filter(
-      order =>
-        order.side === 'BUY' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
-    )
-    .sort((a, b) => parseFloat(b.price) - parseFloat(a.price))[0]
-
-  const nearbySellOrder = relatedOrders
-    .filter(
-      order =>
-        order.side === 'SELL' && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
-    )
-    .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))[0]
-
-  return { nearbyBuyOrder, nearbySellOrder }
 }
 
 /**
@@ -109,6 +77,17 @@ export function PositionCard({
   openOrders = [],
   className = '',
 }: PositionCardProps) {
+  const { klines } = useBinanceKlines({
+    symbol: position.symbol,
+    interval: '15m',
+    limit: 16,
+  })
+
+  const pricePrecision = useMemo(
+    () => getSymbolPrecision(position.symbol, exchangeInfo),
+    [position.symbol, exchangeInfo]
+  )
+
   const positionData = useMemo(() => {
     const unrealizedProfit = parseFloat(position.unrealizedProfit)
     const leverage = parseFloat(position.leverage)
@@ -130,144 +109,156 @@ export function PositionCard({
     }
   }, [position])
 
-  const { nearbyBuyOrder, nearbySellOrder } = useMemo(
-    () => getNearbyOrders(openOrders, position.symbol),
-    [openOrders, position.symbol]
-  )
-
   return (
     <div
-      className={`card relative p-3 transition-all duration-300 hover:scale-[1.02] ${
+      className={`rounded-xl border bg-white shadow-sm transition-all duration-300 hover:shadow-md ${
         positionData.isProfit
-          ? 'hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10'
-          : 'hover:border-red-500/40 hover:shadow-lg hover:shadow-red-500/10'
+          ? 'border-emerald-100 hover:border-emerald-200'
+          : 'border-red-100 hover:border-red-200'
       } ${className}`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-slate-900 tracking-wide">{position.symbol}</h3>
-          <span
-            className={`px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide ${
-              positionData.isLong
-                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                : 'bg-red-100 text-red-700 border border-red-200'
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                positionData.isLong ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {positionData.isLong ? (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 10l7-7m0 0l7 7m-7-7v18"
+                  />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              )}
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">{position.symbol}</h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span
+                  className={`text-xs font-semibold ${
+                    positionData.isLong ? 'text-emerald-600' : 'text-red-600'
+                  }`}
+                >
+                  {positionData.isLong ? '做多' : '做空'}
+                </span>
+                <span className="text-xs font-medium text-slate-500">·</span>
+                <span className="text-xs font-medium text-slate-500">{positionData.leverage}x</span>
+              </div>
+            </div>
+          </div>
+          <div
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+              positionData.isProfit ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
             }`}
           >
-            {positionData.isLong ? '做多' : '做空'}
-          </span>
+            {positionData.isProfit ? '盈利中' : '亏损中'}
+          </div>
         </div>
-
-        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200">
-          {positionData.leverage}x
-        </span>
       </div>
 
-      <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between py-1 border-b border-slate-100">
-          <span className="text-xs text-slate-500 font-medium">持仓金额</span>
-          <span className="text-sm font-bold text-slate-900">
-            ${positionData.positionValue.toFixed(2)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between py-1 border-b border-slate-100">
-          <span className="text-xs text-slate-500 font-medium">持仓数量</span>
-          <span className="text-sm font-semibold text-slate-700">
-            {formatAmount(Math.abs(positionData.positionAmount), position.symbol, exchangeInfo)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between py-1 border-b border-slate-100">
-          <span className="text-xs text-slate-500 font-medium">入场价格</span>
-          <span className="text-sm font-semibold text-slate-700">
-            ${formatPrice(position.entryPrice, position.symbol, exchangeInfo)}
-          </span>
-        </div>
-
-        {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 && (
-          <div className="flex items-center justify-between py-1 border-b border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">盈亏平衡价</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-amber-600">
-                ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
-              </span>
-              <span
-                className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                  parseFloat(position.breakEvenPrice) > parseFloat(position.markPrice)
-                    ? 'text-emerald-700 bg-emerald-100'
-                    : parseFloat(position.breakEvenPrice) < parseFloat(position.markPrice)
-                      ? 'text-red-700 bg-red-100'
-                      : 'text-slate-600 bg-slate-100'
-                }`}
-              >
-                {calculatePercentage(position.markPrice, position.breakEvenPrice) > 0 ? '+' : ''}
-                {calculatePercentage(position.markPrice, position.breakEvenPrice).toFixed(2)}%
-              </span>
-            </div>
-          </div>
-        )}
-
-        {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 && (
-          <div className="flex items-center justify-between py-1 border-b border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">强平价格</span>
-            <span className="text-sm font-semibold text-red-600">
-              ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
-            </span>
-          </div>
-        )}
-
-        {nearbyBuyOrder && (
-          <div className="flex items-center justify-between py-1 border-b border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">委托买价</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-emerald-600">
-                ${formatPrice(nearbyBuyOrder.price, position.symbol, exchangeInfo)}
-              </span>
-              <span className="text-xs font-medium px-1.5 py-0.5 rounded text-slate-600 bg-slate-100">
-                {calculatePercentage(nearbyBuyOrder.price, position.markPrice) > 0 ? '+' : ''}
-                {calculatePercentage(nearbyBuyOrder.price, position.markPrice).toFixed(2)}%
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between py-1 border-b border-slate-100">
-          <span className="text-xs text-slate-500 font-medium">标记价格</span>
-          <span className="text-sm font-semibold text-blue-600">
-            ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
-          </span>
-        </div>
-
-        {nearbySellOrder && (
-          <div className="flex items-center justify-between py-1">
-            <span className="text-xs text-slate-500 font-medium">委托卖价</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-red-600">
-                ${formatPrice(nearbySellOrder.price, position.symbol, exchangeInfo)}
-              </span>
-              <span className="text-xs font-medium px-1.5 py-0.5 rounded text-slate-600 bg-slate-100">
-                {calculatePercentage(position.markPrice, nearbySellOrder.price) > 0 ? '+' : ''}
-                {calculatePercentage(position.markPrice, nearbySellOrder.price).toFixed(2)}%
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="pt-3 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500 font-medium">未实现盈亏</span>
-          <div className="flex items-center gap-1.5">
+      <div className="px-5 py-4">
+        <div
+          className={`mb-4 rounded-xl p-4 ${
+            positionData.isProfit ? 'bg-emerald-50/50' : 'bg-red-50/50'
+          }`}
+        >
+          <div className="text-xs font-medium text-slate-500 mb-2">未实现盈亏</div>
+          <div className="flex items-baseline gap-2">
             <span
-              className={`text-base font-bold tracking-wide ${
+              className={`text-2xl font-bold tracking-tight ${
                 positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
               }`}
             >
               {positionData.isProfit ? '+' : ''}$
               {formatPrice(positionData.unrealizedProfit, position.symbol, exchangeInfo)}
             </span>
+            <span
+              className={`text-sm font-semibold ${
+                positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
+              }`}
+            >
+              {positionData.isProfit ? '+' : ''}
+              {((positionData.unrealizedProfit / positionData.positionValue) * 100).toFixed(2)}%
+            </span>
           </div>
         </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="space-y-1">
+            <div className="text-xs text-slate-400">持仓金额</div>
+            <div className="text-sm font-semibold text-slate-900">
+              ${positionData.positionValue.toFixed(2)}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs text-slate-400">持仓数量</div>
+            <div className="text-sm font-semibold text-slate-900">
+              {formatAmount(Math.abs(positionData.positionAmount), position.symbol, exchangeInfo)}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs text-slate-400">入场价格</div>
+            <div className="text-sm font-semibold text-slate-900">
+              ${formatPrice(position.entryPrice, position.symbol, exchangeInfo)}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <div className="text-xs text-slate-400">标记价格</div>
+            <div className="text-base font-bold text-slate-900">
+              ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs text-slate-400">盈亏平衡价</div>
+            {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 ? (
+              <span className="text-base font-bold text-amber-600">
+                ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
+              </span>
+            ) : (
+              <span className="text-sm text-slate-300">-</span>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs text-slate-400">强平价格</div>
+            {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 ? (
+              <span className="text-base font-bold text-red-600">
+                ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
+              </span>
+            ) : (
+              <span className="text-sm text-slate-300">-</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 px-5 py-4">
+        <KlineChart
+          data={klines}
+          height={300}
+          pricePrecision={pricePrecision}
+          openOrders={openOrders}
+        />
       </div>
     </div>
   )

@@ -69,14 +69,8 @@ export function toError(error: unknown): Error {
 /**
  * 用于 catch 块的错误处理函数
  */
-export function handleCaughtError(error: unknown, context?: string): void {
-  const message = getErrorMessage(error)
-  const fullMessage = context ? `[${context}] ${message}` : message
-
-  console.error(fullMessage)
-
+export function handleCaughtError(error: unknown, _context?: string): void {
   if (isError(error) && error.stack) {
-    console.error(error.stack)
   }
 }
 

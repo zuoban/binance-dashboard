@@ -195,9 +195,8 @@ export class ConnectionManager {
   /**
    * 日志输出
    */
-  private log(message: string): void {
+  private log(_message: string): void {
     if (this.config.enableLog) {
-      console.log(message)
     }
   }
 }

@@ -13,7 +13,7 @@ import { OrderTable } from '@/components/dashboard/OrderTable'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -75,78 +75,191 @@ function StatsOverview({
   orders,
   totalPnl,
   loading,
+  isConnected,
+  isConnecting,
+  lastUpdate,
+  reconnect,
 }: {
   totalEquity: number
   openOrdersStats: { total: number; buy: number; sell: number } | null
   orders: Order[]
   totalPnl: number
   loading: boolean
+  isConnected: boolean
+  isConnecting: boolean
+  lastUpdate: number | null
+  reconnect: () => void
 }) {
+  const [lastUpdateText, setLastUpdateText] = useState('')
+
+  useEffect(() => {
+    const updateTime = () => {
+      if (lastUpdate) {
+        setLastUpdateText(formatRecentOrderTime(lastUpdate))
+      } else {
+        setLastUpdateText('')
+      }
+    }
+
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+
+    return () => clearInterval(interval)
+  }, [lastUpdate])
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="card p-5 backdrop-blur-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 rounded-full bg-slate-600 animate-pulse" />
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">权益总额</p>
+      <div className="card overflow-hidden backdrop-blur-sm">
+        <div className="bg-gradient-to-r from-slate-50 to-slate-100/50 px-5 py-3 border-b border-slate-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  isConnecting
+                    ? 'bg-amber-500 animate-pulse'
+                    : isConnected
+                      ? 'bg-emerald-500 animate-pulse'
+                      : 'bg-red-500'
+                }`}
+                title={isConnecting ? '连接中...' : isConnected ? '已连接' : '未连接'}
+              />
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                权益总额
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium text-slate-400">
+                {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
+              </span>
+              {!isConnected && !isConnecting && (
+                <button
+                  onClick={reconnect}
+                  className="h-5 px-2 text-[10px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded transition-all duration-200"
+                  title="重新连接"
+                >
+                  重连
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-        <p className="text-3xl font-bold text-gradient">${formatNumber(totalEquity)}</p>
+        <div className="px-5 py-4 bg-white">
+          <p className="text-4xl font-bold text-slate-900 tracking-tight">
+            ${formatNumber(totalEquity)}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-slate-400">USDC</span>
+            <div className="w-px h-3 bg-slate-200" />
+            <span
+              className={`text-xs font-medium ${totalEquity > 0 ? 'text-emerald-600' : 'text-slate-400'}`}
+            >
+              {totalEquity > 0 ? '正常' : '空仓'}
+            </span>
+            {lastUpdateText && (
+              <>
+                <div className="w-px h-3 bg-slate-200" />
+                <span className="text-xs text-slate-400">{lastUpdateText}</span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {openOrdersStats && openOrdersStats.total > 0 && (
-        <div className="card p-5 backdrop-blur-sm hover:bg-slate-50/50 transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              当前委托
-            </p>
+        <div className="card overflow-hidden backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 px-5 py-3 border-b border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/30" />
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  当前委托
+                </p>
+              </div>
+              <span className="text-[10px] font-medium text-blue-400">
+                {openOrdersStats.total}笔
+              </span>
+            </div>
           </div>
-          <p className="text-3xl font-bold text-blue-600 mb-1">{openOrdersStats.total}</p>
-          <p className="text-xs text-slate-400">
-            买 <span className="text-emerald-600 font-medium">{openOrdersStats.buy}</span> / 卖{' '}
-            <span className="text-red-500 font-medium">{openOrdersStats.sell}</span>
-          </p>
+          <div className="px-5 py-4 bg-white">
+            <p className="text-4xl font-bold text-blue-600 tracking-tight mb-2">
+              {openOrdersStats.total}
+            </p>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-slate-400">委托</span>
+              <span className="text-xs text-slate-500">买</span>
+              <span className="text-lg font-bold text-emerald-600">{openOrdersStats.buy}</span>
+              <div className="w-px h-3 bg-slate-200" />
+              <span className="text-xs text-slate-500">卖</span>
+              <span className="text-lg font-bold text-red-500">{openOrdersStats.sell}</span>
+            </div>
+          </div>
         </div>
       )}
 
       {!loading && orders.length > 0 && (
-        <div className="card p-5 backdrop-blur-sm hover:bg-slate-50/50 transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full bg-purple-500" />
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              最近订单
-            </p>
-          </div>
-          <p
-            className={`text-3xl font-bold mb-1 ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
-          >
-            {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
-          </p>
-          <div className="flex gap-1 justify-end items-center mb-1">
-            {orders.slice(0, 10).map((order, index) => (
-              <div
-                key={index}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-200 hover:scale-150 ${
-                  order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+        <div className="card overflow-hidden backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 px-5 py-3 border-b border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-sm shadow-purple-500/30" />
+                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
+                  最近订单
+                </p>
+              </div>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  totalPnl >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                 }`}
-                title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-              />
-            ))}
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-400">
-              买{' '}
-              <span className="text-emerald-600">
-                {orders.filter(o => o.side === 'BUY').length}
-              </span>{' '}
-              / 卖{' '}
-              <span className="text-red-500">{orders.filter(o => o.side === 'SELL').length}</span>
-            </p>
-            <p className="text-xs text-slate-400">
-              {formatRecentOrderTime(orders[0].time)}{' '}
-              <span className={orders[0].side === 'BUY' ? 'text-emerald-600' : 'text-red-500'}>
-                {orders[0].side === 'BUY' ? '买' : '卖'}
+              >
+                {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
               </span>
+            </div>
+          </div>
+          <div className="px-5 py-4 bg-white">
+            <p
+              className={`text-4xl font-bold tracking-tight ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+            >
+              {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
             </p>
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-slate-400">成交</span>
+                <span className="text-xs text-slate-500">买</span>
+                <span className="text-lg font-bold text-emerald-600">
+                  {orders.filter(o => o.side === 'BUY').length}
+                </span>
+                <div className="w-px h-3 bg-slate-200" />
+                <span className="text-xs text-slate-500">卖</span>
+                <span className="text-lg font-bold text-red-500">
+                  {orders.filter(o => o.side === 'SELL').length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">
+                  {formatRecentOrderTime(orders[0].time)}
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    orders[0].side === 'BUY'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {orders[0].side === 'BUY' ? '买入' : '卖出'}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-1 justify-center items-center mt-3 py-2 bg-slate-50 rounded-lg">
+              {orders.slice(0, 10).map((order, index) => (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
+                    order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                  title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -156,7 +269,6 @@ function StatsOverview({
 
 export function DashboardView() {
   const mounted = useIsMounted()
-  const [lastUpdateText, setLastUpdateText] = useState('')
 
   const {
     account,
@@ -171,29 +283,9 @@ export function DashboardView() {
     reconnect,
   } = useDashboardWebSocket({
     autoConnect: true,
-    onError: err => {
-      console.error('[Dashboard] WebSocket error:', err)
-    },
-    onConnectionChange: connected => {
-      console.log('[Dashboard] Connection state changed:', connected)
-    },
+    onError: () => {},
+    onConnectionChange: () => {},
   })
-
-  useEffect(() => {
-    if (!lastUpdate) {
-      setTimeout(() => setLastUpdateText(''), 0)
-      return
-    }
-
-    const updateTime = () => {
-      setLastUpdateText(formatRecentOrderTime(lastUpdate))
-    }
-
-    setTimeout(() => updateTime(), 0)
-    const interval = setInterval(updateTime, 1000)
-
-    return () => clearInterval(interval)
-  }, [lastUpdate])
 
   if (!mounted) {
     return <></>
@@ -207,30 +299,6 @@ export function DashboardView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-2 h-2 rounded-full status-dot flex-shrink-0 ${
-              isConnecting ? 'bg-amber-500' : isConnected ? 'bg-emerald-500' : 'bg-red-500'
-            }`}
-            title={isConnecting ? '连接中...' : isConnected ? '已连接' : '未连接'}
-          />
-          <span className="text-xs text-slate-500">
-            {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
-          </span>
-          {lastUpdateText && <span className="text-xs text-slate-400">· {lastUpdateText}</span>}
-        </div>
-        {!isConnected && !isConnecting && (
-          <button
-            onClick={reconnect}
-            className="h-7 px-3 text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
-            title="重新连接"
-          >
-            重新连接
-          </button>
-        )}
-      </div>
-
       {loading && positions.length === 0 && (
         <div className="flex justify-center py-16">
           <LoadingSpinner size="md" showText />
@@ -245,6 +313,10 @@ export function DashboardView() {
             orders={orders}
             totalPnl={totalPnl}
             loading={loading}
+            isConnected={isConnected}
+            isConnecting={isConnecting}
+            lastUpdate={lastUpdate}
+            reconnect={reconnect}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
@@ -259,7 +331,7 @@ export function DashboardView() {
             </div>
 
             <div className="lg:col-span-1 p-0">
-              <div className="card overflow-hidden backdrop-blur-sm p-0">
+              <div className="card overflow-hidden backdrop-blur-sm bg-transparent">
                 <div className="max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin p-0">
                   <OrderTable orders={orders.slice(0, 10)} compact={true} />
                 </div>
