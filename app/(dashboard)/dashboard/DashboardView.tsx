@@ -83,20 +83,20 @@ function StatsOverview({
   loading: boolean
 }) {
   return (
-    <div className="card p-3">
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between py-1.5 border-b border-[#1e1e32]">
+    <div className="card p-4 backdrop-blur-sm">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between py-2 px-1 rounded-lg bg-[#f59e0b]/5 border border-[#f59e0b]/10">
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-            <p className="text-[11px] font-medium text-[#a1a1aa]">权益总额</p>
+            <div className="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse" />
+            <p className="text-xs font-semibold text-[#a1a1aa]">权益总额</p>
           </div>
-          <p className="text-xl font-bold text-gradient">${formatNumber(totalEquity)}</p>
+          <p className="text-2xl font-bold text-gradient">${formatNumber(totalEquity)}</p>
         </div>
         {openOrdersStats && openOrdersStats.total > 0 && (
-          <div className="flex items-center justify-between py-1.5 border-b border-[#1e1e32]">
+          <div className="flex items-center justify-between py-2 px-1 rounded-lg hover:bg-[#1a1a2e] transition-colors">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
-              <p className="text-[11px] font-medium text-[#a1a1aa]">当前委托</p>
+              <div className="w-2 h-2 rounded-full bg-[#3b82f6]" />
+              <p className="text-xs font-semibold text-[#a1a1aa]">当前委托</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-[#3b82f6]">{openOrdersStats.total}</p>
@@ -108,22 +108,22 @@ function StatsOverview({
           </div>
         )}
         {!loading && orders.length > 0 && (
-          <div className="flex items-start justify-between py-1.5">
+          <div className="flex items-start justify-between py-2 px-1 rounded-lg hover:bg-[#1a1a2e] transition-colors">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-              <p className="text-[11px] font-medium text-[#a1a1aa]">最近订单</p>
+              <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
+              <p className="text-xs font-semibold text-[#a1a1aa]">最近订单</p>
             </div>
-            <div className="text-right space-y-1">
+            <div className="text-right space-y-1.5">
               <p
-                className={`text-xl font-bold ${totalPnl >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}
+                className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}
               >
                 {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
               </p>
-              <div className="flex gap-0.5 justify-end items-center">
+              <div className="flex gap-1 justify-end items-center">
                 {orders.slice(0, 10).map((order, index) => (
                   <div
                     key={index}
-                    className={`w-1.5 h-1.5 rounded-full transition-transform hover:scale-125 ${
+                    className={`w-1.5 h-1.5 rounded-full transition-all duration-200 hover:scale-150 ${
                       order.side === 'BUY' ? 'bg-[#10b981]' : 'bg-[#ef4444]'
                     }`}
                     title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
@@ -208,25 +208,24 @@ export function DashboardView() {
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
 
   return (
-    <div className="space-y-3">
-      {/* 顶部连接状态 */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <div
-            className={`w-1.5 h-1.5 rounded-full status-dot ${
+            className={`w-2 h-2 rounded-full status-dot flex-shrink-0 ${
               isConnecting ? 'bg-[#f59e0b]' : isConnected ? 'bg-[#10b981]' : 'bg-[#ef4444]'
             }`}
             title={isConnecting ? '连接中...' : isConnected ? '已连接' : '未连接'}
           />
-          <span className="text-[10px] text-[#71717a]">
+          <span className="text-xs text-[#71717a]">
             {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
           </span>
-          {lastUpdateText && <span className="text-[10px] text-[#71717a]">· {lastUpdateText}</span>}
+          {lastUpdateText && <span className="text-xs text-[#52525b]">· {lastUpdateText}</span>}
         </div>
         {!isConnected && !isConnecting && (
           <button
             onClick={reconnect}
-            className="px-2 py-0.5 text-[10px] font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded transition-all duration-200"
+            className="h-7 px-3 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
             title="重新连接"
           >
             重新连接
@@ -234,17 +233,14 @@ export function DashboardView() {
         )}
       </div>
 
-      {/* 加载状态 */}
       {loading && positions.length === 0 && (
-        <div className="flex justify-center py-10">
+        <div className="flex justify-center py-12">
           <LoadingSpinner size="md" showText />
         </div>
       )}
 
-      {/* 主要内容 */}
       {(!loading || positions.length > 0) && (
         <>
-          {/* 统计概览 */}
           <StatsOverview
             totalEquity={totalEquity}
             openOrdersStats={openOrdersStats}
@@ -253,29 +249,24 @@ export function DashboardView() {
             loading={loading}
           />
 
-          {/* 主要内容区域 */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-            {/* 左侧：持仓 */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
             <div className="lg:col-span-3">
-              <div>
-                {positions.length === 0 ? (
-                  <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
-                ) : (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
-                    <PositionCards positions={positions} openOrders={openOrders} />
-                  </div>
-                )}
-              </div>
+              {positions.length === 0 ? (
+                <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+                  <PositionCards positions={positions} openOrders={openOrders} />
+                </div>
+              )}
             </div>
 
-            {/* 右侧：订单列表 */}
             <div className="lg:col-span-1">
-              <div className="card overflow-hidden sticky top-16">
-                <div className="px-3 py-2 border-b border-[#1e1e32] bg-[#13131f]">
-                  <h2 className="text-[10px] font-semibold text-[#f4f4f5]">最近 10 条订单</h2>
+              <div className="card overflow-hidden sticky top-16 backdrop-blur-sm">
+                <div className="px-4 py-3 border-b border-[#1e1e32] bg-[#13131f]/50">
+                  <h2 className="text-xs font-semibold text-[#f4f4f5]">最近 10 条订单</h2>
                 </div>
                 {loading && orders.length === 0 ? (
-                  <div className="flex justify-center py-4">
+                  <div className="flex justify-center py-6">
                     <LoadingSpinner size="sm" />
                   </div>
                 ) : null}
@@ -285,8 +276,8 @@ export function DashboardView() {
                   </div>
                 )}
                 {!loading && orders.length === 0 && (
-                  <div className="p-4 text-center">
-                    <p className="text-[10px] text-[#71717a]">无订单记录</p>
+                  <div className="p-6 text-center">
+                    <p className="text-xs text-[#71717a]">无订单记录</p>
                   </div>
                 )}
               </div>

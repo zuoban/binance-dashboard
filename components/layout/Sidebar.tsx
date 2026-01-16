@@ -51,23 +51,22 @@ export function Sidebar({ className = '', collapsed = false, onToggle }: Sidebar
 
   return (
     <aside className={`h-full flex flex-col ${className}`}>
-      {/* Logo 区域 */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-[#1e1e32]">
-        <Link href="/" className="flex items-center gap-1.5">
-          <div className="w-6 h-6 gradient-primary rounded-md flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+      <div className="h-12 flex items-center justify-between px-3 border-b border-[#1e1e32]">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-7 h-7 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#f59e0b]/20">
+            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
-          {!collapsed && <span className="text-xs font-bold text-gradient">币安合约</span>}
+          {!collapsed && <span className="text-sm font-bold text-gradient">币安合约</span>}
         </Link>
         {onToggle && (
           <button
             onClick={onToggle}
-            className="p-1 rounded hover:bg-[#1e1e32] transition-colors text-[#a1a1aa]"
+            className="p-1.5 rounded-lg hover:bg-[#1e1e32] transition-colors text-[#a1a1aa] hover:text-[#f4f4f5]"
             title={collapsed ? '展开侧边栏' : '收起侧边栏'}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {collapsed ? (
                 <path
                   strokeLinecap="round"
@@ -88,21 +87,20 @@ export function Sidebar({ className = '', collapsed = false, onToggle }: Sidebar
         )}
       </div>
 
-      {/* 导航菜单 */}
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav className="flex-1 p-2.5 overflow-y-auto">
         {navItems.map(item => (
           <Link
             key={item.path}
             href={item.path}
-            className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200 mb-1 ${
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 mb-1 group ${
               isActive(item.path)
-                ? 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30'
+                ? 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30 shadow-sm'
                 : 'text-[#a1a1aa] hover:bg-[#1e1e32] hover:text-[#f4f4f5]'
             }`}
             title={collapsed ? item.label : undefined}
           >
             <div
-              className="w-3.5 h-3.5 flex-shrink-0"
+              className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110"
               dangerouslySetInnerHTML={{ __html: item.icon }}
             />
             {!collapsed && <span className="text-xs font-medium">{item.label}</span>}
@@ -111,8 +109,7 @@ export function Sidebar({ className = '', collapsed = false, onToggle }: Sidebar
         ))}
       </nav>
 
-      {/* 底部信息 */}
-      <div className="p-2 border-t border-[#1e1e32]">
+      <div className="p-2.5 border-t border-[#1e1e32]">
         {!collapsed && (
           <div className="text-[10px] text-[#71717a]">
             <p>实时数据来自币安 API</p>
@@ -121,7 +118,7 @@ export function Sidebar({ className = '', collapsed = false, onToggle }: Sidebar
         {collapsed && (
           <div className="flex justify-center">
             <svg
-              className="w-3 h-3 text-[#71717a]"
+              className="w-3.5 h-3.5 text-[#71717a]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

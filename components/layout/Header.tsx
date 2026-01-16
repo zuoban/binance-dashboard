@@ -1,32 +1,22 @@
-/**
- * Header 布局组件
- */
-
 interface HeaderProps {
-  /** 自定义样式类名 */
   className?: string
 }
 
-/**
- * 顶部导航栏
- */
 export function Header({ className = '' }: HeaderProps) {
   return (
     <header className={className}>
-      <div className="px-4 py-2">
+      <div className="px-4 py-2.5">
         <div className="flex items-center justify-between">
-          {/* 左侧：页面标题 */}
           <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold text-[#f4f4f5]">交易看板</h1>
+            <h1 className="text-base font-bold text-gradient">交易看板</h1>
           </div>
 
-          {/* 右侧：操作按钮 */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
-              className="p-1 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded transition-all duration-200"
+              className="p-2 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               title="刷新数据"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -36,10 +26,10 @@ export function Header({ className = '' }: HeaderProps) {
               </svg>
             </button>
             <button
-              className="p-1 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded transition-all duration-200"
+              className="p-2 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               title="设置"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -55,10 +45,10 @@ export function Header({ className = '' }: HeaderProps) {
               </svg>
             </button>
             <button
-              className="p-1 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded transition-all duration-200"
+              className="p-2 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               title="退出登录"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
