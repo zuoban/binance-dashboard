@@ -206,7 +206,7 @@ export function DashboardView() {
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <div
@@ -247,37 +247,22 @@ export function DashboardView() {
             loading={loading}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <div className="lg:col-span-3">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+            <div className="lg:col-span-3 p-0">
               {positions.length === 0 ? (
                 <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
               ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <PositionCards positions={positions} openOrders={openOrders} />
                 </div>
               )}
             </div>
 
-            <div className="lg:col-span-1">
-              <div className="card overflow-hidden sticky top-20 backdrop-blur-sm">
-                <div className="px-4 py-3 border-b border-slate-200 bg-white">
-                  <h2 className="text-xs font-semibold text-slate-900">最近 10 条订单</h2>
+            <div className="lg:col-span-1 p-0">
+              <div className="card overflow-hidden backdrop-blur-sm p-0">
+                <div className="max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin p-0">
+                  <OrderTable orders={orders.slice(0, 10)} compact={true} />
                 </div>
-                {loading && orders.length === 0 ? (
-                  <div className="flex justify-center py-6">
-                    <LoadingSpinner size="sm" />
-                  </div>
-                ) : null}
-                {!loading && orders.length > 0 && (
-                  <div className="max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
-                    <OrderTable orders={orders.slice(0, 10)} compact={true} />
-                  </div>
-                )}
-                {!loading && orders.length === 0 && (
-                  <div className="p-6 text-center">
-                    <p className="text-xs text-slate-400">无订单记录</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>

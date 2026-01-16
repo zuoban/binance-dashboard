@@ -288,24 +288,6 @@ interface PositionCardsProps {
 export function PositionCards({ positions, openOrders, className = '' }: PositionCardsProps) {
   const { exchangeInfo } = useExchangeInfo()
 
-  if (positions.length === 0) {
-    return (
-      <div className={`text-center py-16 ${className}`}>
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-          <svg
-            className="w-8 h-8 text-slate-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 12H4" />
-          </svg>
-        </div>
-        <p className="text-sm text-slate-500">暂无持仓</p>
-      </div>
-    )
-  }
-
   return (
     <div className={`space-y-2 ${className}`}>
       {positions.map(position => (
