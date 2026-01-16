@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation'
 import { getStoredAccessCode } from '@/lib/utils/fetch-with-auth'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
@@ -32,15 +34,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // 未登录时显示加载状态并准备重定向
   if (!accessCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
         <LoadingSpinner size="lg" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      <main className="p-3 min-h-screen">
+    <div className="min-h-screen bg-[#f8fafc]">
+      <main className="p-4 min-h-screen">
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
     </div>

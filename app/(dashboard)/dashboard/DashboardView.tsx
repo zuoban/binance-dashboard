@@ -83,75 +83,73 @@ function StatsOverview({
   loading: boolean
 }) {
   return (
-    <div className="card p-4 backdrop-blur-sm">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between py-2 px-1 rounded-lg bg-[#f59e0b]/5 border border-[#f59e0b]/10">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse" />
-            <p className="text-xs font-semibold text-[#a1a1aa]">权益总额</p>
-          </div>
-          <p className="text-2xl font-bold text-gradient">${formatNumber(totalEquity)}</p>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="card p-5 backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-2 h-2 rounded-full bg-slate-600 animate-pulse" />
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">权益总额</p>
         </div>
-        {openOrdersStats && openOrdersStats.total > 0 && (
-          <div className="flex items-center justify-between py-2 px-1 rounded-lg hover:bg-[#1a1a2e] transition-colors">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#3b82f6]" />
-              <p className="text-xs font-semibold text-[#a1a1aa]">当前委托</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-[#3b82f6]">{openOrdersStats.total}</p>
-              <p className="text-[10px] text-[#71717a]">
-                买 <span className="text-[#10b981]">{openOrdersStats.buy}</span> / 卖{' '}
-                <span className="text-[#ef4444]">{openOrdersStats.sell}</span>
-              </p>
-            </div>
-          </div>
-        )}
-        {!loading && orders.length > 0 && (
-          <div className="flex items-start justify-between py-2 px-1 rounded-lg hover:bg-[#1a1a2e] transition-colors">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-              <p className="text-xs font-semibold text-[#a1a1aa]">最近订单</p>
-            </div>
-            <div className="text-right space-y-1.5">
-              <p
-                className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}
-              >
-                {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
-              </p>
-              <div className="flex gap-1 justify-end items-center">
-                {orders.slice(0, 10).map((order, index) => (
-                  <div
-                    key={index}
-                    className={`w-1.5 h-1.5 rounded-full transition-all duration-200 hover:scale-150 ${
-                      order.side === 'BUY' ? 'bg-[#10b981]' : 'bg-[#ef4444]'
-                    }`}
-                    title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-2 justify-end">
-                <p className="text-[10px] text-[#71717a]">
-                  买{' '}
-                  <span className="text-[#10b981]">
-                    {orders.filter(o => o.side === 'BUY').length}
-                  </span>{' '}
-                  / 卖{' '}
-                  <span className="text-[#ef4444]">
-                    {orders.filter(o => o.side === 'SELL').length}
-                  </span>
-                </p>
-              </div>
-              <p className="text-[10px] text-[#71717a]">
-                {formatRecentOrderTime(orders[0].time)}{' '}
-                <span className={orders[0].side === 'BUY' ? 'text-[#10b981]' : 'text-[#ef4444]'}>
-                  {orders[0].side === 'BUY' ? '买' : '卖'}
-                </span>
-              </p>
-            </div>
-          </div>
-        )}
+        <p className="text-3xl font-bold text-gradient">${formatNumber(totalEquity)}</p>
       </div>
+
+      {openOrdersStats && openOrdersStats.total > 0 && (
+        <div className="card p-5 backdrop-blur-sm hover:bg-slate-50/50 transition-colors">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              当前委托
+            </p>
+          </div>
+          <p className="text-3xl font-bold text-blue-600 mb-1">{openOrdersStats.total}</p>
+          <p className="text-xs text-slate-400">
+            买 <span className="text-emerald-600 font-medium">{openOrdersStats.buy}</span> / 卖{' '}
+            <span className="text-red-500 font-medium">{openOrdersStats.sell}</span>
+          </p>
+        </div>
+      )}
+
+      {!loading && orders.length > 0 && (
+        <div className="card p-5 backdrop-blur-sm hover:bg-slate-50/50 transition-colors">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 rounded-full bg-purple-500" />
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              最近订单
+            </p>
+          </div>
+          <p
+            className={`text-3xl font-bold mb-1 ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+          >
+            {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
+          </p>
+          <div className="flex gap-1 justify-end items-center mb-1">
+            {orders.slice(0, 10).map((order, index) => (
+              <div
+                key={index}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-200 hover:scale-150 ${
+                  order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                }`}
+                title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+              />
+            ))}
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              买{' '}
+              <span className="text-emerald-600">
+                {orders.filter(o => o.side === 'BUY').length}
+              </span>{' '}
+              / 卖{' '}
+              <span className="text-red-500">{orders.filter(o => o.side === 'SELL').length}</span>
+            </p>
+            <p className="text-xs text-slate-400">
+              {formatRecentOrderTime(orders[0].time)}{' '}
+              <span className={orders[0].side === 'BUY' ? 'text-emerald-600' : 'text-red-500'}>
+                {orders[0].side === 'BUY' ? '买' : '卖'}
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -208,24 +206,24 @@ export function DashboardView() {
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full status-dot flex-shrink-0 ${
-              isConnecting ? 'bg-[#f59e0b]' : isConnected ? 'bg-[#10b981]' : 'bg-[#ef4444]'
+              isConnecting ? 'bg-amber-500' : isConnected ? 'bg-emerald-500' : 'bg-red-500'
             }`}
             title={isConnecting ? '连接中...' : isConnected ? '已连接' : '未连接'}
           />
-          <span className="text-xs text-[#71717a]">
+          <span className="text-xs text-slate-500">
             {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
           </span>
-          {lastUpdateText && <span className="text-xs text-[#52525b]">· {lastUpdateText}</span>}
+          {lastUpdateText && <span className="text-xs text-slate-400">· {lastUpdateText}</span>}
         </div>
         {!isConnected && !isConnecting && (
           <button
             onClick={reconnect}
-            className="h-7 px-3 text-xs font-medium text-[#a1a1aa] hover:text-[#f4f4f5] hover:bg-[#1e1e32] rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
+            className="h-7 px-3 text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
             title="重新连接"
           >
             重新连接
@@ -234,7 +232,7 @@ export function DashboardView() {
       </div>
 
       {loading && positions.length === 0 && (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <LoadingSpinner size="md" showText />
         </div>
       )}
@@ -249,21 +247,21 @@ export function DashboardView() {
             loading={loading}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-3">
               {positions.length === 0 ? (
                 <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
               ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   <PositionCards positions={positions} openOrders={openOrders} />
                 </div>
               )}
             </div>
 
             <div className="lg:col-span-1">
-              <div className="card overflow-hidden sticky top-16 backdrop-blur-sm">
-                <div className="px-4 py-3 border-b border-[#1e1e32] bg-[#13131f]/50">
-                  <h2 className="text-xs font-semibold text-[#f4f4f5]">最近 10 条订单</h2>
+              <div className="card overflow-hidden sticky top-20 backdrop-blur-sm">
+                <div className="px-4 py-3 border-b border-slate-200 bg-white">
+                  <h2 className="text-xs font-semibold text-slate-900">最近 10 条订单</h2>
                 </div>
                 {loading && orders.length === 0 ? (
                   <div className="flex justify-center py-6">
@@ -271,13 +269,13 @@ export function DashboardView() {
                   </div>
                 ) : null}
                 {!loading && orders.length > 0 && (
-                  <div className="max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
+                  <div className="max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
                     <OrderTable orders={orders.slice(0, 10)} compact={true} />
                   </div>
                 )}
                 {!loading && orders.length === 0 && (
                   <div className="p-6 text-center">
-                    <p className="text-xs text-[#71717a]">无订单记录</p>
+                    <p className="text-xs text-slate-400">无订单记录</p>
                   </div>
                 )}
               </div>
