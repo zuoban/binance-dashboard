@@ -167,8 +167,7 @@ export function PositionCard({
                   positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
                 }`}
               >
-                {positionData.isProfit ? '+' : ''}$
-                {formatPrice(positionData.unrealizedProfit, position.symbol, exchangeInfo)}
+                {positionData.isProfit ? '+' : ''}${positionData.unrealizedProfit.toFixed(2)}
               </span>
               <span
                 className={`text-xs font-semibold ${
