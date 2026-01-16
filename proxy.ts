@@ -1,5 +1,5 @@
 /**
- * Next.js 路由中间件
+ * Next.js 路由代理
  *
  * 保护 API 路由
  */
@@ -10,7 +10,7 @@ import { authConfig } from '@/lib/config'
 // 不需要认证的 API 路径
 const PUBLIC_API_PATHS = ['/api/auth/verify']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 开发模式且未配置访问码时，跳过认证
