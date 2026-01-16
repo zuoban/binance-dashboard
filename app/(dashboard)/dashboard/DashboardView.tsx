@@ -12,8 +12,8 @@ import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderTable } from '@/components/dashboard/OrderTable'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
-import { format } from 'date-fns'
 import { Order } from '@/types/binance'
+import { useEffect, useState } from 'react'
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -28,23 +28,23 @@ function formatRecentOrderTime(timestamp: number): string {
   const now = Date.now()
   const diff = now - timestamp
 
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
+  const secondsTotal = Math.floor(diff / 1000)
+  const minutesTotal = Math.floor(secondsTotal / 60)
+  const hoursTotal = Math.floor(minutesTotal / 60)
 
-  if (seconds < 60) {
-    return `${seconds}秒前`
+  if (secondsTotal < 60) {
+    return `${secondsTotal}秒前`
   }
 
-  if (minutes < 60) {
-    return `${minutes}分钟前`
+  if (minutesTotal < 60) {
+    return `${minutesTotal}分钟前`
   }
 
-  if (hours < 24) {
-    return `${hours}小时前`
+  if (hoursTotal < 24) {
+    return `${hoursTotal}小时前`
   }
 
-  const days = Math.floor(hours / 24)
+  const days = Math.floor(hoursTotal / 24)
   if (days === 1) {
     return '昨天'
   }
@@ -53,7 +53,12 @@ function formatRecentOrderTime(timestamp: number): string {
     return `${days}天前`
   }
 
-  return format(new Date(timestamp), 'MM-dd HH:mm')
+  const date = new Date(timestamp)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const m = String(date.getMinutes()).padStart(2, '0')
+  return `${month}-${day} ${h}:${m}`
 }
 
 function formatNumber(num: number, decimals: number = 2): string {
@@ -64,31 +69,96 @@ function formatNumber(num: number, decimals: number = 2): string {
   return formatted
 }
 
-function StatCard({
-  title,
-  value,
-  subtext,
-  color,
-  subtitle,
+function StatsOverview({
+  totalEquity,
+  openOrdersStats,
+  orders,
+  totalPnl,
+  loading,
 }: {
-  title: string
-  value: string | number
-  subtext?: string
-  color?: string
-  subtitle?: string
+  totalEquity: number
+  openOrdersStats: { total: number; buy: number; sell: number } | null
+  orders: Order[]
+  totalPnl: number
+  loading: boolean
 }) {
   return (
-    <div className="card p-2">
-      <p className="text-[10px] text-[#71717a] mb-1">{title}</p>
-      <p className={`text-lg font-bold ${color || 'text-[#f4f4f5]'}`}>{value}</p>
-      {subtext && <p className="text-[10px] text-[#71717a]">{subtext}</p>}
-      {subtitle && <p className="text-[10px] text-[#71717a]">{subtitle}</p>}
+    <div className="card p-3">
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between py-1.5 border-b border-[#1e1e32]">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+            <p className="text-[11px] font-medium text-[#a1a1aa]">权益总额</p>
+          </div>
+          <p className="text-xl font-bold text-gradient">${formatNumber(totalEquity)}</p>
+        </div>
+        {openOrdersStats && openOrdersStats.total > 0 && (
+          <div className="flex items-center justify-between py-1.5 border-b border-[#1e1e32]">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+              <p className="text-[11px] font-medium text-[#a1a1aa]">当前委托</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-[#3b82f6]">{openOrdersStats.total}</p>
+              <p className="text-[10px] text-[#71717a]">
+                买 <span className="text-[#10b981]">{openOrdersStats.buy}</span> / 卖{' '}
+                <span className="text-[#ef4444]">{openOrdersStats.sell}</span>
+              </p>
+            </div>
+          </div>
+        )}
+        {!loading && orders.length > 0 && (
+          <div className="flex items-start justify-between py-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+              <p className="text-[11px] font-medium text-[#a1a1aa]">最近订单</p>
+            </div>
+            <div className="text-right space-y-1">
+              <p
+                className={`text-xl font-bold ${totalPnl >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}
+              >
+                {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
+              </p>
+              <div className="flex gap-0.5 justify-end items-center">
+                {orders.slice(0, 10).map((order, index) => (
+                  <div
+                    key={index}
+                    className={`w-1.5 h-1.5 rounded-full transition-transform hover:scale-125 ${
+                      order.side === 'BUY' ? 'bg-[#10b981]' : 'bg-[#ef4444]'
+                    }`}
+                    title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2 justify-end">
+                <p className="text-[10px] text-[#71717a]">
+                  买{' '}
+                  <span className="text-[#10b981]">
+                    {orders.filter(o => o.side === 'BUY').length}
+                  </span>{' '}
+                  / 卖{' '}
+                  <span className="text-[#ef4444]">
+                    {orders.filter(o => o.side === 'SELL').length}
+                  </span>
+                </p>
+              </div>
+              <p className="text-[10px] text-[#71717a]">
+                {formatRecentOrderTime(orders[0].time)}{' '}
+                <span className={orders[0].side === 'BUY' ? 'text-[#10b981]' : 'text-[#ef4444]'}>
+                  {orders[0].side === 'BUY' ? '买' : '卖'}
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 export function DashboardView() {
   const mounted = useIsMounted()
+  const [lastUpdateText, setLastUpdateText] = useState('')
 
   const {
     account,
@@ -110,6 +180,22 @@ export function DashboardView() {
       console.log('[Dashboard] Connection state changed:', connected)
     },
   })
+
+  useEffect(() => {
+    if (!lastUpdate) {
+      setTimeout(() => setLastUpdateText(''), 0)
+      return
+    }
+
+    const updateTime = () => {
+      setLastUpdateText(formatRecentOrderTime(lastUpdate))
+    }
+
+    setTimeout(() => updateTime(), 0)
+    const interval = setInterval(updateTime, 1000)
+
+    return () => clearInterval(interval)
+  }, [lastUpdate])
 
   if (!mounted) {
     return <></>
@@ -135,11 +221,7 @@ export function DashboardView() {
           <span className="text-[10px] text-[#71717a]">
             {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
           </span>
-          {lastUpdate && (
-            <span className="text-[10px] text-[#71717a]">
-              · {format(new Date(lastUpdate), 'HH:mm:ss')}
-            </span>
-          )}
+          {lastUpdateText && <span className="text-[10px] text-[#71717a]">· {lastUpdateText}</span>}
         </div>
         {!isConnected && !isConnecting && (
           <button
@@ -162,38 +244,14 @@ export function DashboardView() {
       {/* 主要内容 */}
       {(!loading || positions.length > 0) && (
         <>
-          {/* 统计卡片行 */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            {/* 权益总额 */}
-            {account && (
-              <StatCard
-                title="权益总额"
-                value={`$${formatNumber(totalEquity)}`}
-                color="text-gradient"
-              />
-            )}
-
-            {/* 当前委托统计 */}
-            {openOrdersStats && openOrdersStats.total > 0 && (
-              <StatCard
-                title="当前委托"
-                value={openOrdersStats.total}
-                subtext={`买 ${openOrdersStats.buy} / 卖 ${openOrdersStats.sell}`}
-                color="text-[#3b82f6]"
-              />
-            )}
-
-            {/* 最近订单统计 */}
-            {!loading && orders.length > 0 && (
-              <StatCard
-                title="最近订单"
-                value={`${totalPnl >= 0 ? '+' : ''}$${formatNumber(totalPnl)}`}
-                subtext={`买 ${orders.filter(o => o.side === 'BUY').length} / 卖 ${orders.filter(o => o.side === 'SELL').length}`}
-                subtitle={`${formatRecentOrderTime(orders[0].time)} ${orders[0].side === 'BUY' ? '买' : '卖'}`}
-                color={totalPnl >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}
-              />
-            )}
-          </div>
+          {/* 统计概览 */}
+          <StatsOverview
+            totalEquity={totalEquity}
+            openOrdersStats={openOrdersStats}
+            orders={orders}
+            totalPnl={totalPnl}
+            loading={loading}
+          />
 
           {/* 主要内容区域 */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">

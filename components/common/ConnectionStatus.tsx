@@ -7,6 +7,8 @@
 'use client'
 
 import { useWebSocketStore, getConnectionStatusText } from '@/lib/store'
+import { formatDistanceToNow } from '@/lib/utils/date'
+import { useEffect, useState } from 'react'
 
 interface ConnectionStatusProps {
   /** 是否显示文本 */
@@ -19,7 +21,24 @@ interface ConnectionStatusProps {
  * 连接状态指示器
  */
 export function ConnectionStatus({ showText = true, className = '' }: ConnectionStatusProps) {
-  const { isConnected, isConnecting } = useWebSocketStore()
+  const { isConnected, isConnecting, lastConnected } = useWebSocketStore()
+  const [relativeTime, setRelativeTime] = useState('')
+
+  useEffect(() => {
+    if (!isConnected || !lastConnected) {
+      setRelativeTime('')
+      return
+    }
+
+    const updateTime = () => {
+      setRelativeTime(formatDistanceToNow(lastConnected))
+    }
+
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+
+    return () => clearInterval(interval)
+  }, [isConnected, lastConnected])
 
   const statusText = getConnectionStatusText(useWebSocketStore.getState())
 
@@ -51,7 +70,12 @@ export function ConnectionStatus({ showText = true, className = '' }: Connection
       </div>
 
       {/* 状态文本 */}
-      {showText && <span className="text-sm text-gray-600 dark:text-gray-400">{statusText}</span>}
+      {showText && (
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {statusText}
+          {relativeTime && <span className="ml-1">{relativeTime}</span>}
+        </span>
+      )}
     </div>
   )
 }
