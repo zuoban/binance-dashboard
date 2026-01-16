@@ -192,7 +192,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
-        if (countdownRef.current) {
+      if (countdownRef.current) {
         clearInterval(countdownRef.current)
         countdownRef.current = null
       }

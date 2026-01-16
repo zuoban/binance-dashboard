@@ -93,7 +93,6 @@ export async function GET(request: NextRequest) {
       data: prices,
     })
   } catch (error: unknown) {
-
     return NextResponse.json(
       {
         success: false,

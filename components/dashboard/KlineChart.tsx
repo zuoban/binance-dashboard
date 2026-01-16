@@ -228,12 +228,12 @@ export function KlineChart({
           const kline = data[dataPointIndex]
           if (!kline) return ''
 
-          const firstOpen = data[0]?.open || 0
-          const changePercent =
-            dataPointIndex > 0 ? ((kline.close - firstOpen) / firstOpen) * 100 : 0
+          const changePercent = kline.open > 0 ? ((kline.close - kline.open) / kline.open) * 100 : 0
           const changeColor = changePercent >= 0 ? '#10b981' : '#ef4444'
           const changeBgColor =
             changePercent >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+
+          const amplitude = kline.low > 0 ? ((kline.high - kline.low) / kline.low) * 100 : 0
 
           const date = new Date(kline.time * 1000)
 
@@ -276,17 +276,24 @@ export function KlineChart({
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #94a3b8; font-size: 12px; width: 24px;">低</span>
-                  <span style="font-weight: 600; color: #ef4444; font-family: ui-monospace, monospace;">
-                    ${formatPrice(kline.low)}
-                  </span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
                   <span style="color: #94a3b8; font-size: 12px; width: 24px;">收</span>
                   <span style="font-weight: 600; color: ${kline.close >= kline.open ? '#10b981' : '#ef4444'}; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.close)}
                   </span>
                 </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="color: #94a3b8; font-size: 12px; width: 24px;">低</span>
+                  <span style="font-weight: 600; color: #ef4444; font-family: ui-monospace, monospace;">
+                    ${formatPrice(kline.low)}
+                  </span>
+                </div>
+              </div>
+
+              <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-size: 12px; font-weight: 500;">振幅</span>
+                <span style="font-size: 14px; font-weight: 700; color: #f59e0b; font-family: ui-monospace, monospace;">
+                  ${amplitude.toFixed(2)}%
+                </span>
               </div>
             </div>
           `

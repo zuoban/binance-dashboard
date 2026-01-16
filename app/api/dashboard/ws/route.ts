@@ -76,12 +76,12 @@ export async function GET(request: NextRequest) {
         // 连接会自动接收后续的数据广播
         const cleanup = connectionManager.registerConnection(connectionId, controller, encoder)
 
-         // 3. 设置断开清理
+        // 3. 设置断开清理
         request.signal.addEventListener('abort', () => {
           cleanup()
           controller.close()
         })
-       } catch (error) {
+      } catch (error) {
         // 注册失败（如连接数超限）
         sendEvent(
           {

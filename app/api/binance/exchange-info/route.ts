@@ -71,7 +71,6 @@ export async function GET() {
       data: result,
     })
   } catch (error: unknown) {
-
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
 

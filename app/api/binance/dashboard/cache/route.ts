@@ -31,7 +31,6 @@ export async function DELETE(request: NextRequest) {
       message: 'Cache cleared successfully',
     })
   } catch (error: unknown) {
-
     return NextResponse.json(
       {
         success: false,

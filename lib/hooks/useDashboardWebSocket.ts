@@ -159,8 +159,7 @@ export function useDashboardWebSocket(
             setLastUpdate(message.timestamp)
             onDataUpdate?.(message.data)
           }
-        } catch {
-        }
+        } catch {}
       })
 
       // 连接错误（EventSource 的原生 onerror 回调）
