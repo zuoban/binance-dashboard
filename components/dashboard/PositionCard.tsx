@@ -160,43 +160,37 @@ export function PositionCard({
               </div>
             </div>
           </div>
-          <div
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              positionData.isProfit ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-            }`}
-          >
-            {positionData.isProfit ? '盈利中' : '亏损中'}
+          <div className="text-right">
+            <div className="flex items-baseline gap-1">
+              <span
+                className={`text-lg font-bold ${
+                  positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                {positionData.isProfit ? '+' : ''}$
+                {formatPrice(positionData.unrealizedProfit, position.symbol, exchangeInfo)}
+              </span>
+              <span
+                className={`text-xs font-semibold ${
+                  positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                {positionData.isProfit ? '+' : ''}
+                {((positionData.unrealizedProfit / positionData.positionValue) * 100).toFixed(2)}%
+              </span>
+            </div>
+            <div
+              className={`mt-0.5 text-[10px] font-medium ${
+                positionData.isProfit ? 'text-emerald-500' : 'text-red-500'
+              }`}
+            >
+              {positionData.isProfit ? '盈利中' : '亏损中'}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="px-5 py-4">
-        <div
-          className={`mb-4 rounded-xl p-4 ${
-            positionData.isProfit ? 'bg-emerald-50/50' : 'bg-red-50/50'
-          }`}
-        >
-          <div className="text-xs font-medium text-slate-500 mb-2">未实现盈亏</div>
-          <div className="flex items-baseline gap-2">
-            <span
-              className={`text-2xl font-bold tracking-tight ${
-                positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
-              }`}
-            >
-              {positionData.isProfit ? '+' : ''}$
-              {formatPrice(positionData.unrealizedProfit, position.symbol, exchangeInfo)}
-            </span>
-            <span
-              className={`text-sm font-semibold ${
-                positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
-              }`}
-            >
-              {positionData.isProfit ? '+' : ''}
-              {((positionData.unrealizedProfit / positionData.positionValue) * 100).toFixed(2)}%
-            </span>
-          </div>
-        </div>
-
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="space-y-1">
             <div className="text-xs text-slate-400">持仓金额</div>

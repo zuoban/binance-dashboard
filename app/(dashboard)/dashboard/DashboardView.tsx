@@ -110,7 +110,7 @@ function StatsOverview({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="card overflow-hidden backdrop-blur-sm">
-        <div className="bg-gradient-to-r from-slate-50 to-slate-100/50 px-5 py-3 border-b border-slate-200">
+        <div className="bg-white px-5 py-2 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div
@@ -127,38 +127,58 @@ function StatsOverview({
                 权益总额
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-medium text-slate-400">
-                {isConnecting ? '连接中...' : isConnected ? '实时连接' : '连接断开'}
-              </span>
-              {!isConnected && !isConnecting && (
-                <button
-                  onClick={reconnect}
-                  className="h-5 px-2 text-[10px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded transition-all duration-200"
-                  title="重新连接"
-                >
-                  重连
-                </button>
-              )}
-            </div>
+            {!isConnected && !isConnecting && (
+              <button
+                onClick={reconnect}
+                className="px-2.5 py-1 text-[10px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200"
+                title="重新连接"
+              >
+                重新连接
+              </button>
+            )}
           </div>
         </div>
-        <div className="px-5 py-4 bg-white">
-          <p className="text-4xl font-bold text-slate-900 tracking-tight">
-            ${formatNumber(totalEquity)}
-          </p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-slate-400">USDC</span>
-            <div className="w-px h-3 bg-slate-200" />
-            <span
-              className={`text-xs font-medium ${totalEquity > 0 ? 'text-emerald-600' : 'text-slate-400'}`}
-            >
-              {totalEquity > 0 ? '正常' : '空仓'}
-            </span>
+        <div className="px-5 py-2.5">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <p className="text-5xl font-bold text-slate-900 tracking-tight">
+              ${formatNumber(totalEquity)}
+            </p>
+            <span className="text-sm font-medium text-slate-400">USDC</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  totalEquity > 0 ? 'bg-emerald-500' : 'bg-slate-300'
+                }`}
+              />
+              <span
+                className={`text-xs font-medium ${
+                  totalEquity > 0 ? 'text-emerald-600' : 'text-slate-400'
+                }`}
+              >
+                {totalEquity > 0 ? '正常交易' : '空仓状态'}
+              </span>
+            </div>
             {lastUpdateText && (
               <>
                 <div className="w-px h-3 bg-slate-200" />
-                <span className="text-xs text-slate-400">{lastUpdateText}</span>
+                <div className="flex items-center gap-1.5">
+                  <svg
+                    className="w-3.5 h-3.5 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-xs text-slate-500 font-medium">{lastUpdateText}</span>
+                </div>
               </>
             )}
           </div>
@@ -167,21 +187,16 @@ function StatsOverview({
 
       {openOrdersStats && openOrdersStats.total > 0 && (
         <div className="card overflow-hidden backdrop-blur-sm">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 px-5 py-3 border-b border-blue-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/30" />
-                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                  当前委托
-                </p>
-              </div>
-              <span className="text-[10px] font-medium text-blue-400">
-                {openOrdersStats.total}笔
-              </span>
+          <div className="bg-white px-5 py-2 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                当前委托
+              </p>
             </div>
           </div>
-          <div className="px-5 py-4 bg-white">
-            <p className="text-4xl font-bold text-blue-600 tracking-tight mb-2">
+          <div className="px-5 py-2.5">
+            <p className="text-4xl font-bold text-slate-900 tracking-tight mb-1.5">
               {openOrdersStats.total}
             </p>
             <div className="flex items-center gap-4">
@@ -198,30 +213,34 @@ function StatsOverview({
 
       {!loading && orders.length > 0 && (
         <div className="card overflow-hidden backdrop-blur-sm">
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 px-5 py-3 border-b border-purple-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-sm shadow-purple-500/30" />
-                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
-                  最近订单
-                </p>
-              </div>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  totalPnl >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                }`}
-              >
-                {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
-              </span>
+          <div className="bg-white px-5 py-2 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-500" />
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                最近订单
+              </p>
             </div>
           </div>
-          <div className="px-5 py-4 bg-white">
-            <p
-              className={`text-4xl font-bold tracking-tight ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
-            >
-              {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
-            </p>
-            <div className="flex items-center justify-between mt-3">
+          <div className="px-5 py-2.5">
+            <div className="flex items-center justify-between">
+              <p
+                className={`text-4xl font-bold tracking-tight ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+              >
+                {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
+              </p>
+              <div className="flex gap-1 items-center">
+                {orders.slice(0, 10).map((order, index) => (
+                  <div
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
+                      order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                    }`}
+                    title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-2">
               <div className="flex items-center gap-4">
                 <span className="text-xs text-slate-400">成交</span>
                 <span className="text-xs text-slate-500">买</span>
@@ -239,7 +258,7 @@ function StatsOverview({
                   {formatRecentOrderTime(orders[0].time)}
                 </span>
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
                     orders[0].side === 'BUY'
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-red-100 text-red-700'
@@ -248,17 +267,6 @@ function StatsOverview({
                   {orders[0].side === 'BUY' ? '买入' : '卖出'}
                 </span>
               </div>
-            </div>
-            <div className="flex gap-1 justify-center items-center mt-3 py-2 bg-slate-50 rounded-lg">
-              {orders.slice(0, 10).map((order, index) => (
-                <div
-                  key={index}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
-                    order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
-                  }`}
-                  title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-                />
-              ))}
             </div>
           </div>
         </div>
