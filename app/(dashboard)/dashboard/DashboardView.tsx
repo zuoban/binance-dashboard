@@ -26,7 +26,7 @@ function calculateTotalPnl(orders: Order[]): number {
 
 function formatRecentOrderTime(timestamp: number): string {
   const now = Date.now()
-  const diff = now - timestamp
+  const diff = Math.max(0, now - timestamp)
 
   const secondsTotal = Math.floor(diff / 1000)
   const minutesTotal = Math.floor(secondsTotal / 60)
