@@ -60,7 +60,7 @@ export interface DashboardData {
   account: AccountAsset
   /** 持仓列表 */
   positions: Position[]
-  /** 历史订单（最近 5 条） */
+  /** 历史订单（最近 20 条，已按 orderId 合并） */
   orders: SimpleOrder[]
   /** 开放订单统计 */
   openOrdersStats: OpenOrdersStats

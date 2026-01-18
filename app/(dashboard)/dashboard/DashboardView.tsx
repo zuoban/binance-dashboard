@@ -10,6 +10,7 @@ import { useDashboardWebSocket } from '@/lib/hooks'
 import { useIsMounted } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderTable } from '@/components/dashboard/OrderTable'
+import { OrderTooltip } from '@/components/dashboard/OrderTooltip'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
@@ -228,16 +229,29 @@ function StatsOverview({
               >
                 {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
               </p>
-              <div className="flex gap-1 items-center">
-                {orders.slice(0, 10).map((order, index) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
-                      order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
-                    }`}
-                    title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-                  />
-                ))}
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-1 items-center">
+                  {orders.slice(0, 10).map((order, index) => (
+                    <OrderTooltip key={index} order={order}>
+                      <div
+                        className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
+                          order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                        }`}
+                      />
+                    </OrderTooltip>
+                  ))}
+                </div>
+                <div className="flex gap-1 items-center">
+                  {orders.slice(10, 20).map((order, index) => (
+                    <OrderTooltip key={index + 10} order={order}>
+                      <div
+                        className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
+                          order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                        }`}
+                      />
+                    </OrderTooltip>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-between mt-2">
@@ -341,7 +355,7 @@ export function DashboardView() {
             <div className="lg:col-span-1 p-0">
               <div className="card overflow-hidden backdrop-blur-sm bg-transparent">
                 <div className="max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin p-0">
-                  <OrderTable orders={orders.slice(0, 10)} compact={true} />
+                  <OrderTable orders={orders.slice(0, 20)} compact={true} />
                 </div>
               </div>
             </div>

@@ -381,14 +381,14 @@ export class DataManager {
     // 获取持仓中所有唯一的 symbol
     const symbols = Array.from(new Set(positions.map((p: Position) => p.symbol)))
 
-    // 获取历史订单（只查询最近 10 条）
+    // 获取历史订单（每个 symbol 查询最近 50 条，用于后续合并）
     const allTrades: (BinanceUserTrade & { symbol: string })[] = []
 
     // 并发查询所有持仓交易对的最近成交记录
     const tradesPromises = symbols.map(async symbol => {
       try {
         const trades = await client.getUserTrades(symbol, {
-          limit: 10, // 只获取最近 10 条
+          limit: 50, // 获取最近 50 条，确保有足够数据用于合并
         })
         return trades.map((t: BinanceUserTrade) => ({ ...t, symbol }))
       } catch {
@@ -401,10 +401,9 @@ export class DataManager {
       allTrades.push(...trades)
     })
 
-    // 排序并取最近 10 条
-    const sortedTrades = allTrades.sort((a, b) => b.time - a.time).slice(0, 10)
-
-    const orders = sortedTrades.map(this.mapTradeToOrder)
+    // 按 orderId 合并成交记录，然后取最近 20 条
+    const mergedOrders = this.mergeTradesByOrderId(allTrades)
+    const orders = mergedOrders.slice(0, 20)
 
     // 统计当前委托订单
     const openOrdersStats = {
@@ -427,25 +426,65 @@ export class DataManager {
   }
 
   /**
-   * 将 getUserTrades API 返回的数据映射为简化订单类型
+   * 按 orderId 合并成交记录
+   *
+   * 同一个订单可能有多条成交记录，需要合并为一条订单显示
    */
-  private mapTradeToOrder(trade: BinanceUserTrade & { symbol: string }): SimpleOrder {
-    return {
-      id: trade.id,
-      orderId: trade.orderId,
-      symbol: trade.symbol,
-      price: trade.price,
-      origQty: trade.qty,
-      executedQty: trade.qty,
-      side: trade.side,
-      status: 'FILLED',
-      time: trade.time,
-      updateTime: trade.time,
-      commission: trade.commission,
-      commissionAsset: trade.commissionAsset,
-      realizedPnl: trade.realizedPnl,
-      buyer: trade.buyer,
-    }
+  private mergeTradesByOrderId(trades: (BinanceUserTrade & { symbol: string })[]): SimpleOrder[] {
+    // 按 orderId 分组
+    const ordersMap = new Map<number, (BinanceUserTrade & { symbol: string })[]>()
+
+    trades.forEach(trade => {
+      const existing = ordersMap.get(trade.orderId) || []
+      existing.push(trade)
+      ordersMap.set(trade.orderId, existing)
+    })
+
+    // 合并每个订单的成交记录
+    const mergedOrders: SimpleOrder[] = []
+
+    ordersMap.forEach(orderTrades => {
+      // 按时间排序，确保取到正确的首次和最后成交
+      const sorted = orderTrades.sort((a, b) => a.time - b.time)
+      const firstTrade = sorted[0]
+      const lastTrade = sorted[sorted.length - 1]
+
+      // 累加成交数量
+      const totalQty = sorted.reduce((sum, t) => sum + parseFloat(t.qty), 0)
+
+      // 累加手续费
+      const totalCommission = sorted.reduce((sum, t) => sum + parseFloat(t.commission || '0'), 0)
+
+      // 累加已实现盈亏
+      const totalRealizedPnl = sorted.reduce((sum, t) => sum + parseFloat(t.realizedPnl || '0'), 0)
+
+      // 使用加权平均价格（成交金额 / 成交数量）
+      const totalAmount = sorted.reduce(
+        (sum, t) => sum + parseFloat(t.price) * parseFloat(t.qty),
+        0
+      )
+      const avgPrice = totalQty > 0 ? totalAmount / totalQty : parseFloat(lastTrade.price)
+
+      mergedOrders.push({
+        id: firstTrade.id, // 使用第一条成交的 ID
+        orderId: firstTrade.orderId,
+        symbol: firstTrade.symbol,
+        price: avgPrice.toString(),
+        origQty: totalQty.toString(),
+        executedQty: totalQty.toString(),
+        side: firstTrade.side,
+        status: 'FILLED',
+        time: firstTrade.time, // 使用最早的时间
+        updateTime: lastTrade.time, // 使用最后的时间
+        commission: totalCommission.toString(),
+        commissionAsset: firstTrade.commissionAsset,
+        realizedPnl: totalRealizedPnl.toString(),
+        buyer: firstTrade.buyer,
+      })
+    })
+
+    // 按时间降序排序
+    return mergedOrders.sort((a, b) => b.time - a.time)
   }
 
   /**
