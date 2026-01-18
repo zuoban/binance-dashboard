@@ -221,6 +221,8 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
   const pnl = order.realizedPnl !== undefined ? parseFloat(order.realizedPnl) : null
   const isPnlPositive = pnl !== null && pnl >= 0
 
+  const commission = order.commission !== undefined ? parseFloat(order.commission) : null
+
   return (
     <>
       <div
@@ -248,94 +250,100 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
               }`}
             >
               <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden relative">
-                {/* Header - 与 Compact Card 一致 */}
-                <div className="px-3 py-2.5 border-b border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-slate-900 tracking-wide">
-                        {order.symbol}
-                      </h4>
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide ${
-                          order.side === 'BUY'
-                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                            : 'bg-red-100 text-red-700 border border-red-200'
-                        }`}
-                      >
-                        {order.side === 'BUY' ? '买入' : '卖出'}
-                      </span>
-                      <span
-                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                          order.type === 'MARKET'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-blue-100 text-blue-700'
-                        }`}
-                      >
-                        {order.type === 'MARKET' ? '市价' : '限价'}
+                {/* Header */}
+                <div className="px-3 py-2 border-b border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-baseline gap-2">
+                      <h4 className="text-sm font-bold text-slate-900">{order.symbol}</h4>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {formatDistanceToNow(order.time)}
                       </span>
                     </div>
                     <OrderStatusBadge status={order.status} />
                   </div>
+
+                  <div className="flex gap-1.5">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
+                        order.side === 'BUY'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {order.side === 'BUY' ? '买入' : '卖出'}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${
+                        order.type === 'MARKET'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}
+                    >
+                      {order.type === 'MARKET' ? '市价' : '限价'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Content - 与 Compact Card 一致 */}
-                <div className="px-3 py-2.5 space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-slate-400 font-medium">成交价格</span>
-                      <p className="text-sm font-bold text-slate-900 tracking-tight">
+                {/* Content - 极简紧凑布局 */}
+                <div className="px-3 py-2">
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                    {/* 价格 */}
+                    <div>
+                      <div className="text-[10px] text-slate-400 scale-90 origin-top-left">
+                        成交价格
+                      </div>
+                      <div className="text-sm font-bold text-slate-900 leading-tight">
                         ${formatPrice(price, order.symbol, exchangeInfo)}
-                      </p>
+                      </div>
                     </div>
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-slate-400 font-medium">成交数量</span>
-                      <p className="text-sm font-bold text-slate-700 tracking-tight">
+
+                    {/* 数量 */}
+                    <div>
+                      <div className="text-[10px] text-slate-400 scale-90 origin-top-left">
+                        成交数量
+                      </div>
+                      <div className="text-sm font-bold text-slate-700 leading-tight">
                         {executedQty.toFixed(4)}
-                      </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-slate-400 font-medium">成交金额</span>
-                      <p className="text-sm font-semibold text-slate-900 tracking-tight">
+                    {/* 金额 */}
+                    <div>
+                      <div className="text-[10px] text-slate-400 scale-90 origin-top-left">
+                        成交金额
+                      </div>
+                      <div className="text-sm font-medium text-slate-900 leading-tight">
                         ${totalAmount.toFixed(2)}
-                      </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {order.commission !== undefined && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">手续费</span>
-                          <span className="text-xs font-medium text-slate-700">
-                            {parseFloat(order.commission).toFixed(4)}
-                            {order.commissionAsset && ` ${order.commissionAsset}`}
-                          </span>
-                        </div>
-                      )}
-                      {pnl !== null && order.side === 'SELL' && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-400">盈亏</span>
-                          <span
-                            className={`text-sm font-bold px-2 py-0.5 rounded ${
-                              isPnlPositive
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-red-100 text-red-700'
+                    {/* 盈亏/手续费 */}
+                    <div>
+                      {pnl !== null && order.side === 'SELL' ? (
+                        <>
+                          <div className="text-[10px] text-slate-400 scale-90 origin-top-left">
+                            实现盈亏
+                          </div>
+                          <div
+                            className={`text-sm font-bold leading-tight ${
+                              isPnlPositive ? 'text-emerald-600' : 'text-red-600'
                             }`}
                           >
                             {isPnlPositive ? '+' : ''}
                             {pnl.toFixed(2)}
-                          </span>
-                        </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[10px] text-slate-400 scale-90 origin-top-left">
+                            手续费
+                          </div>
+                          <div className="text-sm font-medium text-slate-700 leading-tight">
+                            {commission !== null ? parseFloat(commission.toFixed(4)) : 0}
+                          </div>
+                        </>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Footer Time - 与 Compact Card 一致 */}
-                <div className="px-3 py-2 bg-slate-50/50 border-t border-slate-100">
-                  <div className="text-[10px] text-slate-400 font-medium">
-                    {formatDistanceToNow(order.time)}
                   </div>
                 </div>
               </div>
