@@ -65,7 +65,7 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
 
   // 点击外部关闭
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (
         isVisible &&
         triggerRef.current &&
@@ -77,10 +77,12 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
       }
     }
 
-    // 使用 mousedown 而不是 click，以获得更好的交互体验
+    // 同时监听 mousedown 和 touchstart 以兼容移动端并保证响应速度
     document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [isVisible])
 
@@ -149,7 +151,7 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
     <>
       <div
         ref={triggerRef}
-        className="relative inline-block cursor-pointer"
+        className="relative inline-flex items-center justify-center p-1.5 cursor-pointer hover:bg-slate-100 rounded-full transition-colors"
         onClick={e => {
           e.stopPropagation()
           setIsVisible(!isVisible)
