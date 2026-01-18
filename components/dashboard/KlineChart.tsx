@@ -103,7 +103,7 @@ export function KlineChart({
     }
 
     const priceRange = maxPrice - minPrice
-    const padding = priceRange * 0.03
+    const padding = priceRange * 0.05 // 增加一点内边距，防止最高/最低价贴边
 
     const dates = data.map(d => {
       const date = new Date(d.time * 1000)
@@ -122,6 +122,10 @@ export function KlineChart({
           show: false,
         },
         zoom: {
+          enabled: false,
+        },
+        // 移动端优化：禁用一些交互以防止滚动冲突，或者优化手势
+        selection: {
           enabled: false,
         },
       },
@@ -151,13 +155,16 @@ export function KlineChart({
           show: true,
           style: {
             colors: '#94a3b8',
-            fontSize: '10px',
+            fontSize: isMobile ? '9px' : '10px',
             fontFamily: 'ui-monospace, monospace',
           },
           formatter: (value: string) => {
             const date = new Date(value)
             return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
           },
+          // 移动端减少标签数量
+          hideOverlappingLabels: true,
+          rotate: 0,
         },
         axisBorder: {
           show: true,
@@ -170,24 +177,47 @@ export function KlineChart({
         tooltip: {
           enabled: false,
         },
+        crosshairs: {
+          show: true,
+          width: 1,
+          position: 'back',
+          opacity: 0.9,
+          stroke: {
+            color: '#94a3b8',
+            width: 1,
+            dashArray: 3,
+          },
+        },
       },
       yaxis: {
         min: minPrice - padding,
         max: maxPrice + padding,
+        floating: isMobile, // 移动端浮动Y轴标签，节省空间
         labels: {
           show: true,
           style: {
             colors: '#94a3b8',
-            fontSize: '10px',
+            fontSize: isMobile ? '9px' : '10px',
             fontFamily: 'ui-monospace, monospace',
           },
           formatter: (value: number) => formatPrice(value),
+          align: isMobile ? 'left' : 'right',
+          offsetX: isMobile ? 0 : -5,
         },
         axisBorder: {
           show: false,
         },
         axisTicks: {
           show: false,
+        },
+        crosshairs: {
+          show: true,
+          position: 'back',
+          stroke: {
+            color: '#94a3b8',
+            width: 1,
+            dashArray: 3,
+          },
         },
       },
       grid: {
@@ -204,8 +234,8 @@ export function KlineChart({
           },
         },
         padding: {
-          left: 10,
-          right: 5,
+          left: isMobile ? 0 : 10,
+          right: isMobile ? 0 : 5,
           bottom: 10,
           top: 24,
         },
@@ -222,9 +252,14 @@ export function KlineChart({
           fontSize: '12px',
           fontFamily: 'ui-sans-serif, system-ui',
         },
+        // 移动端固定 tooltip 位置，避免遮挡手指或K线
+        fixed: {
+          enabled: isMobile,
+          position: 'topLeft',
+          offsetX: 0,
+          offsetY: 0,
+        },
         custom: ({ dataPointIndex }: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-
           const kline = data[dataPointIndex]
           if (!kline) return ''
 
@@ -237,11 +272,25 @@ export function KlineChart({
 
           const date = new Date(kline.time * 1000)
 
+          // 移动端样式优化
+          const containerStyle = isMobile
+            ? `padding: 8px; min-width: 140px; background: rgba(255, 255, 255, 0.98); border: 1px solid ${changeColor}; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); backdrop-filter: blur(8px);`
+            : `padding: 12px; min-width: 220px; background: rgba(255, 255, 255, 0.98); border: 2px solid ${changeColor}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); backdrop-filter: blur(8px);`
+
+          const headerStyle = isMobile
+            ? 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;'
+            : 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;'
+
+          const fontSizeDate = isMobile ? '10px' : '11px'
+          const fontSizeLabel = isMobile ? '10px' : '12px'
+          const fontSizeValue = isMobile ? '11px' : '13px' // 稍微减小字体
+          const gridGap = isMobile ? '8px' : '12px'
+
           return `
-            <div style="padding: 12px; min-width: 220px; background: rgba(255, 255, 255, 0.98); border: 2px solid ${changeColor}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); backdrop-filter: blur(8px);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;">
+            <div style="${containerStyle}">
+              <div style="${headerStyle}">
                 <div>
-                  <div style="font-size: 11px; color: #64748b; font-weight: 500; margin-bottom: 2px;">
+                  <div style="font-size: ${fontSizeDate}; color: #64748b; font-weight: 500; margin-bottom: 2px;">
                     ${date.toLocaleString('zh-CN', {
                       month: '2-digit',
                       day: '2-digit',
@@ -249,49 +298,47 @@ export function KlineChart({
                       minute: '2-digit',
                     })}
                   </div>
-                  <div style="font-size: 10px; color: #94a3b8;">
-                    15分钟 K线
-                  </div>
+                  ${!isMobile ? `<div style="font-size: 10px; color: #94a3b8;">15分钟 K线</div>` : ''}
                 </div>
                 <div style="text-align: right;">
-                  <div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; background: ${changeBgColor};">
-                    <span style="font-size: 12px; font-weight: 700; color: ${changeColor};">
+                  <div style="display: inline-flex; align-items: center; gap: 4px; padding: ${isMobile ? '2px 6px' : '4px 8px'}; border-radius: 6px; background: ${changeBgColor};">
+                    <span style="font-size: ${isMobile ? '10px' : '12px'}; font-weight: 700; color: ${changeColor};">
                       ${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: ${gridGap}; font-size: ${fontSizeValue};">
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #94a3b8; font-size: 12px; width: 24px;">开</span>
+                  <span style="color: #94a3b8; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">开</span>
                   <span style="font-weight: 600; color: #0f172a; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.open)}
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #94a3b8; font-size: 12px; width: 24px;">高</span>
+                  <span style="color: #94a3b8; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">高</span>
                   <span style="font-weight: 600; color: #10b981; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.high)}
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #94a3b8; font-size: 12px; width: 24px;">收</span>
+                  <span style="color: #94a3b8; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">收</span>
                   <span style="font-weight: 600; color: ${kline.close >= kline.open ? '#10b981' : '#ef4444'}; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.close)}
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #94a3b8; font-size: 12px; width: 24px;">低</span>
+                  <span style="color: #94a3b8; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">低</span>
                   <span style="font-weight: 600; color: #ef4444; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.low)}
                   </span>
                 </div>
               </div>
 
-              <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #64748b; font-size: 12px; font-weight: 500;">振幅</span>
-                <span style="font-size: 14px; font-weight: 700; color: #f59e0b; font-family: ui-monospace, monospace;">
+              <div style="margin-top: ${isMobile ? '8px' : '12px'}; padding-top: ${isMobile ? '4px' : '8px'}; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-size: ${fontSizeLabel}; font-weight: 500;">振幅</span>
+                <span style="font-size: ${isMobile ? '12px' : '14px'}; font-weight: 700; color: #f59e0b; font-family: ui-monospace, monospace;">
                   ${amplitude.toFixed(2)}%
                 </span>
               </div>
