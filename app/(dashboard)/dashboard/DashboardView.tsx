@@ -213,84 +213,108 @@ function StatsOverview({
 
       {!loading && orders.length > 0 && (
         <div className="card overflow-hidden backdrop-blur-sm">
-          <div className="bg-white px-5 py-2 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-purple-500" />
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                最近订单
-              </p>
+          <div className="bg-white px-5 py-2.5 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  最近订单
+                </p>
+                <span className="text-xs text-slate-400 font-normal ml-1">{orders.length}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400">买</span>
+                  <span className="text-xs font-bold text-emerald-600">
+                    {orders.filter(o => o.side === 'BUY').length}
+                  </span>
+                </div>
+                <div className="w-px h-3 bg-slate-200" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400">卖</span>
+                  <span className="text-xs font-bold text-red-500">
+                    {orders.filter(o => o.side === 'SELL').length}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="px-5 py-2.5">
-            <div className="flex items-center justify-between">
-              <p
-                className={`text-4xl font-bold tracking-tight ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
-              >
-                {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
-              </p>
-              <div className="flex flex-col gap-1">
-                <div className="flex gap-0.5 items-center">
-                  {orders.slice(0, 10).map((order, index) => (
+          <div className="px-5 py-4">
+            <div className="flex items-start justify-between gap-6">
+              <div className="flex flex-col">
+                <p
+                  className={`text-4xl font-bold tracking-tight ${totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+                >
+                  {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
+                </p>
+                <div className="flex items-center gap-1.5 mt-2.5">
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${orders[0].side === 'BUY' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
+                  >
+                    {orders[0].side === 'BUY' ? '买入' : '卖出'}
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    {formatRecentOrderTime(orders[0].time)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex gap-2 justify-end">
+                  {orders.slice(0, 5).map((order, index) => (
                     <OrderModal key={index} order={order}>
                       <button
-                        className={`w-5 h-5 flex items-center justify-center transition-all duration-200 hover:scale-125 ${
-                          order.side === 'BUY' ? 'hover:bg-emerald-50' : 'hover:bg-red-50'
+                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
+                          order.side === 'BUY'
+                            ? 'bg-emerald-400 hover:ring-emerald-300'
+                            : 'bg-red-400 hover:ring-red-300'
                         }`}
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                            order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
-                          }`}
-                        />
-                      </button>
+                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                      />
                     </OrderModal>
                   ))}
                 </div>
-                <div className="flex gap-0.5 items-center">
-                  {orders.slice(10, 20).map((order, index) => (
+                <div className="flex gap-2 justify-end">
+                  {orders.slice(5, 10).map((order, index) => (
+                    <OrderModal key={index + 5} order={order}>
+                      <button
+                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
+                          order.side === 'BUY'
+                            ? 'bg-emerald-400 hover:ring-emerald-300'
+                            : 'bg-red-400 hover:ring-red-300'
+                        }`}
+                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                      />
+                    </OrderModal>
+                  ))}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  {orders.slice(10, 15).map((order, index) => (
                     <OrderModal key={index + 10} order={order}>
                       <button
-                        className={`w-5 h-5 flex items-center justify-center transition-all duration-200 hover:scale-125 ${
-                          order.side === 'BUY' ? 'hover:bg-emerald-50' : 'hover:bg-red-50'
+                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
+                          order.side === 'BUY'
+                            ? 'bg-emerald-400 hover:ring-emerald-300'
+                            : 'bg-red-400 hover:ring-red-300'
                         }`}
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                            order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
-                          }`}
-                        />
-                      </button>
+                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                      />
                     </OrderModal>
                   ))}
                 </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-slate-400">成交</span>
-                <span className="text-xs text-slate-500">买</span>
-                <span className="text-lg font-bold text-emerald-600">
-                  {orders.filter(o => o.side === 'BUY').length}
-                </span>
-                <div className="w-px h-3 bg-slate-200" />
-                <span className="text-xs text-slate-500">卖</span>
-                <span className="text-lg font-bold text-red-500">
-                  {orders.filter(o => o.side === 'SELL').length}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">
-                  {formatRecentOrderTime(orders[0].time)}
-                </span>
-                <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
-                    orders[0].side === 'BUY'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-red-100 text-red-700'
-                  }`}
-                >
-                  {orders[0].side === 'BUY' ? '买入' : '卖出'}
-                </span>
+                <div className="flex gap-2 justify-end">
+                  {orders.slice(15, 20).map((order, index) => (
+                    <OrderModal key={index + 15} order={order}>
+                      <button
+                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
+                          order.side === 'BUY'
+                            ? 'bg-emerald-400 hover:ring-emerald-300'
+                            : 'bg-red-400 hover:ring-red-300'
+                        }`}
+                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                      />
+                    </OrderModal>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
