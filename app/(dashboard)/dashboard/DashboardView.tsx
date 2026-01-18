@@ -9,7 +9,6 @@
 import { useDashboardWebSocket } from '@/lib/hooks'
 import { useIsMounted } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
-import { OrderTable } from '@/components/dashboard/OrderTable'
 import { OrderTooltip } from '@/components/dashboard/OrderTooltip'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -341,24 +340,14 @@ export function DashboardView() {
             reconnect={reconnect}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
-            <div className="lg:col-span-3 p-0">
-              {positions.length === 0 ? (
-                <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
-              ) : (
-                <div className="space-y-2">
-                  <PositionCards positions={positions} openOrders={openOrders} />
-                </div>
-              )}
-            </div>
-
-            <div className="lg:col-span-1 p-0">
-              <div className="card overflow-hidden backdrop-blur-sm bg-transparent">
-                <div className="max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin p-0">
-                  <OrderTable orders={orders.slice(0, 20)} compact={true} />
-                </div>
+          <div className="space-y-4">
+            {positions.length === 0 ? (
+              <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
+            ) : (
+              <div className="space-y-2">
+                <PositionCards positions={positions} openOrders={openOrders} />
               </div>
-            </div>
+            )}
           </div>
         </>
       )}
