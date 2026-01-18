@@ -78,7 +78,7 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${config.className}`}
+      className={`inline-flex items-center gap-[1px] px-2.5 py-1 rounded-full text-xs font-bold border ${config.className}`}
     >
       <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${config.dot}`} />
       {config.label}

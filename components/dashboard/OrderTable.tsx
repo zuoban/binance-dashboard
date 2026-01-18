@@ -108,7 +108,7 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.className}`}
+      className={`inline-flex items-center gap-[1px] px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.className}`}
     >
       <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${config.dot}`} />
       {config.label}
@@ -225,7 +225,7 @@ export function OrderTable({ orders, className = '', compact = false }: OrderTab
               </div>
 
               <div className="px-3 py-2.5 space-y-2">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <span className="text-[10px] text-slate-400 font-medium">成交价格</span>
                     <p className="text-sm font-bold text-slate-900 tracking-tight">
