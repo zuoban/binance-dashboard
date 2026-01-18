@@ -54,7 +54,12 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
   const { exchangeInfo } = useExchangeInfo()
   const triggerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0, placement: 'top', offsetX: 0 })
+  const [position, setPosition] = useState({
+    top: 0,
+    left: 0,
+    placement: 'top',
+    arrowOffset: 0,
+  })
   const [isClient, setIsClient] = useState(false)
 
   // 确保只在客户端渲染 Portal
@@ -90,48 +95,55 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
   useEffect(() => {
     if (isVisible && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
-      const scrollX = window.scrollX
+      // const scrollX = window.scrollX (未使用)
       const scrollY = window.scrollY
-
-      // Tooltip 尺寸估计 (宽度固定 320px, 高度约 300px)
-      const tooltipHeight = 300
-      const tooltipWidth = Math.min(320, window.innerWidth - 20) // 响应式宽度
-
-      // 视口尺寸
       const viewportWidth = window.innerWidth
+      const isMobile = viewportWidth < 768
 
+      // Tooltip 尺寸设定
+      // 桌面端固定 320px, 移动端最大 90vw
+      const tooltipMaxWidth = isMobile ? Math.min(320, viewportWidth * 0.9) : 320
+      const tooltipHeight = 300 // 估算高度
+
+      // 1. 计算目标 Left 位置 (Tooltip 中心点 X 坐标)
+      const triggerCenter = rect.left + rect.width / 2
+      let targetLeft = triggerCenter
+
+      if (isMobile) {
+        // 移动端：强制居中
+        targetLeft = viewportWidth / 2
+      } else {
+        // 桌面端：跟随触发器，但防止溢出屏幕
+        const halfWidth = tooltipMaxWidth / 2
+        const minLeft = halfWidth + 10 // 左侧最小间距
+        const maxLeft = viewportWidth - halfWidth - 10 // 右侧最大间距
+
+        if (targetLeft < minLeft) targetLeft = minLeft
+        if (targetLeft > maxLeft) targetLeft = maxLeft
+      }
+
+      // 2. 计算 Top 位置和 Placement
       // 默认显示在上方
       let top = rect.top + scrollY - 10
-      let left = rect.left + scrollX + rect.width / 2
-      let placement = 'top' // 用于控制箭头方向和 translateY
+      let placement = 'top'
 
-      // 1. 垂直方向检测：如果上方空间不足，则显示在下方
+      // 垂直方向检测：如果上方空间不足，则显示在下方
       if (rect.top < tooltipHeight + 20) {
-        // 上方空间不足，显示在下方
         top = rect.bottom + scrollY + 10
         placement = 'bottom'
       }
 
-      // 2. 水平方向检测：防止左右溢出
-      // 计算 Tooltip 左边缘和右边缘
-      const halfWidth = tooltipWidth / 2
-      const leftEdge = rect.left + rect.width / 2 - halfWidth
-      const rightEdge = rect.left + rect.width / 2 + halfWidth
+      // 3. 计算箭头偏移量
+      // 箭头默认在 Tooltip 中心 (targetLeft)，需要移动到 triggerCenter
+      let arrowOffset = triggerCenter - targetLeft
 
-      let offsetX = 0
+      // 限制箭头偏移量，防止箭头脱离 Tooltip
+      const maxArrowOffset = tooltipMaxWidth / 2 - 12 // 留出圆角和箭头宽度的余量
+      if (arrowOffset > maxArrowOffset) arrowOffset = maxArrowOffset
+      if (arrowOffset < -maxArrowOffset) arrowOffset = -maxArrowOffset
 
-      if (leftEdge < 10) {
-        // 左侧溢出，向右偏移
-        offsetX = 10 - leftEdge
-      } else if (rightEdge > viewportWidth - 10) {
-        // 右侧溢出，向左偏移
-        offsetX = viewportWidth - 10 - rightEdge
-      }
-
-      // 应用偏移
-      left += offsetX
-
-      setPosition({ top, left, placement, offsetX })
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPosition({ top, left: targetLeft, placement, arrowOffset })
     }
   }, [isVisible])
 
@@ -172,11 +184,6 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
               className={`w-80 max-w-[90vw] -translate-x-1/2 pb-2 transition-all duration-200 pointer-events-auto ${
                 position.placement === 'top' ? '-translate-y-full' : ''
               }`}
-              style={{
-                transform: `translate(calc(-50% + ${-position.offsetX}px), ${
-                  position.placement === 'top' ? '-100%' : '0'
-                })`,
-              }}
             >
               <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden relative">
                 {/* 头部 */}
@@ -357,7 +364,7 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
                     : '-top-1.5 border-l border-t z-10'
                 }`}
                 style={{
-                  marginLeft: position.offsetX, // 箭头保持在触发元素正上方/下方，反向抵消容器的偏移
+                  marginLeft: position.arrowOffset, // 箭头保持在触发元素正上方/下方
                 }}
               />
             </div>
