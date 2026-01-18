@@ -4,17 +4,86 @@
 
 'use client'
 
-import { Order } from '@/types/binance'
+import { Order, OrderStatus } from '@/types/binance'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useExchangeInfo } from '@/lib/hooks'
-import { formatDistanceToNow, formatDateTime } from '@/lib/utils/date'
+import { formatDistanceToNow } from '@/lib/utils/date'
 
 interface OrderTooltipProps {
   /** 订单数据 */
   order: Order
   /** 子元素 */
   children: React.ReactNode
+}
+
+/**
+ * 订单状态标签 (复制自 OrderTable)
+ */
+function OrderStatusBadge({ status }: { status: OrderStatus }) {
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'FILLED':
+        return {
+          label: '已完成',
+          className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+          dot: 'bg-emerald-500 shadow-emerald-500/30',
+        }
+      case 'CANCELED':
+        return {
+          label: '已撤销',
+          className: 'bg-slate-100 text-slate-600 border-slate-200',
+          dot: 'bg-slate-500',
+        }
+      case 'NEW':
+        return {
+          label: '新建',
+          className: 'bg-blue-100 text-blue-700 border-blue-200',
+          dot: 'bg-blue-500 shadow-blue-500/30',
+        }
+      case 'PARTIALLY_FILLED':
+        return {
+          label: '部分成交',
+          className: 'bg-amber-100 text-amber-700 border-amber-200',
+          dot: 'bg-amber-500 shadow-amber-500/30',
+        }
+      case 'PENDING_CANCEL':
+        return {
+          label: '撤销中',
+          className: 'bg-orange-100 text-orange-700 border-orange-200',
+          dot: 'bg-orange-500',
+        }
+      case 'REJECTED':
+        return {
+          label: '已拒绝',
+          className: 'bg-red-100 text-red-700 border-red-200',
+          dot: 'bg-red-500 shadow-red-500/30',
+        }
+      case 'EXPIRED':
+        return {
+          label: '已过期',
+          className: 'bg-slate-100 text-slate-600 border-slate-200',
+          dot: 'bg-slate-500',
+        }
+      default:
+        return {
+          label: status,
+          className: 'bg-slate-100 text-slate-600 border-slate-200',
+          dot: 'bg-slate-500',
+        }
+    }
+  }
+
+  const config = getStatusConfig()
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.className}`}
+    >
+      <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${config.dot}`} />
+      {config.label}
+    </span>
+  )
 }
 
 /**
@@ -95,7 +164,6 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
   useEffect(() => {
     if (isVisible && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
-      // const scrollX = window.scrollX (未使用)
       const scrollY = window.scrollY
       const viewportWidth = window.innerWidth
       const isMobile = viewportWidth < 768
@@ -103,7 +171,7 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
       // Tooltip 尺寸设定
       // 桌面端固定 320px, 移动端最大 90vw
       const tooltipMaxWidth = isMobile ? Math.min(320, viewportWidth * 0.9) : 320
-      const tooltipHeight = 300 // 估算高度
+      const tooltipHeight = 180 // 更新估算高度，内容变少了
 
       // 1. 计算目标 Left 位置 (Tooltip 中心点 X 坐标)
       const triggerCenter = rect.left + rect.width / 2
@@ -148,16 +216,10 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
   }, [isVisible])
 
   const executedQty = parseFloat(order.executedQty)
-  const origQty = parseFloat(order.origQty)
   const price = parseFloat(order.price)
   const totalAmount = executedQty * price
   const pnl = order.realizedPnl !== undefined ? parseFloat(order.realizedPnl) : null
   const isPnlPositive = pnl !== null && pnl >= 0
-  const commission = order.commission !== undefined ? parseFloat(order.commission) : null
-  const commissionValue = commission ? commission : 0
-
-  // 计算盈亏率
-  const pnlRate = pnl !== null && totalAmount > 0 ? (pnl / totalAmount) * 100 : null
 
   return (
     <>
@@ -186,173 +248,95 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
               }`}
             >
               <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden relative">
-                {/* 头部 */}
-                <div
-                  className={`px-4 py-3 ${
-                    order.side === 'BUY'
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
-                      : 'bg-gradient-to-r from-red-500 to-red-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-white font-bold text-base">{order.symbol}</p>
-                      <p className="text-white/90 text-xs font-medium">
-                        {formatDistanceToNow(order.time)}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-md text-white text-xs font-bold text-center">
-                        {order.side === 'BUY' ? '买入' : '卖出'}
-                      </span>
-                      <span className="px-2.5 py-0.5 bg-white/15 backdrop-blur-sm rounded-md text-white/90 text-[10px] font-semibold text-center">
-                        {order.type === 'MARKET'
-                          ? '市价'
-                          : order.type === 'LIMIT'
-                            ? '限价'
-                            : order.type}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-white/80 text-[10px] font-mono">订单 #{order.orderId}</div>
-                </div>
-
-                {/* 内容 */}
-                <div className="px-4 py-3 space-y-3">
-                  {/* 价格和数量 */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-50 rounded-md p-2.5">
-                      <p className="text-[10px] text-slate-500 font-medium mb-1">成交价格</p>
-                      <p className="text-base font-bold text-slate-900">
-                        ${formatPrice(price, order.symbol, exchangeInfo)}
-                      </p>
-                      <p className="text-[9px] text-slate-400 mt-0.5">每单位</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-md p-2.5">
-                      <p className="text-[10px] text-slate-500 font-medium mb-1">成交数量</p>
-                      <p className="text-base font-bold text-slate-900">{executedQty.toFixed(4)}</p>
-                      {origQty !== executedQty && (
-                        <p className="text-[9px] text-amber-600 mt-0.5">
-                          原始: {origQty.toFixed(4)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 成交金额 */}
-                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-md px-3 py-2.5 border border-slate-200">
-                    <p className="text-[10px] text-slate-500 font-medium mb-1">成交总额</p>
-                    <p className="text-xl font-bold text-slate-900">${totalAmount.toFixed(2)}</p>
-                    <p className="text-[9px] text-slate-500 mt-1">
-                      {executedQty.toFixed(4)} × ${formatPrice(price, order.symbol, exchangeInfo)}
-                    </p>
-                  </div>
-
-                  {/* 费用和盈亏详情 */}
-                  <div className="space-y-2">
-                    {/* 手续费 */}
-                    {commission !== null && (
-                      <div className="flex items-center justify-between bg-slate-50 rounded-md px-3 py-2">
-                        <div>
-                          <p className="text-[10px] text-slate-500 font-medium">手续费</p>
-                          <p className="text-xs font-bold text-slate-700 mt-0.5">
-                            {commission.toFixed(4)} {order.commissionAsset || ''}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-slate-400">约</p>
-                          <p className="text-xs font-semibold text-slate-600">
-                            ${commissionValue.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 实现盈亏 */}
-                    {pnl !== null && order.side === 'SELL' && (
-                      <div
-                        className={`rounded-md px-3 py-2 ${
-                          isPnlPositive
-                            ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200'
-                            : 'bg-gradient-to-br from-red-50 to-red-100 border border-red-200'
+                {/* Header - 与 Compact Card 一致 */}
+                <div className="px-3 py-2.5 border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-slate-900 tracking-wide">
+                        {order.symbol}
+                      </h4>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide ${
+                          order.side === 'BUY'
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-red-100 text-red-700 border border-red-200'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-[10px] text-slate-600 font-medium">实现盈亏</p>
-                          {pnlRate !== null && (
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                isPnlPositive
-                                  ? 'bg-emerald-200 text-emerald-800'
-                                  : 'bg-red-200 text-red-800'
-                              }`}
-                            >
-                              {isPnlPositive ? '+' : ''}
-                              {pnlRate.toFixed(2)}%
-                            </span>
-                          )}
-                        </div>
-                        <p
-                          className={`text-lg font-bold ${
-                            isPnlPositive ? 'text-emerald-700' : 'text-red-700'
-                          }`}
-                        >
-                          {isPnlPositive ? '+' : ''}${pnl.toFixed(2)}
-                        </p>
-                        {commission !== null && (
-                          <p className="text-[9px] text-slate-500 mt-1">扣除手续费后净盈亏</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 时间信息 */}
-                  <div className="pt-2 border-t border-slate-200 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 text-[10px]">创建时间</span>
-                      <span className="font-mono text-slate-700 text-[10px]">
-                        {formatDateTime(order.time)}
+                        {order.side === 'BUY' ? '买入' : '卖出'}
+                      </span>
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                          order.type === 'MARKET'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {order.type === 'MARKET' ? '市价' : '限价'}
                       </span>
                     </div>
-                    {order.updateTime && order.updateTime !== order.time && (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 text-[10px]">更新时间</span>
-                        <span className="font-mono text-slate-700 text-[10px]">
-                          {formatDateTime(order.updateTime)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 text-[10px]">订单状态</span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                        {order.status === 'FILLED' ? '已完成' : order.status}
-                      </span>
+                    <OrderStatusBadge status={order.status} />
+                  </div>
+                </div>
+
+                {/* Content - 与 Compact Card 一致 */}
+                <div className="px-3 py-2.5 space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-medium">成交价格</span>
+                      <p className="text-sm font-bold text-slate-900 tracking-tight">
+                        ${formatPrice(price, order.symbol, exchangeInfo)}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-medium">成交数量</span>
+                      <p className="text-sm font-bold text-slate-700 tracking-tight">
+                        {executedQty.toFixed(4)}
+                      </p>
                     </div>
                   </div>
 
-                  {/* 附加信息 */}
-                  {(order.id || order.buyer !== undefined) && (
-                    <div className="pt-2 border-t border-slate-200 space-y-1">
-                      {order.id && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500 text-[10px]">成交 ID</span>
-                          <span className="font-mono text-slate-600 text-[10px]">{order.id}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-medium">成交金额</span>
+                      <p className="text-sm font-semibold text-slate-900 tracking-tight">
+                        ${totalAmount.toFixed(2)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {order.commission !== undefined && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400">手续费</span>
+                          <span className="text-xs font-medium text-slate-700">
+                            {parseFloat(order.commission).toFixed(4)}
+                            {order.commissionAsset && ` ${order.commissionAsset}`}
+                          </span>
                         </div>
                       )}
-                      {order.buyer !== undefined && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500 text-[10px]">成交角色</span>
+                      {pnl !== null && order.side === 'SELL' && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-400">盈亏</span>
                           <span
-                            className={`text-[10px] font-semibold ${
-                              order.buyer ? 'text-emerald-600' : 'text-slate-600'
+                            className={`text-sm font-bold px-2 py-0.5 rounded ${
+                              isPnlPositive
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-red-100 text-red-700'
                             }`}
                           >
-                            {order.buyer ? 'Maker（挂单方）' : 'Taker（吃单方）'}
+                            {isPnlPositive ? '+' : ''}
+                            {pnl.toFixed(2)}
                           </span>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                </div>
+
+                {/* Footer Time - 与 Compact Card 一致 */}
+                <div className="px-3 py-2 bg-slate-50/50 border-t border-slate-100">
+                  <div className="text-[10px] text-slate-400 font-medium">
+                    {formatDistanceToNow(order.time)}
+                  </div>
                 </div>
               </div>
 
