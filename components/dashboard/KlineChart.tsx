@@ -315,8 +315,8 @@ export function KlineChart({
                 fontFamily: 'ui-monospace, monospace',
               },
               text: lastCloseFormatted,
-              position: 'left',
-              offsetX: isMobile ? -20 : -50,
+              position: 'center',
+              offsetX: 0,
             },
           },
           ...nearbyOrders.map(({ order, price }) => ({

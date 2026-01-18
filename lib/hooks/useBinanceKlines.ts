@@ -123,25 +123,15 @@ export function useBinanceKlines({
 
           setLastUpdate(Date.now())
 
-          if (k.x) {
-            setKlines(prev => {
-              const newData = [...prev]
-              if (newData.length > 0 && newData[newData.length - 1].time === kline.time) {
-                newData[newData.length - 1] = kline
-              } else {
-                newData.push(kline)
-              }
-              return newData.slice(-limit)
-            })
-          } else {
-            setKlines(prev => {
-              const newData = [...prev]
-              if (newData.length > 0) {
-                newData[newData.length - 1] = kline
-              }
-              return newData
-            })
-          }
+          setKlines(prev => {
+            const newData = [...prev]
+            if (newData.length > 0 && newData[newData.length - 1].time === kline.time) {
+              newData[newData.length - 1] = kline
+            } else {
+              newData.push(kline)
+            }
+            return newData.slice(-limit)
+          })
         }
       } catch (err) {}
     },
@@ -240,7 +230,7 @@ export function useBinanceKlines({
     if (enableWS && wsEnabled) {
       connectWS()
     } else {
-      const intervalMs = 15000
+      const intervalMs = 5000
       refreshTimerRef.current = setInterval(() => {
         fetchHistoricalKlines()
       }, intervalMs)

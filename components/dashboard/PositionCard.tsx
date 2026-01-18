@@ -80,7 +80,7 @@ export function PositionCard({
   const { klines } = useBinanceKlines({
     symbol: position.symbol,
     interval: '15m',
-    limit: 16,
+    limit: 50,
   })
 
   const pricePrecision = useMemo(
