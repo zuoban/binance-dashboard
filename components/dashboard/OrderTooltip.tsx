@@ -151,11 +151,8 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
     <>
       <div
         ref={triggerRef}
-        className="relative inline-flex items-center justify-center p-1.5 cursor-pointer hover:bg-slate-100 rounded-full transition-colors"
-        onClick={e => {
-          e.stopPropagation()
-          setIsVisible(!isVisible)
-        }}
+        className="relative inline-flex items-center justify-center cursor-pointer -m-1 p-1 rounded-full transition-colors hover:bg-slate-100/50"
+        onClick={() => setIsVisible(!isVisible)}
       >
         {children}
       </div>
