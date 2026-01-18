@@ -9,7 +9,7 @@
 import { useDashboardWebSocket } from '@/lib/hooks'
 import { useIsMounted } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
-import { OrderTooltip } from '@/components/dashboard/OrderTooltip'
+import { OrderModal } from '@/components/dashboard/OrderModal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
@@ -229,26 +229,38 @@ function StatsOverview({
                 {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
               </p>
               <div className="flex flex-col gap-1">
-                <div className="flex gap-1 items-center">
+                <div className="flex gap-0.5 items-center">
                   {orders.slice(0, 10).map((order, index) => (
-                    <OrderTooltip key={index} order={order}>
-                      <div
-                        className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
-                          order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                    <OrderModal key={index} order={order}>
+                      <button
+                        className={`w-5 h-5 flex items-center justify-center transition-all duration-200 hover:scale-125 ${
+                          order.side === 'BUY' ? 'hover:bg-emerald-50' : 'hover:bg-red-50'
                         }`}
-                      />
-                    </OrderTooltip>
+                      >
+                        <div
+                          className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                            order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                          }`}
+                        />
+                      </button>
+                    </OrderModal>
                   ))}
                 </div>
-                <div className="flex gap-1 items-center">
+                <div className="flex gap-0.5 items-center">
                   {orders.slice(10, 20).map((order, index) => (
-                    <OrderTooltip key={index + 10} order={order}>
-                      <div
-                        className={`w-2 h-2 rounded-full transition-all duration-200 hover:scale-150 cursor-pointer ${
-                          order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                    <OrderModal key={index + 10} order={order}>
+                      <button
+                        className={`w-5 h-5 flex items-center justify-center transition-all duration-200 hover:scale-125 ${
+                          order.side === 'BUY' ? 'hover:bg-emerald-50' : 'hover:bg-red-50'
                         }`}
-                      />
-                    </OrderTooltip>
+                      >
+                        <div
+                          className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                            order.side === 'BUY' ? 'bg-emerald-500' : 'bg-red-500'
+                          }`}
+                        />
+                      </button>
+                    </OrderModal>
                   ))}
                 </div>
               </div>

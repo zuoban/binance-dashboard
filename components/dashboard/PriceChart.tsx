@@ -4,7 +4,8 @@
 
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   LineChart,
   Line,
@@ -40,31 +41,82 @@ interface PriceChartProps {
 }
 
 /**
- * 自定义 Tooltip 组件
+ * 价格详情模态框
  */
-interface CustomTooltipProps {
-  active?: boolean
-  payload?: Array<{ payload: PriceDataPoint }>
-}
+function PriceModal({
+  point,
+  onClose,
+  symbol,
+}: {
+  point: PriceDataPoint
+  onClose: () => void
+  symbol: string
+}) {
+  // 监听 ESC 关闭
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    // 禁止背景滚动
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset'
+    }
+  }, [onClose])
 
-function CustomTooltip({ active, payload }: CustomTooltipProps) {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload
-    return (
-      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{data.time}</p>
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">
-          价格: ${data.price.toFixed(2)}
-        </p>
-        {data.volume && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            成交量: {data.volume.toFixed(2)}
-          </p>
-        )}
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+      {/* 背景遮罩 */}
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* 模态框内容 */}
+      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* 头部 */}
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+          <h3 className="text-lg font-bold text-slate-900">{symbol.replace('USDT', '/USDT')}</h3>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <div className="text-xs text-slate-500 mb-1">时间</div>
+            <div className="text-base font-medium text-slate-900">{point.time}</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500 mb-1">价格</div>
+            <div className="text-2xl font-bold text-slate-900 tracking-tight">
+              ${point.price.toFixed(2)}
+            </div>
+          </div>
+          {point.volume !== undefined && (
+            <div>
+              <div className="text-xs text-slate-500 mb-1">成交量</div>
+              <div className="text-base font-medium text-slate-700">{point.volume.toFixed(2)}</div>
+            </div>
+          )}
+        </div>
       </div>
-    )
-  }
-  return null
+    </div>,
+    document.body
+  )
 }
 
 /**
@@ -72,6 +124,13 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
  * 显示交易对的实时价格变化
  */
 export function PriceChart({ symbol, data, type = 'line', className = '' }: PriceChartProps) {
+  const [selectedPoint, setSelectedPoint] = useState<PriceDataPoint | null>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   // 格式化数据
   const chartData = useMemo(() => {
     return data.map(point => ({
@@ -89,6 +148,12 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
     const percentage = (value / firstPrice) * 100
     return { value, percentage }
   }, [chartData])
+
+  const handleChartClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      setSelectedPoint(data.activePayload[0].payload)
+    }
+  }
 
   if (chartData.length === 0) {
     return (
@@ -130,7 +195,7 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
       {/* 图表 */}
       <ResponsiveContainer width="100%" height={300}>
         {type === 'area' ? (
-          <AreaChart data={chartData}>
+          <AreaChart data={chartData} onClick={handleChartClick}>
             <defs>
               <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop
@@ -149,7 +214,10 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
               tickFormatter={value => `$${value.toFixed(2)}`}
               domain={['dataMin - 0.5', 'dataMax + 0.5']}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={() => null}
+              cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
+            />
             <Area
               type="monotone"
               dataKey="price"
@@ -157,10 +225,11 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
               strokeWidth={2}
               fillOpacity={1}
               fill="url(#priceGradient)"
+              activeDot={{ r: 6, strokeWidth: 0, className: 'cursor-pointer' }}
             />
           </AreaChart>
         ) : (
-          <LineChart data={chartData}>
+          <LineChart data={chartData} onClick={handleChartClick}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
             <XAxis dataKey="time" stroke="#9CA3AF" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
             <YAxis
@@ -169,18 +238,26 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
               tickFormatter={value => `$${value.toFixed(2)}`}
               domain={['dataMin - 0.5', 'dataMax + 0.5']}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={() => null}
+              cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
+            />
             <Line
               type="monotone"
               dataKey="price"
               stroke={isPositive ? '#10B981' : '#EF4444'}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4 }}
+              activeDot={{ r: 6, strokeWidth: 0, className: 'cursor-pointer' }}
             />
           </LineChart>
         )}
       </ResponsiveContainer>
+
+      {/* 模态框 */}
+      {selectedPoint && isClient && (
+        <PriceModal point={selectedPoint} symbol={symbol} onClose={() => setSelectedPoint(null)} />
+      )}
     </div>
   )
 }
