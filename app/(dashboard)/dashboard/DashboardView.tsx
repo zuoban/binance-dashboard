@@ -309,6 +309,7 @@ export function DashboardView() {
     orders,
     openOrdersStats,
     openOrders,
+    klines,
     loading,
     isConnected,
     isConnecting,
@@ -357,7 +358,7 @@ export function DashboardView() {
               <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
             ) : (
               <div className="space-y-2">
-                <PositionCards positions={positions} openOrders={openOrders} />
+                <PositionCards positions={positions} openOrders={openOrders} klines={klines} />
               </div>
             )}
           </div>

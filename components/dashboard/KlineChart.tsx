@@ -54,9 +54,9 @@ export function KlineChart({
       }
     }
 
-    const allPrices = data.flatMap(d => [d.open, d.close, d.low, d.high])
-    const klineMinPrice = Math.min(...allPrices)
-    const klineMaxPrice = Math.max(...allPrices)
+    const allPrices = data.flatMap(d => [d.open ?? 0, d.close ?? 0, d.low ?? 0, d.high ?? 0])
+    const klineMinPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
+    const klineMaxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0
 
     const priceChange = data.length >= 2 ? data[data.length - 1].close - data[0].open : 0
     const isPositive = priceChange >= 0
@@ -68,7 +68,8 @@ export function KlineChart({
       return value < 1 ? value.toFixed(4) : value.toFixed(2)
     }
 
-    const lastClose = data[data.length - 1].close
+    const lastKline = data[data.length - 1]
+    const lastClose = lastKline?.close ?? 0
     const lastCloseFormatted = lastClose.toFixed(6)
 
     const activeOrders = openOrders.filter(
@@ -391,7 +392,13 @@ export function KlineChart({
 
   return (
     <div className={className} style={{ height }}>
-      <Chart options={options} series={options.series} type="candlestick" height={height} />
+      <Chart
+        key={`${data[0]?.time}-${data[data.length - 1]?.time}`}
+        options={options}
+        series={options.series}
+        type="candlestick"
+        height={height}
+      />
     </div>
   )
 }

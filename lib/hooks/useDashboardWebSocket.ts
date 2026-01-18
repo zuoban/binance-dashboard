@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { AccountAsset, Position, Order } from '@/types/binance'
+import { AccountAsset, Position, Order, KlineData } from '@/types/binance'
 import { getStoredAccessCode } from '@/lib/utils/fetch-with-auth'
 
 interface DashboardData {
@@ -20,6 +20,7 @@ interface DashboardData {
   }
   openOrders: Order[]
   todayRealizedPnl: number
+  klines: Record<string, KlineData[]>
 }
 
 interface UseDashboardWebSocketOptions {
@@ -46,6 +47,8 @@ interface UseDashboardWebSocketReturn {
   openOrders: Order[]
   /** 今日已实现盈亏 */
   todayRealizedPnl: number
+  /** K线数据 */
+  klines: Record<string, KlineData[]>
   /** 加载状态 */
   loading: boolean
   /** 错误信息 */
@@ -84,6 +87,7 @@ export function useDashboardWebSocket(
     },
     openOrders: [],
     todayRealizedPnl: 0,
+    klines: {},
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -222,6 +226,7 @@ export function useDashboardWebSocket(
     openOrdersStats: data.openOrdersStats,
     openOrders: data.openOrders,
     todayRealizedPnl: data.todayRealizedPnl,
+    klines: data.klines,
     loading,
     error,
     isConnected,

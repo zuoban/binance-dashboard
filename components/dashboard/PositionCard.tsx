@@ -4,8 +4,8 @@
 
 'use client'
 
-import { Position, Order } from '@/types/binance'
-import { useExchangeInfo, useBinanceKlines } from '@/lib/hooks'
+import { Position, Order, KlineData } from '@/types/binance'
+import { useExchangeInfo } from '@/lib/hooks'
 import { useMemo } from 'react'
 import { KlineChart } from './KlineChart'
 
@@ -16,13 +16,23 @@ interface PositionCardProps {
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
   /** 当前委托订单 */
   openOrders?: Order[]
+  /** K线数据 */
+  klines?: Record<string, KlineData[]>
   /** 自定义样式类名 */
   className?: string
 }
 
-/**
- * 获取交易对的价格精度
- */
+interface PositionCardsProps {
+  /** 持仓列表 */
+  positions: Position[]
+  /** 当前委托订单 */
+  openOrders?: Order[]
+  /** K线数据 */
+  klines?: Record<string, KlineData[]>
+  /** 自定义样式类名 */
+  className?: string
+}
+
 function getSymbolPrecision(
   symbol: string,
   exchangeInfo: Record<string, { pricePrecision: number; quantityPrecision: number }>
@@ -30,9 +40,6 @@ function getSymbolPrecision(
   return exchangeInfo[symbol]?.pricePrecision ?? 2
 }
 
-/**
- * 格式化价格
- */
 function formatPrice(
   price: string | number,
   symbol: string,
@@ -44,9 +51,6 @@ function formatPrice(
   return num.toFixed(precision)
 }
 
-/**
- * 格式化数量
- */
 function formatAmount(
   amount: string | number,
   symbol: string,
@@ -58,9 +62,6 @@ function formatAmount(
   return num.toFixed(precision)
 }
 
-/**
- * 判断是否为做多
- */
 function isLongPosition(position: Position): boolean {
   return (
     position.positionSide === 'LONG' ||
@@ -68,20 +69,14 @@ function isLongPosition(position: Position): boolean {
   )
 }
 
-/**
- * 单个持仓卡片
- */
 export function PositionCard({
   position,
   exchangeInfo,
   openOrders = [],
+  klines,
   className = '',
 }: PositionCardProps) {
-  const { klines } = useBinanceKlines({
-    symbol: position.symbol,
-    interval: '15m',
-    limit: 50,
-  })
+  const klineData = klines?.[position.symbol] || []
 
   const pricePrecision = useMemo(
     () => getSymbolPrecision(position.symbol, exchangeInfo),
@@ -247,7 +242,7 @@ export function PositionCard({
 
       <div className="border-t border-slate-100 px-5 py-4">
         <KlineChart
-          data={klines}
+          data={klineData}
           height={300}
           pricePrecision={pricePrecision}
           openOrders={openOrders}
@@ -257,19 +252,12 @@ export function PositionCard({
   )
 }
 
-/**
- * 持仓卡片列表
- */
-interface PositionCardsProps {
-  /** 持仓列表 */
-  positions: Position[]
-  /** 当前委托订单 */
-  openOrders?: Order[]
-  /** 自定义样式类名 */
-  className?: string
-}
-
-export function PositionCards({ positions, openOrders, className = '' }: PositionCardsProps) {
+export function PositionCards({
+  positions,
+  openOrders,
+  klines,
+  className = '',
+}: PositionCardsProps) {
   const { exchangeInfo } = useExchangeInfo()
 
   return (
@@ -280,6 +268,7 @@ export function PositionCards({ positions, openOrders, className = '' }: Positio
           position={position}
           exchangeInfo={exchangeInfo}
           openOrders={openOrders}
+          klines={klines}
         />
       ))}
     </div>

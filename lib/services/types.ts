@@ -4,7 +4,7 @@
  * 定义数据管理器和连接管理器使用的类型
  */
 
-import type { AccountAsset, Position } from '@/types/binance'
+import type { AccountAsset, Position, KlineData } from '@/types/binance'
 
 /**
  * 简化的订单类型（只保留页面需要的字段）
@@ -53,6 +53,16 @@ export interface OpenOrdersStats {
 }
 
 /**
+ * K线数据缓存项
+ */
+export interface KlinesCacheItem {
+  /** K线数据 */
+  data: KlineData[]
+  /** 更新时间 */
+  updatedAt: number
+}
+
+/**
  * 看板数据
  */
 export interface DashboardData {
@@ -68,6 +78,8 @@ export interface DashboardData {
   openOrders: SimpleOrder[]
   /** 今日已实现盈亏 */
   todayRealizedPnl: number
+  /** 持仓交易对K线数据 */
+  klines: Record<string, KlineData[]>
   /** 数据时间戳 */
   timestamp: number
 }

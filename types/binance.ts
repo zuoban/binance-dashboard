@@ -328,22 +328,11 @@ export interface KlineData {
 
 export type KlineDataArray = KlineData[]
 
-// ==================== K线数据 ====================
-
-/**
- * K 线数据点（lightweight-charts 格式）
- */
-export interface KlineData {
-  /** 时间戳（秒） */
-  time: number
-  /** 开盘价 */
-  open: number
-  /** 最高价 */
-  high: number
-  /** 最低价 */
-  low: number
-  /** 收盘价 */
-  close: number
-  /** 成交量 */
-  volume?: number
+export interface PositionKlines {
+  /** 交易对 */
+  symbol: string
+  /** K线数据 */
+  klines: KlineData[]
+  /** 更新时间戳 */
+  updatedAt: number
 }

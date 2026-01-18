@@ -12,14 +12,16 @@ import { BinanceRestClient } from '../binance/rest-client'
 import { getServerConfig } from '../config'
 import { mapBinancePosition } from '../utils/binance-mapper'
 import { mapBinanceAccount } from '../utils/account-mapper'
+import { mapBinanceKlines } from '../utils/kline-mapper'
 import type {
   DashboardData,
   DataCallback,
   DataManagerMetrics,
   DataManagerConfig,
   SimpleOrder,
+  KlinesCacheItem,
 } from './types'
-import type { Position } from '@/types/binance'
+import type { Position, KlineData } from '@/types/binance'
 import type {
   BinancePosition,
   BinanceUserTrade,
@@ -60,6 +62,18 @@ export class DataManager {
 
   /** 重试次数 */
   private retryCount = 0
+
+  /** K线数据缓存（禁用，直接获取最新数据） */
+  private klinesCache: Map<string, KlinesCacheItem> = new Map()
+
+  /** K线数据缓存过期时间（0表示禁用缓存） */
+  private readonly klinesCacheTTL = 0
+
+  /** 默认K线数量 */
+  private readonly defaultKlinesLimit = 50
+
+  /** 默认K线间隔 */
+  private readonly defaultKlinesInterval = '15m'
 
   /**
    * 私有构造函数（单例模式）
@@ -414,6 +428,9 @@ export class DataManager {
 
     const openOrders = openOrdersInfo.map(this.mapOpenOrderToOrder)
 
+    // 获取持仓交易对的K线数据
+    const klines = await this.fetchKlinesForPositions(client, symbols)
+
     return {
       account,
       positions,
@@ -421,8 +438,73 @@ export class DataManager {
       openOrdersStats,
       openOrders,
       todayRealizedPnl,
+      klines,
       timestamp: Date.now(),
     }
+  }
+
+  /**
+   * 获取持仓交易对的K线数据
+   */
+  private async fetchKlinesForPositions(
+    _client: BinanceRestClient,
+    symbols: string[]
+  ): Promise<Record<string, KlineData[]>> {
+    const klines: Record<string, KlineData[]> = {}
+
+    if (symbols.length === 0) {
+      return klines
+    }
+
+    const now = Date.now()
+    const config = getServerConfig()
+
+    // 并发获取所有交易对的K线数据
+    const klinePromises = symbols.map(async symbol => {
+      try {
+        // 检查缓存
+        const cached = this.klinesCache.get(symbol)
+        if (cached && now - cached.updatedAt < this.klinesCacheTTL) {
+          return { symbol, klines: cached.data }
+        }
+
+        // 直接调用币安API获取K线数据（返回数组格式）
+        const response = await fetch(
+          `${config.binance.restApi}/fapi/v1/klines?symbol=${symbol}&interval=${this.defaultKlinesInterval}&limit=${this.defaultKlinesLimit}`
+        )
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const rawKlines = await response.json()
+        const data = mapBinanceKlines(rawKlines)
+
+        // 更新缓存
+        this.klinesCache.set(symbol, {
+          data,
+          updatedAt: now,
+        })
+
+        return { symbol, klines: data }
+      } catch (error) {
+        this.log(`[DataManager] Failed to fetch klines for ${symbol}: ${error}`)
+        // 尝试使用缓存数据
+        const cached = this.klinesCache.get(symbol)
+        if (cached) {
+          return { symbol, klines: cached.data }
+        }
+        return { symbol, klines: [] }
+      }
+    })
+
+    const klineResults = await Promise.all(klinePromises)
+
+    klineResults.forEach(result => {
+      klines[result.symbol] = result.klines
+    })
+
+    return klines
   }
 
   /**
