@@ -53,13 +53,36 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const { exchangeInfo } = useExchangeInfo()
   const triggerRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0, placement: 'top', offsetX: 0 })
   const [isClient, setIsClient] = useState(false)
 
   // 确保只在客户端渲染 Portal
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true)
   }, [])
+
+  // 点击外部关闭
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isVisible &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node) &&
+        tooltipRef.current &&
+        !tooltipRef.current.contains(event.target as Node)
+      ) {
+        setIsVisible(false)
+      }
+    }
+
+    // 使用 mousedown 而不是 click，以获得更好的交互体验
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isVisible])
 
   // 计算位置
   useEffect(() => {
@@ -70,7 +93,7 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
 
       // Tooltip 尺寸估计 (宽度固定 320px, 高度约 300px)
       const tooltipHeight = 300
-      const tooltipWidth = 320
+      const tooltipWidth = Math.min(320, window.innerWidth - 20) // 响应式宽度
 
       // 视口尺寸
       const viewportWidth = window.innerWidth
@@ -126,10 +149,11 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
     <>
       <div
         ref={triggerRef}
-        className="relative inline-block"
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        onClick={() => setIsVisible(!isVisible)}
+        className="relative inline-block cursor-pointer"
+        onClick={e => {
+          e.stopPropagation()
+          setIsVisible(!isVisible)
+        }}
       >
         {children}
       </div>
@@ -145,7 +169,8 @@ export function OrderTooltip({ order, children }: OrderTooltipProps) {
             }}
           >
             <div
-              className={`w-80 -translate-x-1/2 pb-2 transition-all duration-200 ${
+              ref={tooltipRef}
+              className={`w-80 max-w-[90vw] -translate-x-1/2 pb-2 transition-all duration-200 pointer-events-auto ${
                 position.placement === 'top' ? '-translate-y-full' : ''
               }`}
               style={{
