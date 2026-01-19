@@ -139,6 +139,21 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
     }))
   }, [data])
 
+  // 动态计算 Y 轴边距
+  const yAxisDomain = useMemo(() => {
+    if (chartData.length === 0) return [0, 0]
+
+    const prices = chartData.map(d => d.price)
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    const priceRange = maxPrice - minPrice
+
+    // 使用价格范围的 10% 作为边距，但至少 0.5
+    const margin = Math.max(priceRange * 0.1, 0.5)
+
+    return [minPrice - margin, maxPrice + margin]
+  }, [chartData])
+
   // 计算价格变化
   const priceChange = useMemo(() => {
     if (chartData.length < 2) return { value: 0, percentage: 0 }
@@ -212,7 +227,7 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
               stroke="#9CA3AF"
               tick={{ fill: '#9CA3AF', fontSize: 12 }}
               tickFormatter={value => `$${value.toFixed(2)}`}
-              domain={['dataMin - 0.5', 'dataMax + 0.5']}
+              domain={yAxisDomain}
             />
             <Tooltip
               content={() => null}
@@ -236,7 +251,7 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
               stroke="#9CA3AF"
               tick={{ fill: '#9CA3AF', fontSize: 12 }}
               tickFormatter={value => `$${value.toFixed(2)}`}
-              domain={['dataMin - 0.5', 'dataMax + 0.5']}
+              domain={yAxisDomain}
             />
             <Tooltip
               content={() => null}
@@ -274,6 +289,21 @@ export function SimplePriceChart({ symbol, data, className = '' }: Omit<PriceCha
     }))
   }, [data])
 
+  // 动态计算 Y 轴边距
+  const yAxisDomain = useMemo(() => {
+    if (chartData.length === 0) return [0, 0]
+
+    const prices = chartData.map(d => d.price)
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    const priceRange = maxPrice - minPrice
+
+    // 使用价格范围的 10% 作为边距，但至少 0.5
+    const margin = Math.max(priceRange * 0.1, 0.5)
+
+    return [minPrice - margin, maxPrice + margin]
+  }, [chartData])
+
   if (chartData.length === 0) {
     return (
       <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 ${className}`}>
@@ -307,7 +337,7 @@ export function SimplePriceChart({ symbol, data, className = '' }: Omit<PriceCha
             </linearGradient>
           </defs>
           <XAxis dataKey="time" hide />
-          <YAxis hide domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+          <YAxis hide domain={yAxisDomain} />
           <Area
             type="monotone"
             dataKey="price"

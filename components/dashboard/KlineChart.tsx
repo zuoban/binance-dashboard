@@ -25,6 +25,7 @@ interface KlineChartProps {
   className?: string
   pricePrecision?: number
   openOrders?: Order[]
+  visibleCount?: number
 }
 
 export function KlineChart({
@@ -33,11 +34,20 @@ export function KlineChart({
   className = '',
   pricePrecision,
   openOrders = [],
+  visibleCount,
 }: KlineChartProps) {
   const isMobile = useIsMobile()
+
+  const displayData = useMemo(() => {
+    if (visibleCount && visibleCount > 0 && data.length > visibleCount) {
+      return data.slice(-visibleCount)
+    }
+    return data
+  }, [data, visibleCount])
+
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const options: any = useMemo(() => {
-    if (data.length === 0) {
+    if (displayData.length === 0) {
       return {
         chart: {
           height: 300,
@@ -54,11 +64,12 @@ export function KlineChart({
       }
     }
 
-    const allPrices = data.flatMap(d => [d.open ?? 0, d.close ?? 0, d.low ?? 0, d.high ?? 0])
+    const allPrices = displayData.flatMap(d => [d.open ?? 0, d.close ?? 0, d.low ?? 0, d.high ?? 0])
     const klineMinPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
     const klineMaxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0
 
-    const priceChange = data.length >= 2 ? data[data.length - 1].close - data[0].open : 0
+    const priceChange =
+      displayData.length >= 2 ? displayData[displayData.length - 1].close - displayData[0].open : 0
     const isPositive = priceChange >= 0
 
     const formatPrice = (value: number) => {
@@ -68,7 +79,7 @@ export function KlineChart({
       return value < 1 ? value.toFixed(4) : value.toFixed(2)
     }
 
-    const lastKline = data[data.length - 1]
+    const lastKline = displayData[displayData.length - 1]
     const lastClose = lastKline?.close ?? 0
     const lastCloseFormatted = formatPrice(lastClose)
 
@@ -106,7 +117,7 @@ export function KlineChart({
     const priceRange = maxPrice - minPrice
     const padding = priceRange * 0.05 // 增加一点内边距，防止最高/最低价贴边
 
-    const dates = data.map(d => {
+    const dates = displayData.map(d => {
       const date = new Date(d.time * 1000)
       return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
     })
@@ -148,7 +159,7 @@ export function KlineChart({
       },
       series: [
         {
-          data: data.map(d => ({
+          data: displayData.map(d => ({
             x: d.time * 1000,
             y: [d.open, d.high, d.low, d.close],
           })),
@@ -266,7 +277,7 @@ export function KlineChart({
           offsetY: 0,
         },
         custom: ({ dataPointIndex }: any) => {
-          const kline = data[dataPointIndex]
+          const kline = displayData[dataPointIndex]
           if (!kline) return ''
 
           const changePercent = kline.open > 0 ? ((kline.close - kline.open) / kline.open) * 100 : 0
@@ -381,10 +392,10 @@ export function KlineChart({
         ],
       },
     }
-  }, [data, height, pricePrecision, openOrders, isMobile])
+  }, [displayData, height, pricePrecision, openOrders, isMobile])
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
-  if (data.length === 0) {
+  if (displayData.length === 0) {
     return (
       <div
         className={`bg-slate-50 rounded-lg flex items-center justify-center ${className}`}
@@ -398,7 +409,7 @@ export function KlineChart({
   return (
     <div className={className} style={{ height }}>
       <Chart
-        key={`${data[0]?.time}-${data[data.length - 1]?.time}`}
+        key={`${displayData[0]?.time}-${displayData[displayData.length - 1]?.time}`}
         options={options}
         series={options.series}
         type="candlestick"

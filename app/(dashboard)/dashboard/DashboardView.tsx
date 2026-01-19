@@ -91,13 +91,23 @@ function StatsOverview({
   reconnect: () => void
 }) {
   const [lastUpdateText, setLastUpdateText] = useState('')
+  const [updateProgress, setUpdateProgress] = useState(0)
 
   useEffect(() => {
     const updateTime = () => {
       if (lastUpdate) {
+        const now = Date.now()
+        const diff = Math.max(0, now - lastUpdate)
+        const secondsTotal = Math.floor(diff / 1000)
+
+        // 计算进度条（0-5秒为周期）
+        const progress = Math.min(((secondsTotal % 5) / 5) * 100, 100)
+        setUpdateProgress(progress)
+
         setLastUpdateText(formatRecentOrderTime(lastUpdate))
       } else {
         setLastUpdateText('')
+        setUpdateProgress(0)
       }
     }
 
@@ -163,20 +173,13 @@ function StatsOverview({
             {lastUpdateText && (
               <>
                 <div className="w-px h-3 bg-slate-200" />
-                <div className="flex items-center gap-1.5">
-                  <svg
-                    className="w-3.5 h-3.5 text-slate-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                <div className="flex items-center gap-2">
+                  <div className="relative w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-linear"
+                      style={{ width: `${updateProgress}%` }}
                     />
-                  </svg>
+                  </div>
                   <span className="text-xs text-slate-500 font-medium">{lastUpdateText}</span>
                 </div>
               </>
