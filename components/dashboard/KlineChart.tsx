@@ -70,7 +70,7 @@ export function KlineChart({
 
     const lastKline = data[data.length - 1]
     const lastClose = lastKline?.close ?? 0
-    const lastCloseFormatted = lastClose.toFixed(6)
+    const lastCloseFormatted = formatPrice(lastClose)
 
     const activeOrders = openOrders.filter(
       order => order.status === 'NEW' || order.status === 'PARTIALLY_FILLED'
@@ -125,9 +125,14 @@ export function KlineChart({
         zoom: {
           enabled: false,
         },
-        // 移动端优化：禁用一些交互以防止滚动冲突，或者优化手势
         selection: {
           enabled: false,
+        },
+        padding: {
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
         },
       },
       plotOptions: {
@@ -235,10 +240,10 @@ export function KlineChart({
           },
         },
         padding: {
-          left: isMobile ? 0 : 10,
-          right: isMobile ? 0 : 5,
-          bottom: 10,
-          top: 24,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          top: 0,
         },
       },
       tooltip: {

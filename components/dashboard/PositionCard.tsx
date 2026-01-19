@@ -240,14 +240,12 @@ export function PositionCard({
         </div>
       </div>
 
-      <div className="border-t border-slate-100 px-5 py-4">
-        <KlineChart
-          data={klineData}
-          height={300}
-          pricePrecision={pricePrecision}
-          openOrders={openOrders}
-        />
-      </div>
+      <KlineChart
+        data={klineData}
+        height={400}
+        pricePrecision={pricePrecision}
+        openOrders={openOrders}
+      />
     </div>
   )
 }
