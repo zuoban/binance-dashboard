@@ -77,7 +77,7 @@ export function PositionCard({
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
-  const [visibleKlineCount, setVisibleKlineCount] = useState<number | undefined>(30)
+  const [visibleKlineCount, setVisibleKlineCount] = useState<number>(30)
 
   const pricePrecision = useMemo(
     () => getSymbolPrecision(position.symbol, exchangeInfo),
@@ -257,17 +257,15 @@ export function PositionCard({
               min="10"
               max="50"
               step="10"
-              value={visibleKlineCount || 10}
-              onChange={e =>
-                setVisibleKlineCount(e.target.value === '10' ? undefined : Number(e.target.value))
-              }
+              value={visibleKlineCount}
+              onChange={e => setVisibleKlineCount(Number(e.target.value))}
               style={{
-                background: `linear-gradient(to right, #10b981 0%, #10b981 ${(((visibleKlineCount || 10) - 10) / 40) * 100}%, #e2e8f0 ${(((visibleKlineCount || 10) - 10) / 40) * 100}%, #e2e8f0 100%)`,
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((visibleKlineCount - 10) / 40) * 100}%, #e2e8f0 ${((visibleKlineCount - 10) / 40) * 100}%, #e2e8f0 100%)`,
               }}
               className="w-32 h-1.5 rounded-full appearance-none cursor-pointer border-none outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-emerald-400 [&::-webkit-slider-thumb]:to-emerald-600 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-emerald-400/50 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gradient-to-br [&::-moz-range-thumb]:from-emerald-400 [&::-moz-range-thumb]:to-emerald-600 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:shadow-emerald-400/50 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:duration-150 [&::-moz-range-thumb]:hover:scale-110"
             />
             <span className="text-xs font-semibold text-emerald-600 min-w-[20px] text-right tabular-nums">
-              {visibleKlineCount || 10}
+              {visibleKlineCount}
             </span>
           </div>
         </div>
