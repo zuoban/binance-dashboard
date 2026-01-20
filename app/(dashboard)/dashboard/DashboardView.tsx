@@ -69,8 +69,29 @@ function formatNumber(num: number, decimals: number = 2): string {
   return formatted
 }
 
+function formatTimeDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) {
+    const remainingHours = hours % 24
+    return remainingHours > 0 ? `${days}天${remainingHours}小时` : `${days}天`
+  }
+  if (hours > 0) {
+    const remainingMinutes = minutes % 60
+    return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`
+  }
+  if (minutes > 0) {
+    return `${minutes}分钟`
+  }
+  return `${seconds}秒`
+}
+
 function StatsOverview({
   totalEquity,
+  marginBalance,
   openOrdersStats,
   orders,
   totalPnl,
@@ -81,6 +102,7 @@ function StatsOverview({
   reconnect,
 }: {
   totalEquity: number
+  marginBalance: number
   openOrdersStats: { total: number; buy: number; sell: number } | null
   orders: Order[]
   totalPnl: number
@@ -91,23 +113,13 @@ function StatsOverview({
   reconnect: () => void
 }) {
   const [lastUpdateText, setLastUpdateText] = useState('')
-  const [updateProgress, setUpdateProgress] = useState(0)
 
   useEffect(() => {
     const updateTime = () => {
       if (lastUpdate) {
-        const now = Date.now()
-        const diff = Math.max(0, now - lastUpdate)
-        const secondsTotal = Math.floor(diff / 1000)
-
-        // 计算进度条（0-5秒为周期）
-        const progress = Math.min(((secondsTotal % 5) / 5) * 100, 100)
-        setUpdateProgress(progress)
-
         setLastUpdateText(formatRecentOrderTime(lastUpdate))
       } else {
         setLastUpdateText('')
-        setUpdateProgress(0)
       }
     }
 
@@ -173,17 +185,16 @@ function StatsOverview({
             {lastUpdateText && (
               <>
                 <div className="w-px h-3 bg-slate-200" />
-                <div className="flex items-center gap-2">
-                  <div className="relative w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-linear"
-                      style={{ width: `${updateProgress}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-slate-500 font-medium">{lastUpdateText}</span>
-                </div>
+                <span className="text-xs text-slate-500 font-medium">{lastUpdateText}</span>
               </>
             )}
+            <div className="w-px h-3 bg-slate-200" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400">保证金</span>
+              <span className="text-xs font-semibold text-slate-700">
+                ${formatNumber(marginBalance)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -226,6 +237,14 @@ function StatsOverview({
                 <span className="text-xs text-slate-400 font-normal ml-1">{orders.length}</span>
               </div>
               <div className="flex items-center gap-3">
+                {orders.length >= 2 && (
+                  <>
+                    <span className="text-xs text-slate-400">
+                      耗时 {formatTimeDuration(orders[0].time - orders[orders.length - 1].time)}
+                    </span>
+                    <div className="w-px h-3 bg-slate-200" />
+                  </>
+                )}
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-400">买</span>
                   <span className="text-xs font-bold text-emerald-600">
@@ -356,6 +375,8 @@ export function DashboardView() {
     ? parseFloat(account.totalWalletBalance) + parseFloat(account.unrealizedProfit)
     : 0
 
+  const marginBalance = account ? parseFloat(account.marginBalance) : 0
+
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
 
   return (
@@ -370,6 +391,7 @@ export function DashboardView() {
         <>
           <StatsOverview
             totalEquity={totalEquity}
+            marginBalance={marginBalance}
             openOrdersStats={openOrdersStats}
             orders={orders}
             totalPnl={totalPnl}
