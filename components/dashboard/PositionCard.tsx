@@ -6,7 +6,7 @@
 
 import { Position, Order, KlineData } from '@/types/binance'
 import { useExchangeInfo } from '@/lib/hooks'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { KlineChart } from './KlineChart'
 
 interface PositionCardProps {
@@ -77,7 +77,23 @@ export function PositionCard({
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
-  const [visibleKlineCount, setVisibleKlineCount] = useState<number>(30)
+  const [visibleKlineCount, setVisibleKlineCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 30
+    try {
+      const saved = localStorage.getItem('kline-visible-count')
+      return saved ? Number.parseInt(saved, 10) : 30
+    } catch {
+      return 30
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('kline-visible-count', visibleKlineCount.toString())
+    } catch (error) {
+      console.error('Failed to save kline visible count:', error)
+    }
+  }, [visibleKlineCount])
 
   const pricePrecision = useMemo(
     () => getSymbolPrecision(position.symbol, exchangeInfo),
