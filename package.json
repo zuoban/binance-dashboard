@@ -2,6 +2,11 @@
   "name": "binance-dashboard",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=9.0.0 <10"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,7 +16,8 @@
     "format": "prettier --write .",
     "check": "tsx scripts/check-env.ts",
     "prebuild": "tsx scripts/check-env.ts",
-    "test:listenkey": "tsx scripts/test-listenkey.ts"
+    "test:listenkey": "tsx scripts/test-listenkey.ts",
+    "test:unit": "tsx --test scripts/*.test.ts"
   },
   "dependencies": {
     "apexcharts": "^5.3.6",

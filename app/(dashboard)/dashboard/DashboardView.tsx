@@ -357,6 +357,7 @@ export function DashboardView() {
     openOrders,
     klines,
     loading,
+    error,
     isConnected,
     isConnecting,
     lastUpdate,
@@ -378,17 +379,47 @@ export function DashboardView() {
   const marginBalance = account ? parseFloat(account.marginBalance) : 0
 
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
+  const hasNoData = !account && positions.length === 0
 
   return (
     <div className="space-y-4">
-      {loading && positions.length === 0 && (
+      {loading && hasNoData && (
         <div className="flex justify-center py-16">
           <LoadingSpinner size="md" showText />
         </div>
       )}
 
-      {(!loading || positions.length > 0) && (
+      {!loading && error && hasNoData && (
+        <EmptyState
+          title="暂时无法加载交易数据"
+          description={error}
+          action={
+            <button
+              onClick={reconnect}
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700"
+            >
+              立即重试
+            </button>
+          }
+        />
+      )}
+
+      {(!loading || positions.length > 0) && !(error && hasNoData) && (
         <>
+          {error && (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            >
+              <span>{error}</span>
+              <button
+                onClick={reconnect}
+                className="shrink-0 text-xs font-semibold text-amber-900 underline underline-offset-2"
+              >
+                重试
+              </button>
+            </div>
+          )}
           <StatsOverview
             totalEquity={totalEquity}
             marginBalance={marginBalance}

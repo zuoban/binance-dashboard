@@ -38,11 +38,11 @@
 | **语言**        | TypeScript   | 5.9+  | 严格模式，完整类型检查       |
 | **样式**        | Tailwind CSS | 4.x   | 原子化 CSS 框架              |
 | **状态管理**    | Zustand      | 5.x   | 轻量级状态管理库             |
-| **数据可视化**  | Recharts     | 2.x   | React 图表库                 |
-| **HTTP 客户端** | Axios        | 1.7+  | HTTP 请求库                  |
+| **数据可视化**  | Recharts     | 3.x   | React 图表库                 |
+| **HTTP 客户端** | Axios        | 1.13+ | HTTP 请求库                  |
 | **WebSocket**   | 原生 API     | -     | 实时数据推送                 |
 | **表单验证**    | Zod          | 4.x   | TypeScript 优先的验证库      |
-| **包管理器**    | pnpm         | 10.x  | 快速、节省磁盘空间的包管理器 |
+| **包管理器**    | pnpm         | 9.x   | 快速、节省磁盘空间的包管理器 |
 
 ---
 
@@ -50,8 +50,8 @@
 
 ### 前置要求
 
-- Node.js >= 18
-- pnpm >= 8
+- Node.js >= 20.9.0
+- pnpm 9.x（推荐使用 Corepack 自动读取项目锁定版本）
 
 ### 安装
 
@@ -106,7 +106,7 @@ pnpm dev
 
 ```bash
 # 使用 Docker Compose（推荐）
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 手动运行
@@ -297,6 +297,9 @@ BINANCE_API_SECRET=your_secret_key_here
 NEXT_PUBLIC_BINANCE_REST_API=https://fapi.binance.com
 NEXT_PUBLIC_BINANCE_WS_API=wss://fstream.binance.com/ws
 NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+
+# 可选：启用访问码保护
+# ACCESS_CODE=your-random-access-code
 ```
 
 4. **部署**

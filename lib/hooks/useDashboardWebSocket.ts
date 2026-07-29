@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AccountAsset, Position, Order, KlineData } from '@/types/binance'
-import { getStoredAccessCode } from '@/lib/utils/fetch-with-auth'
 
 interface DashboardData {
   account: AccountAsset | null
@@ -124,17 +123,8 @@ export function useDashboardWebSocket(
       setIsConnecting(true)
       setError(null)
 
-      // 获取访问码并构建 SSE URL
-      const accessCode = getStoredAccessCode()
-      if (!accessCode) {
-        throw new Error('未找到访问码，请先登录')
-      }
-
-      // 将访问码作为查询参数传递
-      // 注意：EventSource 不支持自定义请求头，只能通过 URL 传递
-      const url = `/api/dashboard/ws?code=${encodeURIComponent(accessCode)}`
-
-      const eventSource = new EventSource(url)
+      // EventSource 会自动携带同源 HttpOnly 会话 Cookie。
+      const eventSource = new EventSource('/api/dashboard/ws')
       eventSourceRef.current = eventSource
 
       // 连接成功（SSE 没有显式的 open 事件，第一次收到消息就是连接成功）
@@ -163,7 +153,29 @@ export function useDashboardWebSocket(
             setLastUpdate(message.timestamp)
             onDataUpdate?.(message.data)
           }
-        } catch {}
+        } catch {
+          const errorMessage = '无法解析服务端实时数据'
+          setError(errorMessage)
+          onError?.(errorMessage)
+        }
+      })
+
+      // 接收服务端业务错误。该事件不代表 SSE 连接中断，因此不会触发原生 onerror。
+      eventSource.addEventListener('dashboard-error', (event: MessageEvent) => {
+        try {
+          const message = JSON.parse(event.data) as { error?: unknown }
+          const errorMessage =
+            typeof message.error === 'string' ? message.error : '无法获取最新交易数据'
+
+          setError(errorMessage)
+          setLoading(false)
+          onError?.(errorMessage)
+        } catch {
+          const errorMessage = '无法解析服务端错误信息'
+          setError(errorMessage)
+          setLoading(false)
+          onError?.(errorMessage)
+        }
       })
 
       // 连接错误（EventSource 的原生 onerror 回调）
@@ -180,6 +192,7 @@ export function useDashboardWebSocket(
         setIsConnecting(false)
         setIsConnected(false)
         onConnectionChange?.(false)
+        onError?.(errorMessage)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed')

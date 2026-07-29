@@ -6,7 +6,6 @@
 
 import { useState, FormEvent, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { storeAccessCode } from '@/lib/utils/fetch-with-auth'
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -23,6 +22,7 @@ function LoginForm() {
       // 验证访问码
       const response = await fetch('/api/auth/verify', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
           'x-access-code': code,
@@ -32,11 +32,9 @@ function LoginForm() {
       const result = await response.json()
 
       if (result.success) {
-        // 存储访问码
-        storeAccessCode(code)
-
-        // 使用 window.location.href 确保跳转成功
-        const redirect = searchParams.get('redirect') || '/dashboard'
+        // 服务端已写入 HttpOnly 会话 Cookie，避免在浏览器中保存访问码。
+        const redirectParam = searchParams.get('redirect')
+        const redirect = redirectParam?.startsWith('/') ? redirectParam : '/dashboard'
         window.location.href = redirect
       } else {
         setError('访问码错误，请重试')

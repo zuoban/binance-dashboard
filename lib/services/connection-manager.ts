@@ -94,14 +94,24 @@ export class ConnectionManager {
     }
 
     // 订阅数据更新
-    const unsubscribe = this.dataManager.subscribe(data => {
-      this.sendToConnection(connection, data)
-    })
+    const unsubscribe = this.dataManager.subscribe(
+      data => {
+        this.sendToConnection(connection, data)
+      },
+      error => {
+        this.sendErrorToConnection(connection, error)
+      }
+    )
+    connection.unsubscribe = unsubscribe
+
+    // subscribe 会立即推送缓存数据；若该次推送已使连接失效，立即释放订阅。
+    if (!this.connections.has(id)) {
+      unsubscribe()
+    }
 
     // 返回清理函数
     return () => {
       this.unregisterConnection(id)
-      unsubscribe()
     }
   }
 
@@ -111,7 +121,9 @@ export class ConnectionManager {
    * @param id 连接 ID
    */
   unregisterConnection(id: string): void {
-    if (this.connections.delete(id)) {
+    const connection = this.connections.get(id)
+    if (connection && this.connections.delete(id)) {
+      connection.unsubscribe?.()
       this.log(
         `[ConnectionManager] Connection ${id.slice(0, 8)}... unregistered. ` +
           `Total: ${this.connections.size}`
@@ -159,7 +171,7 @@ export class ConnectionManager {
    */
   sendErrorToConnection(connection: SSEConnection, error: string): void {
     try {
-      const message = `event: error\ndata: ${JSON.stringify({
+      const message = `event: dashboard-error\ndata: ${JSON.stringify({
         type: 'error',
         error,
         timestamp: Date.now(),
@@ -195,8 +207,9 @@ export class ConnectionManager {
   /**
    * 日志输出
    */
-  private log(_message: string): void {
+  private log(message: string): void {
     if (this.config.enableLog) {
+      console.debug(message)
     }
   }
 }

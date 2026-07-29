@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   binance-dashboard:
     image: ghcr.io/zuoban/binance-dashboard:latest
@@ -14,6 +12,8 @@ services:
       # API 端点（可选）
       - NEXT_PUBLIC_BINANCE_REST_API=${NEXT_PUBLIC_BINANCE_REST_API:-https://fapi.binance.com}
       - NEXT_PUBLIC_BINANCE_WS_API=${NEXT_PUBLIC_BINANCE_WS_API:-wss://fstream.binance.com/ws}
+      # 可选访问码认证
+      - ACCESS_CODE=${ACCESS_CODE:-}
       # 应用配置
       - NODE_ENV=production
     env_file:

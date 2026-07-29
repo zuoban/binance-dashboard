@@ -70,6 +70,7 @@ export function toError(error: unknown): Error {
  * 用于 catch 块的错误处理函数
  */
 export function handleCaughtError(error: unknown, _context?: string): void {
+  void _context
   if (isError(error) && error.stack) {
   }
 }

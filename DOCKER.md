@@ -71,24 +71,27 @@ BINANCE_API_SECRET=your_api_secret_here
 # API 端点（可选）
 NEXT_PUBLIC_BINANCE_REST_API=https://fapi.binance.com
 NEXT_PUBLIC_BINANCE_WS_API=wss://fstream.binance.com/ws
+
+# 可选：启用访问码保护
+# ACCESS_CODE=your-random-access-code
 ```
 
 2. 启动服务：
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 3. 查看日志：
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 4. 停止服务：
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## 镜像信息
@@ -152,13 +155,14 @@ docker run -d -p 3000:3000 \
 
 ## 环境变量
 
-| 变量名                         | 必需 | 说明               | 默认值                         |
-| ------------------------------ | ---- | ------------------ | ------------------------------ |
-| `BINANCE_API_KEY`              | ✅   | 币安 API Key       | -                              |
-| `BINANCE_API_SECRET`           | ✅   | 币安 API Secret    | -                              |
-| `NEXT_PUBLIC_BINANCE_REST_API` | ❌   | REST API 端点      | `https://fapi.binance.com`     |
-| `NEXT_PUBLIC_BINANCE_WS_API`   | ❌   | WebSocket API 端点 | `wss://fstream.binance.com/ws` |
-| `NODE_ENV`                     | ❌   | 运行环境           | `production`                   |
+| 变量名                         | 必需 | 说明                   | 默认值                         |
+| ------------------------------ | ---- | ---------------------- | ------------------------------ |
+| `BINANCE_API_KEY`              | ✅   | 币安 API Key           | -                              |
+| `BINANCE_API_SECRET`           | ✅   | 币安 API Secret        | -                              |
+| `NEXT_PUBLIC_BINANCE_REST_API` | ❌   | REST API 端点          | `https://fapi.binance.com`     |
+| `NEXT_PUBLIC_BINANCE_WS_API`   | ❌   | WebSocket API 端点     | `wss://fstream.binance.com/ws` |
+| `ACCESS_CODE`                  | ❌   | 访问码（留空则不启用） | -                              |
+| `NODE_ENV`                     | ❌   | 运行环境               | `production`                   |
 
 ## 安全建议
 
@@ -251,7 +255,7 @@ docker logout ghcr.io
 docker pull ghcr.io/zuoban/binance-dashboard:latest
 
 # 重新创建容器
-docker-compose up -d --force-recreate
+docker compose up -d --force-recreate
 ```
 
 ## 生产部署建议

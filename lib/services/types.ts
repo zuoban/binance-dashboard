@@ -96,12 +96,19 @@ export interface SSEConnection {
   encoder: TextEncoder
   /** 连接创建时间 */
   createdAt: number
+  /** 取消 DataManager 数据订阅 */
+  unsubscribe?: () => void
 }
 
 /**
  * 数据更新回调函数类型
  */
 export type DataCallback = (data: DashboardData) => void
+
+/**
+ * 数据获取失败回调函数类型
+ */
+export type DataErrorCallback = (message: string) => void
 
 /**
  * 数据管理器指标
@@ -146,7 +153,7 @@ export interface ConnectionManagerConfig {
 /**
  * SSE 事件类型
  */
-export type SSEEventType = 'data' | 'heartbeat' | 'error'
+export type SSEEventType = 'data' | 'heartbeat' | 'dashboard-error'
 
 /**
  * SSE 消息

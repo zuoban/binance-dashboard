@@ -12,10 +12,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **语言**: TypeScript 5.9+ (严格模式)
 - **样式**: Tailwind CSS 4.x
 - **状态管理**: Zustand 5.x
-- **数据可视化**: Recharts 2.x
-- **API 客户端**: Axios 1.7+
+- **数据可视化**: Recharts 3.x
+- **API 客户端**: Axios 1.13+
 - **表单验证**: Zod 4.x
-- **包管理器**: pnpm 10.x
+- **运行时**: Node.js 20.9+
+- **包管理器**: pnpm 9.x
 
 ## 开发命令
 

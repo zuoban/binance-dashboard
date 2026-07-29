@@ -8,6 +8,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
 import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
+import { checkRateLimit } from '@/lib/middleware/rate-limit'
+import {
+  positionsQuerySchema,
+  validateQueryParams,
+  validationErrorResponse,
+} from '@/lib/validations/api'
 import type { BinancePosition } from '@/types/binance-api'
 
 /**
@@ -16,9 +22,18 @@ import type { BinancePosition } from '@/types/binance-api'
  */
 export async function GET(request: NextRequest) {
   try {
-    // 获取查询参数
-    const { searchParams } = new URL(request.url)
-    const symbol = searchParams.get('symbol') || undefined
+    const rateLimitResult = await checkRateLimit(request)
+    if (!rateLimitResult.allowed) {
+      return rateLimitResult.error!
+    }
+
+    const validation = validateQueryParams(request.nextUrl.searchParams, positionsQuerySchema)
+    if (!validation.success) {
+      const errorResponse = validationErrorResponse(validation)
+      if (errorResponse) return errorResponse
+    }
+
+    const { symbol } = validation.data!
 
     // 获取服务端配置
     const config = getServerConfig()

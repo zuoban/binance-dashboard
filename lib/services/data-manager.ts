@@ -16,6 +16,7 @@ import { mapBinanceKlines } from '../utils/kline-mapper'
 import type {
   DashboardData,
   DataCallback,
+  DataErrorCallback,
   DataManagerMetrics,
   DataManagerConfig,
   SimpleOrder,
@@ -45,8 +46,17 @@ export class DataManager {
   /** 心跳定时器 */
   private heartbeatIntervalId: NodeJS.Timeout | null = null
 
+  /** 指标日志定时器 */
+  private metricsIntervalId: NodeJS.Timeout | null = null
+
+  /** 当前进行中的刷新任务，防止慢请求与重试叠加 */
+  private inFlightFetch: Promise<void> | null = null
+
+  /** 当前进行中的数据聚合请求，供 SSE 与兼容 REST 接口复用 */
+  private inFlightDataFetch: Promise<DashboardData> | null = null
+
   /** 订阅者集合 */
-  private subscribers: Set<DataCallback> = new Set()
+  private subscribers: Set<{ onData: DataCallback; onError?: DataErrorCallback }> = new Set()
 
   /** 引用计数 */
   private refCount = 0
@@ -57,17 +67,17 @@ export class DataManager {
   /** 指标 */
   private metrics: DataManagerMetrics
 
-  /** 每日快照（用于计算已实现盈亏） */
-  private dailySnapshot: { date: string; balance: number; unrealizedProfit: number } | null = null
+  /** 当日已实现盈亏缓存，避免为每次实时刷新重复调用收益接口 */
+  private realizedPnlCache: { date: string; value: number; updatedAt: number } | null = null
 
-  /** 重试次数 */
-  private retryCount = 0
+  /** 已实现盈亏缓存过期时间 */
+  private readonly realizedPnlCacheTTL = 60 * 1000
 
-  /** K线数据缓存（禁用，直接获取最新数据） */
+  /** K线数据缓存 */
   private klinesCache: Map<string, KlinesCacheItem> = new Map()
 
-  /** K线数据缓存过期时间（0表示禁用缓存） */
-  private readonly klinesCacheTTL = 0
+  /** K线数据缓存过期时间。15 分钟 K 线不需要每 5 秒重新拉取。 */
+  private readonly klinesCacheTTL = 60 * 1000
 
   /** 默认K线数量 */
   private readonly defaultKlinesLimit = 50
@@ -141,11 +151,11 @@ export class DataManager {
     this.log('[DataManager] Starting data refresh loop')
 
     // 立即获取一次数据
-    this.fetchAndBroadcast()
+    void this.fetchAndBroadcast()
 
     // 启动定时刷新
     this.refreshIntervalId = setInterval(() => {
-      this.fetchAndBroadcast()
+      void this.fetchAndBroadcast()
     }, this.config.refreshInterval)
 
     // 启动心跳
@@ -155,7 +165,7 @@ export class DataManager {
 
     // 启动指标日志（每分钟）
     if (this.config.enableLog) {
-      setInterval(() => {
+      this.metricsIntervalId = setInterval(() => {
         this.logMetrics()
       }, 60000)
     }
@@ -177,6 +187,11 @@ export class DataManager {
       this.heartbeatIntervalId = null
     }
 
+    if (this.metricsIntervalId) {
+      clearInterval(this.metricsIntervalId)
+      this.metricsIntervalId = null
+    }
+
     // 清空订阅者
     this.subscribers.clear()
   }
@@ -187,8 +202,9 @@ export class DataManager {
    * @param callback 数据更新回调函数
    * @returns 取消订阅函数
    */
-  subscribe(callback: DataCallback): () => void {
-    this.subscribers.add(callback)
+  subscribe(callback: DataCallback, onError?: DataErrorCallback): () => void {
+    const subscriber = { onData: callback, onError }
+    this.subscribers.add(subscriber)
     this.log(`[DataManager] New subscriber added. Total: ${this.subscribers.size}`)
 
     // 新订阅者立即获得当前数据
@@ -198,7 +214,7 @@ export class DataManager {
 
     // 返回取消订阅函数
     return () => {
-      this.subscribers.delete(callback)
+      this.subscribers.delete(subscriber)
       this.log(`[DataManager] Subscriber removed. Total: ${this.subscribers.size}`)
     }
   }
@@ -211,16 +227,47 @@ export class DataManager {
   }
 
   /**
+   * 获取一次最新看板快照。
+   *
+   * 兼容 REST 接口通过此方法复用同一聚合逻辑；并发调用会合并为一次 Binance 请求。
+   */
+  async getDashboardSnapshot(): Promise<DashboardData> {
+    const data = await this.fetchLatestDashboardData()
+    this.data = data
+    return data
+  }
+
+  /**
    * 获取并广播数据
    */
   private async fetchAndBroadcast(): Promise<void> {
+    if (this.inFlightFetch) {
+      this.log('[DataManager] Skipping overlapping refresh')
+      return this.inFlightFetch
+    }
+
+    const fetchPromise = this.performFetchAndBroadcast()
+    this.inFlightFetch = fetchPromise
+
+    void fetchPromise.finally(() => {
+      if (this.inFlightFetch === fetchPromise) {
+        this.inFlightFetch = null
+      }
+    })
+
+    return fetchPromise
+  }
+
+  /**
+   * 执行单次数据刷新。
+   */
+  private async performFetchAndBroadcast(): Promise<void> {
     const startTime = Date.now()
 
     try {
       // 获取数据（带重试）
-      const data = await this.fetchWithRetry()
+      const data = await this.fetchLatestDashboardData()
       this.data = data
-      this.retryCount = 0
 
       // 更新指标
       const elapsed = Date.now() - startTime
@@ -241,28 +288,45 @@ export class DataManager {
       this.metrics.failedFetches++
       this.log(`[DataManager] Fetch failed: ${error}`)
 
-      // 广播错误给订阅者
-      this.broadcastError()
+      // 通知订阅者本次刷新失败，避免将旧数据伪装成最新数据。
+      this.broadcastError('暂时无法获取最新交易数据，系统将自动重试')
     }
   }
 
   /**
    * 带重试的数据获取
    */
-  private async fetchWithRetry(): Promise<DashboardData> {
+  private async fetchLatestDashboardData(): Promise<DashboardData> {
+    if (this.inFlightDataFetch) {
+      return this.inFlightDataFetch
+    }
+
+    const fetchPromise = this.fetchWithRetry()
+    this.inFlightDataFetch = fetchPromise
+
+    try {
+      return await fetchPromise
+    } finally {
+      if (this.inFlightDataFetch === fetchPromise) {
+        this.inFlightDataFetch = null
+      }
+    }
+  }
+
+  private async fetchWithRetry(attempt = 0): Promise<DashboardData> {
     try {
       return await this.fetchDashboardData()
     } catch (error) {
-      this.retryCount++
+      const nextAttempt = attempt + 1
 
-      if (this.retryCount <= this.config.maxRetries) {
-        const delay = Math.pow(2, this.retryCount) * 1000
+      if (nextAttempt <= this.config.maxRetries) {
+        const delay = Math.pow(2, nextAttempt) * 1000
         this.log(
           `[DataManager] Fetch failed, retrying in ${delay}ms ` +
-            `(attempt ${this.retryCount}/${this.config.maxRetries})`
+            `(attempt ${nextAttempt}/${this.config.maxRetries})`
         )
         await new Promise(resolve => setTimeout(resolve, delay))
-        return this.fetchWithRetry()
+        return this.fetchWithRetry(nextAttempt)
       }
 
       // 重试次数用尽，使用缓存数据
@@ -305,7 +369,9 @@ export class DataManager {
     // 获取非稳定币并计算价格
     const nonStableCoins =
       accountInfo.assets?.filter(
-        (a: BinanceAsset) => !['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(a.asset)
+        (a: BinanceAsset) =>
+          !['USDT', 'USDC', 'FDUSD', 'BUSD'].includes(a.asset) &&
+          parseFloat(a.walletBalance || '0') !== 0
       ) || []
 
     if (nonStableCoins.length > 0) {
@@ -314,7 +380,11 @@ export class DataManager {
         const pricePromises = symbols.map(async (symbol: string) => {
           try {
             const res = await fetch(
-              `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`
+              `${config.binance.restApi}/fapi/v1/ticker/price?${new URLSearchParams({ symbol })}`,
+              {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(10000),
+              }
             )
             if (!res.ok) return null
             return await res.json()
@@ -367,25 +437,8 @@ export class DataManager {
     )
     account.unrealizedProfit = totalUnrealizedProfit.toString()
 
-    // 计算今日已实现盈亏
-    const now = new Date()
-    const todayDate = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-    const todayDateString = new Date(todayDate).toISOString().split('T')[0]
-
-    const currentBalance = parseFloat(account.totalWalletBalance || '0')
-    const currentEquity = currentBalance - totalUnrealizedProfit
-    let todayRealizedPnl = 0
-
-    if (!this.dailySnapshot || this.dailySnapshot.date !== todayDateString) {
-      this.dailySnapshot = {
-        date: todayDateString,
-        balance: currentBalance,
-        unrealizedProfit: totalUnrealizedProfit,
-      }
-    } else {
-      const snapshotEquity = this.dailySnapshot.balance - this.dailySnapshot.unrealizedProfit
-      todayRealizedPnl = currentEquity - snapshotEquity
-    }
+    // 直接汇总币安收益历史，避免进程重启或多实例时零点快照失真。
+    const todayRealizedPnl = await this.getTodayRealizedPnl(client)
 
     // 映射并过滤持仓数据
     const positions = positionsInfo
@@ -394,6 +447,14 @@ export class DataManager {
 
     // 获取持仓中所有唯一的 symbol
     const symbols = Array.from(new Set(positions.map((p: Position) => p.symbol)))
+
+    // 已平仓交易对不再保留 K 线缓存，避免长时间运行时缓存无界增长。
+    const activeSymbols = new Set(symbols)
+    for (const cachedSymbol of this.klinesCache.keys()) {
+      if (!activeSymbols.has(cachedSymbol)) {
+        this.klinesCache.delete(cachedSymbol)
+      }
+    }
 
     // 获取历史订单（每个 symbol 查询最近 50 条，用于后续合并）
     const allTrades: (BinanceUserTrade & { symbol: string })[] = []
@@ -444,6 +505,45 @@ export class DataManager {
   }
 
   /**
+   * 获取 UTC 当日已实现盈亏。
+   */
+  private async getTodayRealizedPnl(client: BinanceRestClient): Promise<number> {
+    const now = new Date()
+    const todayStartTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    const date = new Date(todayStartTime).toISOString().slice(0, 10)
+    const cached = this.realizedPnlCache
+
+    if (
+      cached &&
+      cached.date === date &&
+      Date.now() - cached.updatedAt < this.realizedPnlCacheTTL
+    ) {
+      return cached.value
+    }
+
+    try {
+      const incomes = await client.getIncomeHistory({
+        incomeType: 'REALIZED_PNL',
+        startTime: todayStartTime,
+        endTime: Date.now(),
+        limit: 1000,
+      })
+      const value = incomes.reduce((total, income) => total + parseFloat(income.income || '0'), 0)
+
+      this.realizedPnlCache = {
+        date,
+        value,
+        updatedAt: Date.now(),
+      }
+
+      return value
+    } catch (error) {
+      this.log(`[DataManager] Failed to fetch realized PnL: ${error}`)
+      return cached?.date === date ? cached.value : 0
+    }
+  }
+
+  /**
    * 获取持仓交易对的K线数据
    */
   private async fetchKlinesForPositions(
@@ -470,7 +570,15 @@ export class DataManager {
 
         // 直接调用币安API获取K线数据（返回数组格式）
         const response = await fetch(
-          `${config.binance.restApi}/fapi/v1/klines?symbol=${symbol}&interval=${this.defaultKlinesInterval}&limit=${this.defaultKlinesLimit}`
+          `${config.binance.restApi}/fapi/v1/klines?${new URLSearchParams({
+            symbol,
+            interval: this.defaultKlinesInterval,
+            limit: this.defaultKlinesLimit.toString(),
+          })}`,
+          {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(10000),
+          }
         )
 
         if (!response.ok) {
@@ -594,9 +702,9 @@ export class DataManager {
     let successCount = 0
     let failCount = 0
 
-    this.subscribers.forEach(callback => {
+    this.subscribers.forEach(subscriber => {
       try {
-        callback(data)
+        subscriber.onData(data)
         successCount++
       } catch (error) {
         failCount++
@@ -612,17 +720,14 @@ export class DataManager {
   /**
    * 广播错误给所有订阅者
    */
-  private broadcastError(): void {
-    // 使用缓存数据广播，标记为错误状态
-    if (this.data) {
-      this.subscribers.forEach(callback => {
-        try {
-          callback({ ...this.data!, timestamp: Date.now() })
-        } catch (err) {
-          this.log(`[DataManager] Error callback failed: ${err}`)
-        }
-      })
-    }
+  private broadcastError(message: string): void {
+    this.subscribers.forEach(subscriber => {
+      try {
+        subscriber.onError?.(message)
+      } catch (error) {
+        this.log(`[DataManager] Error callback failed: ${error}`)
+      }
+    })
   }
 
   /**
@@ -664,8 +769,9 @@ export class DataManager {
   /**
    * 日志输出
    */
-  private log(_message: string): void {
+  private log(message: string): void {
     if (this.config.enableLog) {
+      console.debug(message)
     }
   }
 }

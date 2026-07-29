@@ -26,7 +26,9 @@ interface DashboardData {
 interface UseDashboardDataOptions {
   /** 自动刷新间隔（毫秒），默认 10000ms */
   refreshInterval?: number
-  /** 订单查询时间范围（毫秒），默认 1 小时 */
+  /**
+   * @deprecated 看板已统一使用 SSE/DataManager 的订单口径，此参数不再影响请求结果。
+   */
   orderTimeRange?: number
   /** 是否自动获取数据 */
   autoFetch?: boolean
@@ -62,7 +64,7 @@ interface UseDashboardDataReturn {
  * @returns 看板数据和操作方法
  */
 export function useDashboardData(options: UseDashboardDataOptions = {}): UseDashboardDataReturn {
-  const { refreshInterval = 10000, orderTimeRange = 60 * 60 * 1000, autoFetch = true } = options
+  const { refreshInterval = 10000, autoFetch = true } = options
 
   const [data, setData] = useState<DashboardData>({
     account: null,
@@ -108,9 +110,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       }
       setError(null)
 
-      const response = await fetchWithAuth(
-        `/api/binance/dashboard?orderTimeRange=${orderTimeRange}`
-      )
+      const response = await fetchWithAuth('/api/binance/dashboard')
       const result = await response.json()
 
       // 检查是否在请求期间被取消
@@ -150,7 +150,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       }
       isRequestingRef.current = false
     }
-  }, [refreshInterval, orderTimeRange])
+  }, [refreshInterval])
 
   // 存储最新的 fetchData 函数
   const fetchDataRef = useRef(fetchData)
@@ -197,7 +197,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
         countdownRef.current = null
       }
     }
-  }, [autoFetch, refreshInterval, orderTimeRange]) // 直接依赖 orderTimeRange
+  }, [autoFetch, refreshInterval])
 
   return {
     account: data.account,

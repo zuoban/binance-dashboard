@@ -133,7 +133,7 @@ export function useBinanceKlines({
             return newData.slice(-limit)
           })
         }
-      } catch (err) {}
+      } catch {}
     },
     [limit]
   )
@@ -160,7 +160,7 @@ export function useBinanceKlines({
 
       ws.onmessage = handleWSMessage
 
-      ws.onerror = _event => {
+      ws.onerror = () => {
         setWsConnected(false)
 
         wsErrorCountRef.current += 1
@@ -206,7 +206,7 @@ export function useBinanceKlines({
           }, 5000)
         }
       }
-    } catch (err) {
+    } catch {
       wsErrorCountRef.current += 1
 
       if (wsErrorCountRef.current >= maxWsErrors) {

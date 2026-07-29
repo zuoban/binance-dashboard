@@ -139,7 +139,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
       ws.onerror = event => {
         onError?.(event)
       }
-    } catch (error) {
+    } catch {
       setDisconnected()
     }
   }, [

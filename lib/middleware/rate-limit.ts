@@ -22,6 +22,8 @@ interface RateLimitConfig {
   maxRequests: number
 }
 
+const MAX_RATE_LIMIT_ENTRIES = 10000
+
 /**
  * 内存存储（开发环境）
  * 注意：重启服务器会重置计数
@@ -31,8 +33,7 @@ const rateLimitStore = new Map<string, RateLimitStore>()
 /**
  * 清理过期的速率限制记录
  */
-function cleanupExpiredEntries() {
-  const now = Date.now()
+function cleanupExpiredEntries(now: number = Date.now()): void {
   for (const [key, value] of rateLimitStore.entries()) {
     if (now > value.resetTime) {
       rateLimitStore.delete(key)
@@ -40,19 +41,18 @@ function cleanupExpiredEntries() {
   }
 }
 
-// 每分钟清理一次过期记录
-if (typeof window === 'undefined') {
-  setInterval(cleanupExpiredEntries, 60 * 1000)
-}
-
 /**
  * 速率限制器类
  */
 export class RateLimiter {
-  private config: RateLimitConfig
+  constructor(
+    private readonly name: string,
+    private readonly config: RateLimitConfig
+  ) {}
 
-  constructor(config: RateLimitConfig) {
-    this.config = config
+  /** 获取限流器配置，用于响应头。 */
+  getConfig(): RateLimitConfig {
+    return this.config
   }
 
   /**
@@ -64,12 +64,27 @@ export class RateLimiter {
     resetTime: number
   } {
     const now = Date.now()
-    const record = rateLimitStore.get(identifier)
+    const storeKey = `${this.name}:${identifier}`
+
+    // 采用惰性清理，避免模块加载时创建永久定时器。
+    if (rateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES) {
+      cleanupExpiredEntries(now)
+    }
+
+    // 极端高基数流量下优先删除最旧记录，防止内存无界增长。
+    if (rateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES && !rateLimitStore.has(storeKey)) {
+      const oldestKey = rateLimitStore.keys().next().value
+      if (oldestKey) {
+        rateLimitStore.delete(oldestKey)
+      }
+    }
+
+    const record = rateLimitStore.get(storeKey)
 
     // 如果没有记录或记录已过期，创建新记录
     if (!record || now > record.resetTime) {
       const resetTime = now + this.config.windowMs
-      rateLimitStore.set(identifier, {
+      rateLimitStore.set(storeKey, {
         count: 1,
         resetTime,
       })
@@ -84,7 +99,7 @@ export class RateLimiter {
     // 如果未超过限制，增加计数
     if (record.count < this.config.maxRequests) {
       record.count += 1
-      rateLimitStore.set(identifier, record)
+      rateLimitStore.set(storeKey, record)
 
       return {
         allowed: true,
@@ -105,7 +120,7 @@ export class RateLimiter {
    * 重置指定标识符的速率限制
    */
   reset(identifier: string): void {
-    rateLimitStore.delete(identifier)
+    rateLimitStore.delete(`${this.name}:${identifier}`)
   }
 
   /**
@@ -121,19 +136,19 @@ export class RateLimiter {
  */
 
 // 通用 API 速率限制：每分钟 60 次
-export const generalRateLimit = new RateLimiter({
+export const generalRateLimit = new RateLimiter('general', {
   windowMs: 60 * 1000,
   maxRequests: 60,
 })
 
 // 严格速率限制：每分钟 10 次
-export const strictRateLimit = new RateLimiter({
+export const strictRateLimit = new RateLimiter('strict', {
   windowMs: 60 * 1000,
   maxRequests: 10,
 })
 
 // 宽松速率限制：每分钟 120 次
-export const looseRateLimit = new RateLimiter({
+export const looseRateLimit = new RateLimiter('loose', {
   windowMs: 60 * 1000,
   maxRequests: 120,
 })
@@ -185,7 +200,7 @@ export async function checkRateLimit(
         status: 429,
         headers: {
           'Content-Type': 'application/json',
-          'X-RateLimit-Limit': limiter['config'].maxRequests.toString(),
+          'X-RateLimit-Limit': limiter.getConfig().maxRequests.toString(),
           'X-RateLimit-Remaining': result.remaining.toString(),
           'X-RateLimit-Reset': new Date(result.resetTime).toISOString(),
           'Retry-After': Math.ceil((result.resetTime - Date.now()) / 1000).toString(),

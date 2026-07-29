@@ -174,10 +174,7 @@ export class BinanceRestClient {
     }
 
     if (signed) {
-      const url = this.buildSignedUrl(endpoint, params || {})
-      const baseUrl = 'https://fapi.binance.com'
-      config.url = url.split(baseUrl)[1]
-      config.params = undefined
+      config.params = this.buildSignedParams(params || {})
     }
 
     return this.client.request(config)
@@ -197,10 +194,9 @@ export class BinanceRestClient {
       data,
     }
 
-    if (signed && data) {
-      const { queryString, signature } = BinanceSignature.buildSignedQuery(data, this.apiSecret)
+    if (signed) {
       config.data = undefined
-      config.params = { ...data, timestamp: queryString.split('=')[1], signature }
+      config.params = this.buildSignedParams(data || {})
     }
 
     return this.client.request(config)
@@ -214,7 +210,18 @@ export class BinanceRestClient {
     data?: Record<string, string | number | boolean | undefined>,
     signed: boolean = false
   ): Promise<T> {
-    return this.post<T>(endpoint, data, signed)
+    const config: AxiosRequestConfig = {
+      method: 'PUT',
+      url: endpoint,
+      data,
+    }
+
+    if (signed) {
+      config.data = undefined
+      config.params = this.buildSignedParams(data || {})
+    }
+
+    return this.client.request(config)
   }
 
   /**
@@ -225,18 +232,30 @@ export class BinanceRestClient {
     params?: Record<string, string | number | boolean | undefined>,
     signed: boolean = false
   ): Promise<T> {
-    return this.get<T>(endpoint, params, signed)
+    const config: AxiosRequestConfig = {
+      method: 'DELETE',
+      url: endpoint,
+      params,
+    }
+
+    if (signed) {
+      config.params = this.buildSignedParams(params || {})
+    }
+
+    return this.client.request(config)
   }
 
   /**
-   * 构建带签名的 URL
+   * 构建带签名的查询参数。
+   *
+   * 使用 Axios 的 baseURL 发送请求，避免在签名请求中意外绕过测试网或自定义端点。
    */
-  private buildSignedUrl(
-    endpoint: string,
+  private buildSignedParams(
     params: Record<string, string | number | boolean | undefined>
-  ): string {
-    const baseUrl = 'https://fapi.binance.com'
-    return BinanceSignature.signUrl(`${baseUrl}${endpoint}`, params, this.apiSecret)
+  ): URLSearchParams {
+    const { queryString, signature } = BinanceSignature.buildSignedQuery(params, this.apiSecret)
+
+    return new URLSearchParams(`${queryString}&signature=${signature}`)
   }
 
   // ==================== 具体业务方法 ====================

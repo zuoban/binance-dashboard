@@ -259,6 +259,7 @@ export function PositionCard({
 
       <div className="relative">
         <KlineChart
+          symbol={position.symbol}
           data={klineData}
           height={400}
           pricePrecision={pricePrecision}

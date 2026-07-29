@@ -122,6 +122,43 @@ export const userTradesQuerySchema = z.object({
  */
 export const listenKeyActionSchema = z.enum(['start', 'keepAlive', 'stop'])
 
+/** Listen Key 管理请求体 Schema */
+export const listenKeyRequestSchema = z.object({
+  action: z.enum(['start', 'refresh', 'close']).optional(),
+  listenKey: z.string().min(1, 'Listen key is required').optional(),
+})
+
+/** 公开交易所数据查询参数 Schema */
+export const exchangeQuerySchema = z.object({
+  type: z.enum(['info', 'ticker', 'klines']).optional().default('info'),
+  symbol: symbolSchema.optional(),
+  interval: z
+    .enum([
+      '1m',
+      '3m',
+      '5m',
+      '15m',
+      '30m',
+      '1h',
+      '2h',
+      '4h',
+      '6h',
+      '8h',
+      '12h',
+      '1d',
+      '3d',
+      '1w',
+      '1M',
+    ])
+    .optional()
+    .default('1h'),
+  limit: z
+    .string()
+    .optional()
+    .transform(val => (val ? parseInt(val, 10) : undefined))
+    .pipe(z.number().int().min(1).max(1500).optional()),
+})
+
 /**
  * 验证 URL 查询参数
  */

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { memo, useMemo, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import type { KlineData, Order } from '@/types/binance'
 
@@ -20,6 +20,8 @@ function useIsMobile() {
 }
 
 interface KlineChartProps {
+  /** 当前 K 线所属交易对 */
+  symbol: string
   data: KlineData[]
   height?: number
   className?: string
@@ -28,7 +30,8 @@ interface KlineChartProps {
   visibleCount?: number
 }
 
-export function KlineChart({
+function KlineChartComponent({
+  symbol,
   data,
   height = 150,
   className = '',
@@ -84,7 +87,8 @@ export function KlineChart({
     const lastCloseFormatted = formatPrice(lastClose)
 
     const activeOrders = openOrders.filter(
-      order => order.status === 'NEW' || order.status === 'PARTIALLY_FILLED'
+      order =>
+        order.symbol === symbol && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
     )
 
     const ordersWithDistance = activeOrders.map(order => ({
@@ -392,7 +396,7 @@ export function KlineChart({
         ],
       },
     }
-  }, [displayData, height, pricePrecision, openOrders, isMobile])
+  }, [displayData, symbol, height, pricePrecision, openOrders, isMobile])
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (displayData.length === 0) {
@@ -418,3 +422,40 @@ export function KlineChart({
     </div>
   )
 }
+
+/**
+ * 比较会影响 K 线标注的当前交易对挂单，避免其他看板数据刷新时重复更新 ApexCharts。
+ */
+function areRelevantOrdersEqual(
+  previousOrders: Order[],
+  nextOrders: Order[],
+  symbol: string
+): boolean {
+  const previous = previousOrders.filter(order => order.symbol === symbol)
+  const next = nextOrders.filter(order => order.symbol === symbol)
+
+  if (previous.length !== next.length) {
+    return false
+  }
+
+  return previous.every((order, index) => {
+    const nextOrder = next[index]
+    return (
+      order.orderId === nextOrder?.orderId &&
+      order.price === nextOrder.price &&
+      order.status === nextOrder.status &&
+      order.side === nextOrder.side
+    )
+  })
+}
+
+export const KlineChart = memo(KlineChartComponent, (previous, next) => {
+  return (
+    previous.symbol === next.symbol &&
+    previous.data === next.data &&
+    previous.height === next.height &&
+    previous.className === next.className &&
+    previous.pricePrecision === next.pricePrecision &&
+    areRelevantOrdersEqual(previous.openOrders || [], next.openOrders || [], previous.symbol)
+  )
+})

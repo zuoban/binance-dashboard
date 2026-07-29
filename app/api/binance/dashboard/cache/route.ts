@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { clearCache, clearCacheByTimeRange } from '../route'
 import { getErrorMessage } from '@/lib/utils/error-handler'
+import { checkRateLimit, strictRateLimit } from '@/lib/middleware/rate-limit'
 
 /**
  * DELETE /api/binance/dashboard/cache
@@ -14,12 +15,26 @@ import { getErrorMessage } from '@/lib/utils/error-handler'
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const rateLimitResult = await checkRateLimit(request, strictRateLimit)
+    if (!rateLimitResult.allowed) {
+      return rateLimitResult.error!
+    }
+
     const searchParams = request.nextUrl.searchParams
     const orderTimeRange = searchParams.get('orderTimeRange')
 
     if (orderTimeRange) {
       // 清除指定时间范围的缓存
       const range = parseInt(orderTimeRange, 10)
+      if (!Number.isSafeInteger(range) || range <= 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: { message: 'Invalid orderTimeRange' },
+          },
+          { status: 400 }
+        )
+      }
       clearCacheByTimeRange(range)
     } else {
       // 清除所有缓存

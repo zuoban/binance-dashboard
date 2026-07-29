@@ -6,33 +6,49 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredAccessCode } from '@/lib/utils/fetch-with-auth'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-
-/* eslint-disable react-hooks/set-state-in-effect */
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
-  const accessCode = getStoredAccessCode()
+  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>(
+    'checking'
+  )
 
   useEffect(() => {
-    setMounted(true)
+    let active = true
+
+    const verifySession = async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          cache: 'no-store',
+          credentials: 'same-origin',
+        })
+        const result = (await response.json()) as { success?: boolean }
+
+        if (active) {
+          setAuthState(result.success ? 'authenticated' : 'unauthenticated')
+        }
+      } catch {
+        if (active) {
+          setAuthState('unauthenticated')
+        }
+      }
+    }
+
+    void verifySession()
+
+    return () => {
+      active = false
+    }
   }, [])
 
   useEffect(() => {
-    if (mounted && !accessCode) {
-      router.push('/login')
+    if (authState === 'unauthenticated') {
+      router.replace('/login?redirect=/dashboard')
     }
-  }, [accessCode, router, mounted])
+  }, [authState, router])
 
-  // 未挂载时不渲染任何内容，避免 Hydration 不匹配
-  if (!mounted) {
-    return <></>
-  }
-
-  // 未登录时显示加载状态并准备重定向
-  if (!accessCode) {
+  if (authState !== 'authenticated') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
         <LoadingSpinner size="lg" />

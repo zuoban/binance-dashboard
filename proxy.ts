@@ -6,11 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authConfig } from '@/lib/config'
+import { AUTH_COOKIE_NAME, validateAuthSession } from '@/lib/middleware/auth'
 
 // 不需要认证的 API 路径
 const PUBLIC_API_PATHS = ['/api/auth/verify']
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 开发模式且未配置访问码时，跳过认证
@@ -28,13 +29,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 验证访问码
-  // 支持两种方式：请求头（fetch API）和查询参数（EventSource）
-  const codeFromHeader = request.headers.get('x-access-code')
-  const codeFromQuery = request.nextUrl.searchParams.get('code')
-  const accessCode = codeFromHeader || codeFromQuery
+  // 仅接受 HttpOnly 会话 Cookie，避免将访问码暴露给 JavaScript、URL 和日志。
+  const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value
 
-  if (!accessCode || accessCode !== authConfig.accessCode) {
+  if (!(await validateAuthSession(sessionToken))) {
     return new NextResponse(
       JSON.stringify({
         success: false,

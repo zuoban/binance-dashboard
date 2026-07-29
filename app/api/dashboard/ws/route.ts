@@ -12,23 +12,17 @@
 import { NextRequest } from 'next/server'
 import { getConnectionManager } from '@/lib/services/connection-manager'
 import { getDataManager } from '@/lib/services/data-manager'
-import { authConfig } from '@/lib/config'
+import { AUTH_COOKIE_NAME, validateAuthSession } from '@/lib/middleware/auth'
 
 /**
  * GET /api/dashboard/ws
  * SSE (Server-Sent Events) 流
  */
 export async function GET(request: NextRequest) {
-  // 从查询参数获取访问码（EventSource 不支持自定义请求头）
-  const { searchParams } = new URL(request.url)
-  const codeFromQuery = searchParams.get('code')
-  const codeFromHeader = request.headers.get('x-access-code')
+  const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value
 
-  // 优先使用请求头中的访问码，其次使用查询参数
-  const accessCode = codeFromHeader || codeFromQuery
-
-  // 验证访问码
-  if (authConfig.accessCode && accessCode !== authConfig.accessCode) {
+  // Proxy 已保护 API 路由；这里再次检查，避免部署配置变更时暴露实时流。
+  if (!(await validateAuthSession(sessionToken))) {
     return new Response(
       JSON.stringify({
         success: false,

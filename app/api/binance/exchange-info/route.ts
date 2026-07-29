@@ -4,9 +4,10 @@
  * 获取交易对的精度、交易规则等信息
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerConfig } from '@/lib/config'
 import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
+import { checkRateLimit } from '@/lib/middleware/rate-limit'
 
 /**
  * 交易规则缓存
@@ -19,8 +20,13 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
  * GET /api/binance/exchange-info
  * 获取交易规则和精度信息
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const rateLimitResult = await checkRateLimit(request)
+    if (!rateLimitResult.allowed) {
+      return rateLimitResult.error!
+    }
+
     // 检查缓存
     const now = Date.now()
     if (exchangeInfoCache && now - cacheTime < CACHE_DURATION) {

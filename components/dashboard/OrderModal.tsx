@@ -121,11 +121,6 @@ function formatPrice(
 export function OrderModal({ order, children }: OrderModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { exchangeInfo } = useExchangeInfo()
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   // 监听 ESC 关闭
   useEffect(() => {
@@ -162,7 +157,6 @@ export function OrderModal({ order, children }: OrderModalProps) {
       </div>
 
       {isOpen &&
-        isClient &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
             {/* 背景遮罩 */}

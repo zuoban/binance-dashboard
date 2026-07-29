@@ -113,11 +113,15 @@ function main() {
   // 检查 Node.js 版本
   info('Checking Node.js version...')
   const nodeVersion = process.version
-  const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0])
-  if (majorVersion >= 18) {
+  const [majorVersion, minorVersion] = nodeVersion
+    .slice(1)
+    .split('.')
+    .map(versionPart => parseInt(versionPart, 10))
+  const isSupportedNodeVersion = majorVersion > 20 || (majorVersion === 20 && minorVersion >= 9)
+  if (isSupportedNodeVersion) {
     success(`Node.js version: ${nodeVersion}`)
   } else {
-    error(`Node.js version ${nodeVersion} is too old (require >= 18.17.0)`)
+    error(`Node.js version ${nodeVersion} is too old (require >= 20.9.0)`)
     hasError = true
   }
 

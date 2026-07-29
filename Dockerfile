@@ -5,8 +5,8 @@
 # ============================================
 FROM docker.m.daocloud.io/library/node:20-alpine AS deps
 
-# 安装 pnpm（仅此阶段需要）
-RUN corepack enable pnpm && corepack prepare pnpm@9 --activate
+# 安装与 packageManager 和 lockfile 对应的 pnpm 版本
+RUN corepack enable pnpm && corepack prepare pnpm@9.15.9 --activate
 
 WORKDIR /app
 

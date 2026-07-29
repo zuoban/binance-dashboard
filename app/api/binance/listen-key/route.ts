@@ -8,19 +8,67 @@ import { NextRequest, NextResponse } from 'next/server'
 import { BinanceRestClient } from '@/lib/binance/rest-client'
 import { getServerConfig } from '@/lib/config'
 import { isBinanceErrorResponse, getBinanceErrorMessage } from '@/lib/utils/error-handler'
+import { strictRateLimit, checkRateLimit } from '@/lib/middleware/rate-limit'
+import { listenKeyRequestSchema } from '@/lib/validations/api'
 
-/**
- * POST /api/binance/listen-key
- * 获取或刷新 Listen Key
- */
-export async function POST(request: NextRequest) {
+type ListenKeyAction = 'start' | 'refresh' | 'close'
+
+async function manageListenKey(request: NextRequest, forcedAction?: ListenKeyAction) {
+  const rateLimitResult = await checkRateLimit(request, strictRateLimit)
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.error!
+  }
+
+  let payload: unknown = {}
   try {
-    const body = await request.json()
-    const { listenKey, action } = body
+    const body = await request.text()
+    payload = body ? JSON.parse(body) : {}
+  } catch {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: -1,
+          message: 'Invalid JSON request body',
+        },
+      },
+      { status: 400 }
+    )
+  }
+  const validation = listenKeyRequestSchema.safeParse(payload)
 
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: -1,
+          message: validation.error.issues[0]?.message || 'Invalid request body',
+        },
+      },
+      { status: 400 }
+    )
+  }
+
+  const action = forcedAction || validation.data.action || 'start'
+  const { listenKey } = validation.data
+
+  if (action !== 'start' && !listenKey) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: -1,
+          message: 'Missing listen key',
+        },
+      },
+      { status: 400 }
+    )
+  }
+
+  try {
     const config = getServerConfig()
 
-    // 验证 API 配置
     if (!config.binance.apiKey || !config.binance.apiSecret) {
       return NextResponse.json(
         {
@@ -40,20 +88,19 @@ export async function POST(request: NextRequest) {
       baseUrl: config.binance.restApi,
     })
 
-    let result
-
-    if (action === 'refresh' || listenKey) {
-      result = await client.keepAliveListenKey(listenKey)
-    } else if (action === 'close' || listenKey) {
-      result = await client.closeListenKey(listenKey)
-    } else {
-      result = await client.getListenKey()
+    switch (action) {
+      case 'refresh':
+        await client.keepAliveListenKey(listenKey!)
+        return NextResponse.json({ success: true, data: { message: 'Listen key refreshed' } })
+      case 'close':
+        await client.closeListenKey(listenKey!)
+        return NextResponse.json({ success: true, data: { message: 'Listen key closed' } })
+      default:
+        return NextResponse.json({
+          success: true,
+          data: await client.getListenKey(),
+        })
     }
-
-    return NextResponse.json({
-      success: true,
-      data: result,
-    })
   } catch (error: unknown) {
     const errorCode = isBinanceErrorResponse(error) ? error.code : -1
     const errorMessage = getBinanceErrorMessage(error)
@@ -72,11 +119,19 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * POST /api/binance/listen-key
+ * 获取或刷新 Listen Key
+ */
+export async function POST(request: NextRequest) {
+  return manageListenKey(request)
+}
+
+/**
  * PUT /api/binance/listen-key
  * 刷新 Listen Key
  */
 export async function PUT(request: NextRequest) {
-  return POST(request)
+  return manageListenKey(request, 'refresh')
 }
 
 /**
@@ -84,68 +139,5 @@ export async function PUT(request: NextRequest) {
  * 关闭 Listen Key
  */
 export async function DELETE(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { listenKey } = body
-
-    if (!listenKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: -1,
-            message: 'Missing listen key',
-          },
-        },
-        { status: 400 }
-      )
-    }
-
-    // 获取服务端配置
-    const config = getServerConfig()
-
-    // 验证 API 配置
-    if (!config.binance.apiKey || !config.binance.apiSecret) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: -1,
-            message: 'Binance API credentials not configured',
-          },
-        },
-        { status: 500 }
-      )
-    }
-
-    // 创建 REST 客户端
-    const client = new BinanceRestClient({
-      apiKey: config.binance.apiKey,
-      apiSecret: config.binance.apiSecret,
-      baseUrl: config.binance.restApi,
-    })
-
-    // 关闭 Listen Key
-    await client.closeListenKey(listenKey)
-
-    // 返回结果
-    return NextResponse.json({
-      success: true,
-      data: { message: 'Listen key closed successfully' },
-    })
-  } catch (error: unknown) {
-    const errorCode = isBinanceErrorResponse(error) ? error.code : -1
-    const errorMessage = getBinanceErrorMessage(error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: errorCode,
-          message: errorMessage || 'Failed to close listen key',
-        },
-      },
-      { status: errorCode === -1021 ? 401 : 500 }
-    )
-  }
+  return manageListenKey(request, 'close')
 }

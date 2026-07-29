@@ -6,6 +6,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import type { MouseHandlerDataParam } from 'recharts'
 import {
   LineChart,
   Line,
@@ -125,11 +126,6 @@ function PriceModal({
  */
 export function PriceChart({ symbol, data, type = 'line', className = '' }: PriceChartProps) {
   const [selectedPoint, setSelectedPoint] = useState<PriceDataPoint | null>(null)
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   // 格式化数据
   const chartData = useMemo(() => {
@@ -164,9 +160,12 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
     return { value, percentage }
   }, [chartData])
 
-  const handleChartClick = (data: any) => {
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      setSelectedPoint(data.activePayload[0].payload)
+  const handleChartClick = ({ activeTooltipIndex }: MouseHandlerDataParam) => {
+    if (typeof activeTooltipIndex === 'number') {
+      const point = chartData[activeTooltipIndex]
+      if (point) {
+        setSelectedPoint(point)
+      }
     }
   }
 
@@ -270,7 +269,7 @@ export function PriceChart({ symbol, data, type = 'line', className = '' }: Pric
       </ResponsiveContainer>
 
       {/* 模态框 */}
-      {selectedPoint && isClient && (
+      {selectedPoint && (
         <PriceModal point={selectedPoint} symbol={symbol} onClose={() => setSelectedPoint(null)} />
       )}
     </div>

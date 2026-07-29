@@ -63,11 +63,15 @@ export class BinanceSignature {
       timestamp: this.getTimestamp(),
     }
 
-    // 构建查询字符串（按参数名排序）
-    const queryString = Object.keys(paramsWithTimestamp)
+    // 构建经过 URL 编码的查询字符串（按参数名排序）。
+    // 签名内容必须与实际发送的查询参数完全一致，不能在签名后再由 HTTP 客户端改写。
+    const searchParams = new URLSearchParams()
+    Object.keys(paramsWithTimestamp)
       .sort()
-      .map(key => `${key}=${paramsWithTimestamp[key]}`)
-      .join('&')
+      .forEach(key => {
+        searchParams.set(key, paramsWithTimestamp[key])
+      })
+    const queryString = searchParams.toString()
 
     // 生成签名
     const signature = this.generateSignature(queryString, secretKey)

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/middleware/rate-limit'
 import { getErrorMessage } from '@/lib/utils/error-handler'
+import { binanceConfig } from '@/lib/config'
 
 interface BinanceTicker {
   symbol: string
@@ -43,7 +44,41 @@ export async function GET(request: NextRequest) {
     }
 
     // 解析资产列表
-    const assetList = symbols.split(',')
+    const assetList = Array.from(
+      new Set(
+        symbols
+          .split(',')
+          .map(asset => asset.trim().toUpperCase())
+          .filter(Boolean)
+      )
+    )
+
+    if (
+      assetList.length === 0 ||
+      assetList.length > 20 ||
+      assetList.some(asset => !/^[A-Z0-9]{1,20}$/.test(asset))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: -1,
+            message: 'Invalid symbols parameter',
+          },
+        },
+        { status: 400 }
+      )
+    }
+
+    // 构建价格映射
+    const prices: Record<string, number> = {}
+
+    // USDT 和 USDC 对 USD 的价格固定为 1
+    assetList.forEach(asset => {
+      if (asset === 'USDT' || asset === 'USDC') {
+        prices[asset] = 1
+      }
+    })
 
     // 构建交易对列表（转换为对 USD 或 USDT）
     const tickers = assetList
@@ -53,31 +88,23 @@ export async function GET(request: NextRequest) {
         }
         return `${asset}USDT`
       })
-      .filter(Boolean)
+      .filter((ticker): ticker is string => ticker !== null)
 
-    // 调用币安 API 获取 24 小时价格变动
-    const response = await fetch(
-      `https://fapi.binance.com/fapi/v1/ticker/24hr?${tickers.map(t => `symbols=${encodeURIComponent(JSON.stringify([t]))}`).join('&')}`,
-      {
-        next: { revalidate: 5 }, // 缓存 5 秒
-      }
-    )
+    if (tickers.length === 0) {
+      return NextResponse.json({ success: true, data: prices })
+    }
+
+    // Binance 的批量行情接口只接受一个 JSON 数组参数，而非重复的 symbols 参数。
+    const query = new URLSearchParams({ symbols: JSON.stringify(tickers) })
+    const response = await fetch(`${binanceConfig.restApi}/fapi/v1/ticker/24hr?${query}`, {
+      next: { revalidate: 5 },
+    })
 
     if (!response.ok) {
       throw new Error('Failed to fetch prices from Binance')
     }
 
     const tickerData = await response.json()
-
-    // 构建价格映射
-    const prices: Record<string, number> = {}
-
-    // USDT 和 USDC 的价格是 1
-    assetList.forEach(asset => {
-      if (asset === 'USDT' || asset === 'USDC') {
-        prices[asset] = 1
-      }
-    })
 
     // 解析 ticker 数据
     if (Array.isArray(tickerData)) {
