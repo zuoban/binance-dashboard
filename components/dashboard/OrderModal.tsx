@@ -5,14 +5,16 @@
 'use client'
 
 import { Order, OrderStatus } from '@/types/binance'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useExchangeInfo } from '@/lib/hooks'
-import { formatDistanceToNow } from '@/lib/utils/date'
+import type { ExchangeInfoData } from '@/lib/hooks/useExchangeInfo'
+import { formatDateTime, formatDistanceToNow } from '@/lib/utils/date'
 
 interface OrderModalProps {
   /** 订单数据 */
   order: Order
+  /** 交易对精度信息 */
+  exchangeInfo: ExchangeInfoData
   /** 触发元素 */
   children: React.ReactNode
 }
@@ -118,25 +120,30 @@ function formatPrice(
 /**
  * 订单详情模态框
  */
-export function OrderModal({ order, children }: OrderModalProps) {
+export function OrderModal({ order, exchangeInfo, children }: OrderModalProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { exchangeInfo } = useExchangeInfo()
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
-  // 监听 ESC 关闭
+  // 监听 ESC、锁定背景滚动，并将焦点放到关闭按钮。
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsOpen(false)
       }
     }
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      // 禁止背景滚动
-      document.body.style.overflow = 'hidden'
+
+    if (!isOpen) {
+      return
     }
+
+    const previousOverflow = document.body.style.overflow
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+    closeButtonRef.current?.focus()
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = previousOverflow
     }
   }, [isOpen])
 
@@ -166,19 +173,29 @@ export function OrderModal({ order, children }: OrderModalProps) {
             />
 
             {/* 模态框内容 */}
-            <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="order-dialog-title"
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-200"
+            >
               {/* 头部 */}
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-lg font-bold text-slate-900">{order.symbol}</h3>
+                    <h3 id="order-dialog-title" className="text-lg font-bold text-slate-900">
+                      {order.symbol}
+                    </h3>
                     <span className="text-xs text-slate-500 font-medium">
                       {formatDistanceToNow(order.time)}
                     </span>
                   </div>
                   <button
+                    ref={closeButtonRef}
+                    type="button"
                     onClick={() => setIsOpen(false)}
                     className="text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label="关闭订单详情"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -276,7 +293,7 @@ export function OrderModal({ order, children }: OrderModalProps) {
               <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
                 <div className="flex justify-between items-center text-[10px] text-slate-400">
                   <span>Order ID: {order.orderId}</span>
-                  <span>{new Date(order.time).toLocaleString()}</span>
+                  <span>{formatDateTime(order.time)}</span>
                 </div>
               </div>
             </div>

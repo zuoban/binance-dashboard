@@ -96,14 +96,22 @@ export function useDashboardWebSocket(
 
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const callbacksRef = useRef({ onDataUpdate, onError, onConnectionChange })
+
+  // 事件源只在 autoConnect 改变时重建；回调则始终使用最新引用，避免闭包过期。
+  useEffect(() => {
+    callbacksRef.current = { onDataUpdate, onError, onConnectionChange }
+  }, [onDataUpdate, onError, onConnectionChange])
 
   /**
    * 清理资源
    */
   const cleanup = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
-      eventSourceRef.current = null
+    const eventSource = eventSourceRef.current
+    eventSourceRef.current = null
+
+    if (eventSource) {
+      eventSource.close()
     }
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
@@ -115,7 +123,11 @@ export function useDashboardWebSocket(
    * 连接 SSE
    */
   const connect = useCallback(() => {
-    if (eventSourceRef.current?.readyState === EventSource.OPEN) {
+    const currentEventSource = eventSourceRef.current
+    if (
+      currentEventSource?.readyState === EventSource.OPEN ||
+      currentEventSource?.readyState === EventSource.CONNECTING
+    ) {
       return
     }
 
@@ -126,17 +138,26 @@ export function useDashboardWebSocket(
       // EventSource 会自动携带同源 HttpOnly 会话 Cookie。
       const eventSource = new EventSource('/api/dashboard/ws')
       eventSourceRef.current = eventSource
+      const isCurrentEventSource = () => eventSourceRef.current === eventSource
 
       // 连接成功（SSE 没有显式的 open 事件，第一次收到消息就是连接成功）
       eventSource.onopen = () => {
+        if (!isCurrentEventSource()) {
+          return
+        }
+
         setIsConnected(true)
         setIsConnecting(false)
         setError(null)
-        onConnectionChange?.(true)
+        callbacksRef.current.onConnectionChange?.(true)
       }
 
       // 接收数据消息
       eventSource.addEventListener('data', (event: MessageEvent) => {
+        if (!isCurrentEventSource()) {
+          return
+        }
+
         try {
           const rawData = event.data
 
@@ -151,17 +172,22 @@ export function useDashboardWebSocket(
             setLoading(false)
             setError(null)
             setLastUpdate(message.timestamp)
-            onDataUpdate?.(message.data)
+            callbacksRef.current.onDataUpdate?.(message.data)
           }
         } catch {
           const errorMessage = '无法解析服务端实时数据'
           setError(errorMessage)
-          onError?.(errorMessage)
+          setLoading(false)
+          callbacksRef.current.onError?.(errorMessage)
         }
       })
 
       // 接收服务端业务错误。该事件不代表 SSE 连接中断，因此不会触发原生 onerror。
       eventSource.addEventListener('dashboard-error', (event: MessageEvent) => {
+        if (!isCurrentEventSource()) {
+          return
+        }
+
         try {
           const message = JSON.parse(event.data) as { error?: unknown }
           const errorMessage =
@@ -169,37 +195,45 @@ export function useDashboardWebSocket(
 
           setError(errorMessage)
           setLoading(false)
-          onError?.(errorMessage)
+          callbacksRef.current.onError?.(errorMessage)
         } catch {
           const errorMessage = '无法解析服务端错误信息'
           setError(errorMessage)
           setLoading(false)
-          onError?.(errorMessage)
+          callbacksRef.current.onError?.(errorMessage)
         }
       })
 
       // 连接错误（EventSource 的原生 onerror 回调）
       eventSource.onerror = () => {
-        // 根据 readyState 提供更详细的错误信息
-        let errorMessage = 'Connection error'
+        if (!isCurrentEventSource()) {
+          return
+        }
+
+        // EventSource 会自动重连，因此在连接中展示明确的重试状态。
+        let errorMessage = '实时连接发生错误'
         if (eventSource.readyState === EventSource.CLOSED) {
-          errorMessage = 'Connection closed'
+          errorMessage = '实时连接已关闭'
         } else if (eventSource.readyState === EventSource.CONNECTING) {
-          errorMessage = 'Connection failed - unable to establish connection'
+          errorMessage = '实时连接中断，正在重试'
         }
 
         setError(errorMessage)
+        setLoading(false)
         setIsConnecting(false)
         setIsConnected(false)
-        onConnectionChange?.(false)
-        onError?.(errorMessage)
+        callbacksRef.current.onConnectionChange?.(false)
+        callbacksRef.current.onError?.(errorMessage)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connection failed')
+      const errorMessage = err instanceof Error ? err.message : '实时连接失败'
+      setError(errorMessage)
+      setLoading(false)
       setIsConnecting(false)
+      callbacksRef.current.onError?.(errorMessage)
       cleanup()
     }
-  }, [cleanup, onDataUpdate, onError, onConnectionChange])
+  }, [cleanup])
 
   /**
    * 断开连接
@@ -208,8 +242,8 @@ export function useDashboardWebSocket(
     cleanup()
     setIsConnected(false)
     setIsConnecting(false)
-    onConnectionChange?.(false)
-  }, [cleanup, onConnectionChange])
+    callbacksRef.current.onConnectionChange?.(false)
+  }, [cleanup])
 
   const reconnect = useCallback(() => {
     disconnect()
@@ -221,16 +255,19 @@ export function useDashboardWebSocket(
 
   // 自动连接
   useEffect(() => {
-    if (autoConnect) {
-      connect()
+    if (!autoConnect) {
+      cleanup()
+      return
     }
 
+    // 延后到本轮渲染提交后再建立连接，避免在 Effect 中同步更新状态。
+    const initialConnectionTimer = setTimeout(connect, 0)
+
     return () => {
+      clearTimeout(initialConnectionTimer)
       cleanup()
     }
-    // 只在 autoConnect 变化时重新执行，避免因为 connect/cleanup 函数引用变化导致重连
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoConnect])
+  }, [autoConnect, cleanup, connect])
 
   return {
     account: data.account,

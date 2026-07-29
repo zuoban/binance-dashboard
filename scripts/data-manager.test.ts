@@ -14,6 +14,11 @@ import type { DashboardData, DataManagerMetrics, UserTradesCacheItem } from '../
 interface DataManagerInternals {
   fetchWithRetry: () => Promise<DashboardData>
   broadcastError: (message: string) => void
+  mapWithConcurrency: <T, R>(
+    items: T[],
+    concurrency: number,
+    mapper: (item: T) => Promise<R>
+  ) => Promise<R[]>
   fetchTradesForSymbols: (
     client: Pick<BinanceRestClient, 'getUserTrades'>,
     symbols: string[]
@@ -137,4 +142,26 @@ test('成交记录请求会限制并发并复用短期缓存', async () => {
     internals.userTradesCache.clear()
     internals.metrics = originalMetrics
   }
+})
+
+test('受控并发映射限制 K 线等批量请求并保留结果顺序', async () => {
+  const manager = DataManager.getInstance()
+  const internals = manager as unknown as DataManagerInternals
+  let activeRequests = 0
+  let maxActiveRequests = 0
+
+  const results = await internals.mapWithConcurrency([1, 2, 3, 4, 5], 3, async item => {
+    activeRequests++
+    maxActiveRequests = Math.max(maxActiveRequests, activeRequests)
+
+    try {
+      await new Promise<void>(resolve => setTimeout(resolve, 5))
+      return item * 2
+    } finally {
+      activeRequests--
+    }
+  })
+
+  assert.equal(maxActiveRequests, 3)
+  assert.deepEqual(results, [2, 4, 6, 8, 10])
 })

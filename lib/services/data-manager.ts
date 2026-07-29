@@ -93,6 +93,9 @@ export class DataManager {
   /** 同时请求成交记录的最大交易对数量 */
   private readonly maxConcurrentUserTradesRequests = 3
 
+  /** 同时请求 K 线的最大交易对数量，避免多持仓时瞬时放大上游请求 */
+  private readonly maxConcurrentKlineRequests = 3
+
   /** 默认K线数量 */
   private readonly defaultKlinesLimit = 50
 
@@ -662,54 +665,56 @@ export class DataManager {
     const now = Date.now()
     const config = getServerConfig()
 
-    // 并发获取所有交易对的K线数据
-    const klinePromises = symbols.map(async symbol => {
-      try {
-        // 检查缓存
-        const cached = this.klinesCache.get(symbol)
-        if (cached && now - cached.updatedAt < this.klinesCacheTTL) {
-          return { symbol, klines: cached.data }
-        }
-
-        // 直接调用币安API获取K线数据（返回数组格式）
-        const response = await fetch(
-          `${config.binance.restApi}/fapi/v1/klines?${new URLSearchParams({
-            symbol,
-            interval: this.defaultKlinesInterval,
-            limit: this.defaultKlinesLimit.toString(),
-          })}`,
-          {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(10000),
+    // K 线接口在多持仓时也受控并发，避免首次加载产生突发请求。
+    const klineResults = await this.mapWithConcurrency(
+      symbols,
+      this.maxConcurrentKlineRequests,
+      async symbol => {
+        try {
+          // 检查缓存
+          const cached = this.klinesCache.get(symbol)
+          if (cached && now - cached.updatedAt < this.klinesCacheTTL) {
+            return { symbol, klines: cached.data }
           }
-        )
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          // 直接调用币安 API 获取 K 线数据（返回数组格式）
+          const response = await fetch(
+            `${config.binance.restApi}/fapi/v1/klines?${new URLSearchParams({
+              symbol,
+              interval: this.defaultKlinesInterval,
+              limit: this.defaultKlinesLimit.toString(),
+            })}`,
+            {
+              cache: 'no-store',
+              signal: AbortSignal.timeout(10000),
+            }
+          )
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          const rawKlines = await response.json()
+          const data = mapBinanceKlines(rawKlines)
+
+          // 更新缓存
+          this.klinesCache.set(symbol, {
+            data,
+            updatedAt: now,
+          })
+
+          return { symbol, klines: data }
+        } catch (error) {
+          this.log(`[DataManager] Failed to fetch klines for ${symbol}: ${error}`)
+          // 尝试使用缓存数据
+          const cached = this.klinesCache.get(symbol)
+          if (cached) {
+            return { symbol, klines: cached.data }
+          }
+          return { symbol, klines: [] }
         }
-
-        const rawKlines = await response.json()
-        const data = mapBinanceKlines(rawKlines)
-
-        // 更新缓存
-        this.klinesCache.set(symbol, {
-          data,
-          updatedAt: now,
-        })
-
-        return { symbol, klines: data }
-      } catch (error) {
-        this.log(`[DataManager] Failed to fetch klines for ${symbol}: ${error}`)
-        // 尝试使用缓存数据
-        const cached = this.klinesCache.get(symbol)
-        if (cached) {
-          return { symbol, klines: cached.data }
-        }
-        return { symbol, klines: [] }
       }
-    })
-
-    const klineResults = await Promise.all(klinePromises)
+    )
 
     klineResults.forEach(result => {
       klines[result.symbol] = result.klines

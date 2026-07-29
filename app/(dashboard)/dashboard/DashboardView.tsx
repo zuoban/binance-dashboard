@@ -6,8 +6,7 @@
 
 'use client'
 
-import { useDashboardWebSocket } from '@/lib/hooks'
-import { useIsMounted } from '@/lib/hooks'
+import { useDashboardWebSocket, useExchangeInfo, useIsMounted } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderModal } from '@/components/dashboard/OrderModal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -18,7 +17,8 @@ import { useEffect, useMemo, useState } from 'react'
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
     if (order.realizedPnl !== undefined) {
-      return total + parseFloat(order.realizedPnl)
+      const pnl = Number.parseFloat(order.realizedPnl)
+      return Number.isFinite(pnl) ? total + pnl : total
     }
     return total
   }, 0)
@@ -157,6 +157,7 @@ function StatsOverview({
   lastUpdate: number | null
   reconnect: () => void
 }) {
+  const { exchangeInfo } = useExchangeInfo()
   const { buyOrderCount, sellOrderCount } = useMemo(
     () =>
       orders.reduce(
@@ -314,63 +315,29 @@ function StatsOverview({
                   </span>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex gap-2 justify-end">
-                  {orders.slice(0, 5).map((order, index) => (
-                    <OrderModal key={index} order={order}>
+              <div className="grid grid-cols-5 gap-2">
+                {orders.slice(0, 20).map(order => {
+                  const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`
+
+                  return (
+                    <OrderModal
+                      key={`${order.orderId}-${order.time}`}
+                      order={order}
+                      exchangeInfo={exchangeInfo}
+                    >
                       <button
-                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
+                        type="button"
+                        aria-label={`查看订单详情：${orderLabel}`}
+                        className={`h-2.5 w-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
                           order.side === 'BUY'
                             ? 'bg-emerald-400 hover:ring-emerald-300'
                             : 'bg-red-400 hover:ring-red-300'
                         }`}
-                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
+                        title={orderLabel}
                       />
                     </OrderModal>
-                  ))}
-                </div>
-                <div className="flex gap-2 justify-end">
-                  {orders.slice(5, 10).map((order, index) => (
-                    <OrderModal key={index + 5} order={order}>
-                      <button
-                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
-                          order.side === 'BUY'
-                            ? 'bg-emerald-400 hover:ring-emerald-300'
-                            : 'bg-red-400 hover:ring-red-300'
-                        }`}
-                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-                      />
-                    </OrderModal>
-                  ))}
-                </div>
-                <div className="flex gap-2 justify-end">
-                  {orders.slice(10, 15).map((order, index) => (
-                    <OrderModal key={index + 10} order={order}>
-                      <button
-                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
-                          order.side === 'BUY'
-                            ? 'bg-emerald-400 hover:ring-emerald-300'
-                            : 'bg-red-400 hover:ring-red-300'
-                        }`}
-                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-                      />
-                    </OrderModal>
-                  ))}
-                </div>
-                <div className="flex gap-2 justify-end">
-                  {orders.slice(15, 20).map((order, index) => (
-                    <OrderModal key={index + 15} order={order}>
-                      <button
-                        className={`w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 ${
-                          order.side === 'BUY'
-                            ? 'bg-emerald-400 hover:ring-emerald-300'
-                            : 'bg-red-400 hover:ring-red-300'
-                        }`}
-                        title={`${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`}
-                      />
-                    </OrderModal>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -396,11 +363,7 @@ export function DashboardView() {
     isConnecting,
     lastUpdate,
     reconnect,
-  } = useDashboardWebSocket({
-    autoConnect: true,
-    onError: () => {},
-    onConnectionChange: () => {},
-  })
+  } = useDashboardWebSocket()
 
   if (!mounted) {
     return <></>
