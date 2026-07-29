@@ -1,7 +1,7 @@
 /**
  * Next.js 路由代理
  *
- * 保护 API 路由
+ * 保护 API 路由和看板页面
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,6 +11,9 @@ import { AUTH_COOKIE_NAME, validateAuthSession } from '@/lib/middleware/auth'
 // 不需要认证的 API 路径
 const PUBLIC_API_PATHS = ['/api/auth/verify']
 
+// 需要会话认证的页面路径
+const PROTECTED_PAGE_PATHS = ['/dashboard']
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -19,13 +22,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 只处理 API 路由
-  if (!pathname.startsWith('/api')) {
+  const isApiRequest = pathname.startsWith('/api')
+  const isProtectedPage = PROTECTED_PAGE_PATHS.some(
+    path => pathname === path || pathname.startsWith(`${path}/`)
+  )
+
+  if (!isApiRequest && !isProtectedPage) {
     return NextResponse.next()
   }
 
   // 公开 API 不需要认证
-  if (PUBLIC_API_PATHS.some(path => pathname === path)) {
+  if (isApiRequest && PUBLIC_API_PATHS.some(path => pathname === path)) {
     return NextResponse.next()
   }
 
@@ -33,6 +40,12 @@ export async function proxy(request: NextRequest) {
   const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value
 
   if (!(await validateAuthSession(sessionToken))) {
+    if (isProtectedPage) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`)
+      return NextResponse.redirect(loginUrl)
+    }
+
     return new NextResponse(
       JSON.stringify({
         success: false,
@@ -52,5 +65,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/api/:path*', '/dashboard/:path*'],
 }
