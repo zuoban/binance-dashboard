@@ -3,7 +3,7 @@
 # ============================================
 # 依赖安装阶段（仅用于构建）
 # ============================================
-FROM docker.m.daocloud.io/library/node:20-alpine AS deps
+FROM node:20-alpine AS deps
 
 # 安装与 packageManager 和 lockfile 对应的 pnpm 版本
 RUN corepack enable pnpm && corepack prepare pnpm@9.15.9 --activate
@@ -38,7 +38,7 @@ RUN pnpm build
 # ============================================
 # 生产运行阶段（最小化镜像）
 # ============================================
-FROM docker.m.daocloud.io/library/node:20-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
