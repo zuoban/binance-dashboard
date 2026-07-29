@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo, useState, useEffect } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { KlineData, Order } from '@/types/binance'
 
@@ -40,7 +40,6 @@ function KlineChartComponent({
   visibleCount,
 }: KlineChartProps) {
   const isMobile = useIsMobile()
-
   const displayData = useMemo(() => {
     if (visibleCount && visibleCount > 0 && data.length > visibleCount) {
       return data.slice(-visibleCount)
@@ -48,6 +47,36 @@ function KlineChartComponent({
     return data
   }, [data, visibleCount])
 
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+  const [shouldRenderChart, setShouldRenderChart] = useState(
+    () => typeof window !== 'undefined' && !('IntersectionObserver' in window)
+  )
+
+  useEffect(() => {
+    const chartContainer = chartContainerRef.current
+
+    if (!chartContainer) {
+      return
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) {
+          setShouldRenderChart(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '300px' }
+    )
+
+    observer.observe(chartContainer)
+
+    return () => observer.disconnect()
+  }, [])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const options: any = useMemo(() => {
     if (displayData.length === 0) {
@@ -411,22 +440,56 @@ function KlineChartComponent({
   }
 
   return (
-    <div className={className} style={{ height }}>
-      <Chart
-        key={`${displayData[0]?.time}-${displayData[displayData.length - 1]?.time}`}
-        options={options}
-        series={options.series}
-        type="candlestick"
-        height={height}
-      />
+    <div ref={chartContainerRef} className={className} style={{ height }}>
+      {shouldRenderChart ? (
+        <Chart
+          key={`${displayData[0]?.time}-${displayData[displayData.length - 1]?.time}`}
+          options={options}
+          series={options.series}
+          type="candlestick"
+          height={height}
+        />
+      ) : (
+        <div
+          className="flex h-full items-center justify-center rounded-lg bg-slate-50"
+          aria-busy="true"
+        >
+          <span className="text-xs text-slate-400">图表加载中...</span>
+        </div>
+      )}
     </div>
   )
 }
 
 /**
+ * SSE 消息反序列化后会生成新的数组引用。逐项比较可避免未变化的 K 线反复触发图表更新。
+ */
+export function areKlineDataEqual(previousData: KlineData[], nextData: KlineData[]): boolean {
+  if (previousData === nextData) {
+    return true
+  }
+
+  if (previousData.length !== nextData.length) {
+    return false
+  }
+
+  return previousData.every((previousKline, index) => {
+    const nextKline = nextData[index]
+    return (
+      previousKline.time === nextKline?.time &&
+      previousKline.open === nextKline.open &&
+      previousKline.high === nextKline.high &&
+      previousKline.low === nextKline.low &&
+      previousKline.close === nextKline.close &&
+      previousKline.volume === nextKline.volume
+    )
+  })
+}
+
+/**
  * 比较会影响 K 线标注的当前交易对挂单，避免其他看板数据刷新时重复更新 ApexCharts。
  */
-function areRelevantOrdersEqual(
+export function areRelevantOrdersEqual(
   previousOrders: Order[],
   nextOrders: Order[],
   symbol: string
@@ -452,7 +515,7 @@ function areRelevantOrdersEqual(
 export const KlineChart = memo(KlineChartComponent, (previous, next) => {
   return (
     previous.symbol === next.symbol &&
-    previous.data === next.data &&
+    areKlineDataEqual(previous.data, next.data) &&
     previous.height === next.height &&
     previous.className === next.className &&
     previous.pricePrecision === next.pricePrecision &&

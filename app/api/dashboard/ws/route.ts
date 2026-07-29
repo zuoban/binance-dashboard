@@ -11,7 +11,6 @@
 
 import { NextRequest } from 'next/server'
 import { getConnectionManager } from '@/lib/services/connection-manager'
-import { getDataManager } from '@/lib/services/data-manager'
 import { AUTH_COOKIE_NAME, validateAuthSession } from '@/lib/middleware/auth'
 
 /**
@@ -45,8 +44,6 @@ export async function GET(request: NextRequest) {
     async start(controller) {
       // 获取管理器实例
       const connectionManager = getConnectionManager()
-      const dataManager = getDataManager()
-
       /**
        * 发送 SSE 事件
        */
@@ -56,21 +53,10 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        // 1. 立即发送当前最新数据（如果 DataManager 已有数据）
-        const currentData = dataManager.getCurrentData()
-        if (currentData) {
-          sendEvent({
-            type: 'data',
-            data: currentData,
-            timestamp: Date.now(),
-          })
-        }
-
-        // 2. 注册连接到 ConnectionManager
-        // 连接会自动接收后续的数据广播
+        // 注册连接到 ConnectionManager。subscribe 会立即发送缓存快照，避免重复推送。
         const cleanup = connectionManager.registerConnection(connectionId, controller, encoder)
 
-        // 3. 设置断开清理
+        // 设置断开清理
         request.signal.addEventListener('abort', () => {
           cleanup()
           controller.close()

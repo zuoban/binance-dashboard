@@ -40,16 +40,23 @@ function mapBinanceAsset(binanceAsset: BinanceAsset): Asset {
 export function mapBinanceAccount(
   data: BinanceAccountInfo | Partial<Record<string, unknown>>
 ): AccountAsset {
+  const assets = (data.assets as BinanceAsset[])?.map(mapBinanceAsset) || []
+  const assetsAvailableBalance = assets.reduce(
+    (total, asset) => total + Number.parseFloat(asset.availableBalance || '0'),
+    0
+  )
+
   // 币安 API 返回的字段名
   return {
     // 总钱包余额
     totalWalletBalance: (data.totalWalletBalance as string) || '0',
-    // 可用余额
-    availableBalance: (data.availableBalance as string) || '0',
+    // 可用余额。优先使用账户汇总字段；缺失时回退汇总资产余额。
+    availableBalance: (data.availableBalance as string) || assetsAvailableBalance.toString(),
     // 未实现盈亏 (币安API字段: totalUnrealizedProfit)
     unrealizedProfit: (data.totalUnrealizedProfit as string) || '0',
-    // 保证金余额
-    marginBalance: (data.marginBalance as string) || '0',
+    // 保证金余额：账户接口返回的是汇总字段 totalMarginBalance。
+    // 保留 marginBalance 作为兼容旧响应的降级值。
+    marginBalance: (data.totalMarginBalance as string) || (data.marginBalance as string) || '0',
     // 持仓保证金
     maintainMargin: (data.maintMargin as string) || '0',
     // 账户余额
@@ -87,10 +94,70 @@ export function mapBinanceAccount(
     // 总 cross 未实现盈亏
     totalCrossUnPnl: (data.totalCrossUnPnl as string) || '0',
     // 资产列表
-    assets: (data.assets as BinanceAsset[])?.map(mapBinanceAsset) || [],
+    assets,
     // 当前杠杆
     currentLeverage: (data.currentLeverage as string) || '1',
     // 保证金模式
     marginMode: (data.marginMode as string) || 'cross',
   }
+}
+
+/**
+ * 获取账户总保证金余额。
+ *
+ * 部分账户响应不会返回 totalMarginBalance，或会返回 0；此时使用钱包余额与未实现盈亏计算，
+ * 与币安总保证金余额的定义保持一致。
+ */
+export function calculateAccountMarginBalance(
+  account: Pick<AccountAsset, 'marginBalance' | 'totalWalletBalance' | 'unrealizedProfit'>
+): string {
+  const reportedMarginBalance = Number.parseFloat(account.marginBalance)
+
+  if (Number.isFinite(reportedMarginBalance) && reportedMarginBalance > 0) {
+    return account.marginBalance
+  }
+
+  const walletBalance = Number.parseFloat(account.totalWalletBalance)
+  const unrealizedProfit = Number.parseFloat(account.unrealizedProfit)
+
+  if (!Number.isFinite(walletBalance) || !Number.isFinite(unrealizedProfit)) {
+    return '0'
+  }
+
+  return (walletBalance + unrealizedProfit).toString()
+}
+
+/**
+ * 计算可用于开仓的保证金。
+ *
+ * 可用保证金 = 权益 - 持仓初始保证金 - 挂单初始保证金。部分账户接口的 availableBalance
+ * 未计入当前持仓，因此以账户汇总字段和持仓推导值中的较大者计算已用保证金。
+ */
+export function calculateAvailableMargin(
+  account: Pick<
+    AccountAsset,
+    | 'totalWalletBalance'
+    | 'unrealizedProfit'
+    | 'totalPositionInitialMargin'
+    | 'totalOpenOrderInitialMargin'
+  >,
+  derivedPositionInitialMargin: number = 0
+): string {
+  const walletBalance = Number.parseFloat(account.totalWalletBalance)
+  const unrealizedProfit = Number.parseFloat(account.unrealizedProfit)
+
+  if (!Number.isFinite(walletBalance) || !Number.isFinite(unrealizedProfit)) {
+    return '0'
+  }
+
+  const reportedPositionInitialMargin = Number.parseFloat(account.totalPositionInitialMargin)
+  const openOrderInitialMargin = Number.parseFloat(account.totalOpenOrderInitialMargin)
+  const positionInitialMargin = Math.max(
+    Number.isFinite(reportedPositionInitialMargin) ? reportedPositionInitialMargin : 0,
+    Number.isFinite(derivedPositionInitialMargin) ? derivedPositionInitialMargin : 0
+  )
+  const totalUsedMargin =
+    positionInitialMargin + (Number.isFinite(openOrderInitialMargin) ? openOrderInitialMargin : 0)
+
+  return Math.max(0, walletBalance + unrealizedProfit - totalUsedMargin).toString()
 }

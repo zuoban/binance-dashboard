@@ -13,7 +13,7 @@ import { OrderModal } from '@/components/dashboard/OrderModal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -89,9 +89,53 @@ function formatTimeDuration(ms: number): string {
   return `${seconds}秒`
 }
 
+function LastUpdateTime({ lastUpdate }: { lastUpdate: number | null }) {
+  const [lastUpdateText, setLastUpdateText] = useState(() =>
+    lastUpdate ? formatRecentOrderTime(lastUpdate) : ''
+  )
+
+  useEffect(() => {
+    const updateTime = () => {
+      setLastUpdateText(lastUpdate ? formatRecentOrderTime(lastUpdate) : '')
+    }
+
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+
+    return () => clearInterval(interval)
+  }, [lastUpdate])
+
+  if (!lastUpdateText) {
+    return null
+  }
+
+  return (
+    <>
+      <div className="w-px h-3 bg-slate-200" />
+      <div className="flex items-center gap-1.5">
+        <svg
+          className="w-3.5 h-3.5 text-slate-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span className="text-xs text-slate-500 font-medium">{lastUpdateText}</span>
+      </div>
+    </>
+  )
+}
+
 function StatsOverview({
   totalEquity,
-  marginBalance,
+  availableMargin,
+  availableMarginPercent,
   openOrdersStats,
   orders,
   totalPnl,
@@ -102,7 +146,8 @@ function StatsOverview({
   reconnect,
 }: {
   totalEquity: number
-  marginBalance: number
+  availableMargin: number
+  availableMarginPercent: number
   openOrdersStats: { total: number; buy: number; sell: number } | null
   orders: Order[]
   totalPnl: number
@@ -112,22 +157,21 @@ function StatsOverview({
   lastUpdate: number | null
   reconnect: () => void
 }) {
-  const [lastUpdateText, setLastUpdateText] = useState('')
-
-  useEffect(() => {
-    const updateTime = () => {
-      if (lastUpdate) {
-        setLastUpdateText(formatRecentOrderTime(lastUpdate))
-      } else {
-        setLastUpdateText('')
-      }
-    }
-
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-
-    return () => clearInterval(interval)
-  }, [lastUpdate])
+  const { buyOrderCount, sellOrderCount } = useMemo(
+    () =>
+      orders.reduce(
+        (counts, order) => {
+          if (order.side === 'BUY') {
+            counts.buyOrderCount++
+          } else {
+            counts.sellOrderCount++
+          }
+          return counts
+        },
+        { buyOrderCount: 0, sellOrderCount: 0 }
+      ),
+    [orders]
+  )
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -167,6 +211,12 @@ function StatsOverview({
             </p>
             <span className="text-sm font-medium text-slate-400">USDC</span>
           </div>
+          <div className="mb-2 flex items-center gap-2 text-xs">
+            <span className="font-medium text-slate-400">可用保证金</span>
+            <span className="font-semibold text-slate-700">${formatNumber(availableMargin)}</span>
+            <span className="text-slate-400">USDC</span>
+            <span className="text-slate-400">{formatNumber(availableMarginPercent, 1)}%</span>
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <div
@@ -182,19 +232,7 @@ function StatsOverview({
                 {totalEquity > 0 ? '正常交易' : '空仓状态'}
               </span>
             </div>
-            {lastUpdateText && (
-              <>
-                <div className="w-px h-3 bg-slate-200" />
-                <span className="text-xs text-slate-500 font-medium">{lastUpdateText}</span>
-              </>
-            )}
-            <div className="w-px h-3 bg-slate-200" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-400">保证金</span>
-              <span className="text-xs font-semibold text-slate-700">
-                ${formatNumber(marginBalance)}
-              </span>
-            </div>
+            <LastUpdateTime lastUpdate={lastUpdate} />
           </div>
         </div>
       </div>
@@ -247,16 +285,12 @@ function StatsOverview({
                 )}
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-400">买</span>
-                  <span className="text-xs font-bold text-emerald-600">
-                    {orders.filter(o => o.side === 'BUY').length}
-                  </span>
+                  <span className="text-xs font-bold text-emerald-600">{buyOrderCount}</span>
                 </div>
                 <div className="w-px h-3 bg-slate-200" />
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-400">卖</span>
-                  <span className="text-xs font-bold text-red-500">
-                    {orders.filter(o => o.side === 'SELL').length}
-                  </span>
+                  <span className="text-xs font-bold text-red-500">{sellOrderCount}</span>
                 </div>
               </div>
             </div>
@@ -375,8 +409,8 @@ export function DashboardView() {
   const totalEquity = account
     ? parseFloat(account.totalWalletBalance) + parseFloat(account.unrealizedProfit)
     : 0
-
-  const marginBalance = account ? parseFloat(account.marginBalance) : 0
+  const availableMargin = account ? parseFloat(account.availableBalance) || 0 : 0
+  const availableMarginPercent = totalEquity > 0 ? (availableMargin / totalEquity) * 100 : 0
 
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
   const hasNoData = !account && positions.length === 0
@@ -422,7 +456,8 @@ export function DashboardView() {
           )}
           <StatsOverview
             totalEquity={totalEquity}
-            marginBalance={marginBalance}
+            availableMargin={availableMargin}
+            availableMarginPercent={availableMarginPercent}
             openOrdersStats={openOrdersStats}
             orders={orders}
             totalPnl={totalPnl}

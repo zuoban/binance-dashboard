@@ -11,7 +11,11 @@
 import { BinanceRestClient } from '../binance/rest-client'
 import { getServerConfig } from '../config'
 import { mapBinancePosition } from '../utils/binance-mapper'
-import { mapBinanceAccount } from '../utils/account-mapper'
+import {
+  calculateAccountMarginBalance,
+  calculateAvailableMargin,
+  mapBinanceAccount,
+} from '../utils/account-mapper'
 import { mapBinanceKlines } from '../utils/kline-mapper'
 import type {
   DashboardData,
@@ -412,7 +416,6 @@ export class DataManager {
           }, 0) || 0
 
         account.totalWalletBalance = totalUsdBalance.toString()
-        account.availableBalance = totalUsdBalance.toString()
       } catch (error) {
         this.log(`[DataManager] Failed to fetch prices: ${error}`)
       }
@@ -427,7 +430,6 @@ export class DataManager {
           return total
         }, 0) || 0
       account.totalWalletBalance = totalUsdBalance.toString()
-      account.availableBalance = totalUsdBalance.toString()
     }
 
     // 计算总未实现盈亏
@@ -436,6 +438,7 @@ export class DataManager {
       0
     )
     account.unrealizedProfit = totalUnrealizedProfit.toString()
+    account.marginBalance = calculateAccountMarginBalance(account)
 
     // 直接汇总币安收益历史，避免进程重启或多实例时零点快照失真。
     const todayRealizedPnl = await this.getTodayRealizedPnl(client)
@@ -444,6 +447,10 @@ export class DataManager {
     const positions = positionsInfo
       .map((p: BinancePosition) => mapBinancePosition(p))
       .filter((p: Position) => parseFloat(p.positionAmount) !== 0)
+    account.availableBalance = calculateAvailableMargin(
+      account,
+      this.calculatePositionInitialMargin(positions)
+    )
 
     // 获取持仓中所有唯一的 symbol
     const symbols = Array.from(new Set(positions.map((p: Position) => p.symbol)))
@@ -541,6 +548,32 @@ export class DataManager {
       this.log(`[DataManager] Failed to fetch realized PnL: ${error}`)
       return cached?.date === date ? cached.value : 0
     }
+  }
+
+  /**
+   * 当账户汇总初始保证金缺失时，按持仓名义价值和杠杆推导已占用保证金。
+   */
+  private calculatePositionInitialMargin(positions: Position[]): number {
+    return positions.reduce((total, position) => {
+      const isolatedWallet = Number.parseFloat(position.isolatedWallet)
+
+      if (
+        position.marginType === 'isolated' &&
+        Number.isFinite(isolatedWallet) &&
+        isolatedWallet > 0
+      ) {
+        return total + isolatedWallet
+      }
+
+      const notional = Math.abs(Number.parseFloat(position.notional))
+      const leverage = Number.parseFloat(position.leverage)
+
+      if (!Number.isFinite(notional) || !Number.isFinite(leverage) || leverage <= 0) {
+        return total
+      }
+
+      return total + notional / leverage
+    }, 0)
   }
 
   /**

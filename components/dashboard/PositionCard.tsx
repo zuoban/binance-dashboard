@@ -6,8 +6,8 @@
 
 import { Position, Order, KlineData } from '@/types/binance'
 import { useExchangeInfo } from '@/lib/hooks'
-import { useEffect, useMemo, useState } from 'react'
-import { KlineChart } from './KlineChart'
+import { memo, useEffect, useMemo, useState } from 'react'
+import { areKlineDataEqual, areRelevantOrdersEqual, KlineChart } from './KlineChart'
 
 interface PositionCardProps {
   /** 持仓数据 */
@@ -69,7 +69,7 @@ function isLongPosition(position: Position): boolean {
   )
 }
 
-export function PositionCard({
+function PositionCardComponent({
   position,
   exchangeInfo,
   openOrders = [],
@@ -290,6 +290,36 @@ export function PositionCard({
     </div>
   )
 }
+
+/**
+ * SSE 每次推送都会创建新的对象。仅当当前仓位展示的数据、相关挂单或 K 线变化时重绘卡片。
+ */
+function arePositionCardPropsEqual(previous: PositionCardProps, next: PositionCardProps): boolean {
+  const previousPosition = previous.position
+  const nextPosition = next.position
+  const symbol = previousPosition.symbol
+
+  const isPositionEqual =
+    previousPosition.symbol === nextPosition.symbol &&
+    previousPosition.positionAmount === nextPosition.positionAmount &&
+    previousPosition.entryPrice === nextPosition.entryPrice &&
+    previousPosition.markPrice === nextPosition.markPrice &&
+    previousPosition.unrealizedProfit === nextPosition.unrealizedProfit &&
+    previousPosition.liquidationPrice === nextPosition.liquidationPrice &&
+    previousPosition.breakEvenPrice === nextPosition.breakEvenPrice &&
+    previousPosition.leverage === nextPosition.leverage &&
+    previousPosition.positionSide === nextPosition.positionSide
+
+  return (
+    isPositionEqual &&
+    previous.exchangeInfo === next.exchangeInfo &&
+    previous.className === next.className &&
+    areKlineDataEqual(previous.klines?.[symbol] || [], next.klines?.[symbol] || []) &&
+    areRelevantOrdersEqual(previous.openOrders || [], next.openOrders || [], symbol)
+  )
+}
+
+export const PositionCard = memo(PositionCardComponent, arePositionCardPropsEqual)
 
 export function PositionCards({
   positions,
