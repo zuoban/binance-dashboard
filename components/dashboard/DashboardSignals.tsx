@@ -7,12 +7,16 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { formatISO } from 'date-fns'
 import {
   DEFAULT_RISK_THRESHOLDS,
   isRiskThresholds,
   type RiskAlert,
   type RiskThresholds,
 } from '@/lib/utils/risk'
+import { useRiskHistory } from '@/lib/hooks'
+import { formatDateTime } from '@/lib/utils/date'
+import type { RiskHistoryEvent } from '@/lib/utils/risk-history'
 
 interface RiskMonitorProps {
   alerts: RiskAlert[]
@@ -206,6 +210,74 @@ function RiskThresholdSettings({
   )
 }
 
+function RiskHistoryTimeline({
+  history,
+  onClear,
+}: {
+  history: RiskHistoryEvent[]
+  onClear: () => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const visibleHistory = history.slice(0, 6)
+
+  return (
+    <div className="mt-3 border-t border-current/15 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold">风险历史</p>
+          <p className="text-[10px] font-medium opacity-70">本地保留最近 100 条事件</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {history.length > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-[10px] font-bold opacity-70 transition hover:opacity-100"
+            >
+              清空
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(current => !current)}
+            className="rounded-md border border-current/20 px-2 py-1 text-[10px] font-bold transition hover:bg-white/45"
+            aria-expanded={isOpen}
+          >
+            {isOpen ? '收起' : `查看${history.length > 0 ? `（${history.length}）` : ''}`}
+          </button>
+        </div>
+      </div>
+      {isOpen && (
+        <div className="mt-3 space-y-2 border-l border-current/20 pl-3">
+          {visibleHistory.length > 0 ? (
+            visibleHistory.map(event => (
+              <div key={event.id} className="relative">
+                <span
+                  className={`absolute -left-[1.05rem] top-1.5 h-1.5 w-1.5 rounded-full ${
+                    event.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
+                  }`}
+                />
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <p className="text-[11px] font-bold">{event.title}</p>
+                  <time
+                    className="text-[10px] font-medium opacity-65"
+                    dateTime={formatISO(event.occurredAt)}
+                  >
+                    {formatDateTime(event.occurredAt)}
+                  </time>
+                </div>
+                <p className="text-[10px] font-medium opacity-75">{event.description}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-[11px] font-medium opacity-70">暂未记录风险事件。</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** 风险监控条。无风险时保持低干扰状态，有风险时突出显示最高等级信号。 */
 export function RiskMonitor({
   alerts,
@@ -213,6 +285,7 @@ export function RiskMonitor({
   onSaveThresholds,
   onResetThresholds,
 }: RiskMonitorProps) {
+  const { history, clearHistory } = useRiskHistory(alerts)
   const visibleAlerts = alerts.slice(0, 3)
   const hasCriticalAlert = alerts.some(alert => alert.severity === 'critical')
   const severity = hasCriticalAlert ? 'critical' : alerts.length > 0 ? 'warning' : 'healthy'
@@ -278,6 +351,7 @@ export function RiskMonitor({
           ) : (
             <p className="mt-1 text-[11px] font-medium opacity-75">风险指标处于当前预设阈值内。</p>
           )}
+          <RiskHistoryTimeline history={history} onClear={clearHistory} />
         </div>
       </div>
     </section>
