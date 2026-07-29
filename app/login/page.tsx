@@ -47,26 +47,33 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#f59e0b]/5 via-transparent to-[#3b82f6]/5" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.08),transparent_50%)]" />
-      <div className="relative max-w-md w-full px-4">
-        <div className="card p-8 glow-primary backdrop-blur-sm bg-opacity-90">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(66,211,146,0.16),transparent_27rem),radial-gradient(circle_at_84%_72%,rgba(216,179,106,0.13),transparent_25rem)]" />
+      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(202,221,210,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(202,221,210,0.035)_1px,transparent_1px)] [background-size:42px_42px]" />
+      <div className="relative w-full max-w-md">
+        <div className="card p-7 sm:p-9">
           <div className="text-center mb-10">
-            <div className="w-20 h-20 mx-auto mb-5 gradient-primary rounded-2xl flex items-center justify-center shadow-lg shadow-[#f59e0b]/20 transition-transform hover:scale-105">
-              <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#f7d99a]/45 bg-[linear-gradient(145deg,#e5c276,#a67836)] text-[#15201c] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.2}
+                  d="m5 15 7-7 7 7"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8v11" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gradient mb-2">访问验证</h1>
-            <p className="text-sm text-[#71717a]">请输入访问码以继续访问交易看板</p>
+            <p className="dashboard-overline mb-2">Binance Futures · Private workspace</p>
+            <h1 className="mb-2 text-3xl font-bold tracking-[-0.05em] text-[#f2f7f1]">访问验证</h1>
+            <p className="text-sm text-[#a8b9b1]">请输入访问码以继续访问交易看板</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label
                 htmlFor="access-code"
-                className="block text-xs font-semibold text-[#a1a1aa] mb-2 uppercase tracking-wider"
+                className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#71857c]"
               >
                 访问码
               </label>
@@ -76,7 +83,7 @@ function LoginForm() {
                   type="password"
                   value={code}
                   onChange={e => setCode(e.target.value)}
-                  className="w-full px-4 py-3.5 border-2 border-[#1e1e32] rounded-xl bg-[#13131f]/50 text-[#f4f4f5] placeholder-[#71717a] focus:ring-2 focus:ring-[#f59e0b]/50 focus:border-[#f59e0b] outline-none transition-all duration-300"
+                  className="w-full rounded-xl border border-white/10 bg-[#071b1b]/75 px-4 py-3.5 text-[#f2f7f1] placeholder-[#526861] outline-none transition focus:border-[#d8b36a]/70 focus:ring-4 focus:ring-[#d8b36a]/10"
                   placeholder="••••••••"
                   autoFocus
                   required
@@ -85,9 +92,9 @@ function LoginForm() {
             </div>
 
             {error && (
-              <div className="p-3 bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-lg flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-lg border border-[#ff7676]/25 bg-[#ff7676]/10 p-3">
                 <svg
-                  className="w-4 h-4 text-[#ef4444] flex-shrink-0"
+                  className="h-4 w-4 shrink-0 text-[#ff8585]"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -97,14 +104,14 @@ function LoginForm() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <p className="text-sm text-[#ef4444]">{error}</p>
+                <p className="text-sm text-[#ffb4b4]">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading || !code}
-              className="w-full py-3.5 px-4 gradient-primary hover:opacity-90 disabled:bg-[#27272a] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-lg shadow-[#f59e0b]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#f59e0b]/30 hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full rounded-xl border border-[#f7d99a]/30 bg-[linear-gradient(135deg,#e5c276,#b38441)] px-4 py-3.5 font-bold text-[#17211d] shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -133,7 +140,7 @@ function LoginForm() {
         </div>
 
         <div className="mt-8 text-center">
-          <p className="text-xs text-[#52525b]">币安合约交易看板 · 实时数据监控</p>
+          <p className="text-xs text-[#71857c]">币安合约交易看板 · 实时数据监控</p>
         </div>
       </div>
     </div>
@@ -144,8 +151,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] px-4">
-          <div className="text-[#71717a]">加载中...</div>
+        <div className="flex min-h-screen items-center justify-center px-4">
+          <div className="text-[#71857c]">加载中...</div>
         </div>
       }
     >

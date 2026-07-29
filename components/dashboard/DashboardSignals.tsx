@@ -122,7 +122,7 @@ function RiskThresholdSettings({
                 step="0.1"
                 value={draft.liquidationWarningPercent}
                 onChange={event => updateDraft('liquidationWarningPercent', event.target.value)}
-                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+                className="mt-1 block w-full rounded-md border border-current/25 bg-[#071b1b]/70 px-2 py-1 text-xs text-[#f2f7f1] outline-none ring-0 focus:border-current"
               />
             </label>
             <label className="text-[11px] font-semibold">
@@ -134,7 +134,7 @@ function RiskThresholdSettings({
                 step="0.1"
                 value={draft.liquidationCriticalPercent}
                 onChange={event => updateDraft('liquidationCriticalPercent', event.target.value)}
-                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+                className="mt-1 block w-full rounded-md border border-current/25 bg-[#071b1b]/70 px-2 py-1 text-xs text-[#f2f7f1] outline-none ring-0 focus:border-current"
               />
             </label>
             <label className="text-[11px] font-semibold">
@@ -146,7 +146,7 @@ function RiskThresholdSettings({
                 step="0.1"
                 value={draft.availableMarginWarningPercent}
                 onChange={event => updateDraft('availableMarginWarningPercent', event.target.value)}
-                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+                className="mt-1 block w-full rounded-md border border-current/25 bg-[#071b1b]/70 px-2 py-1 text-xs text-[#f2f7f1] outline-none ring-0 focus:border-current"
               />
             </label>
             <label className="text-[11px] font-semibold">
@@ -160,7 +160,7 @@ function RiskThresholdSettings({
                 onChange={event =>
                   updateDraft('availableMarginCriticalPercent', event.target.value)
                 }
-                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+                className="mt-1 block w-full rounded-md border border-current/25 bg-[#071b1b]/70 px-2 py-1 text-xs text-[#f2f7f1] outline-none ring-0 focus:border-current"
               />
             </label>
             <label className="text-[11px] font-semibold">
@@ -172,7 +172,7 @@ function RiskThresholdSettings({
                 step="1"
                 value={draft.dataDelayWarningSeconds}
                 onChange={event => updateDraft('dataDelayWarningSeconds', event.target.value)}
-                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+                className="mt-1 block w-full rounded-md border border-current/25 bg-[#071b1b]/70 px-2 py-1 text-xs text-[#f2f7f1] outline-none ring-0 focus:border-current"
               />
             </label>
           </div>
@@ -185,7 +185,7 @@ function RiskThresholdSettings({
             <button
               type="button"
               onClick={handleSave}
-              className="rounded-md bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white transition hover:bg-slate-700"
+              className="rounded-md border border-[#d8b36a]/35 bg-[#d8b36a]/15 px-2.5 py-1.5 text-[11px] font-bold text-[#f6d797] transition hover:bg-[#d8b36a]/25"
             >
               保存到此浏览器
             </button>
@@ -290,33 +290,33 @@ export function RiskMonitor({
   const hasCriticalAlert = alerts.some(alert => alert.severity === 'critical')
   const severity = hasCriticalAlert ? 'critical' : alerts.length > 0 ? 'warning' : 'healthy'
   const styles = {
-    healthy: 'border-emerald-100 bg-emerald-50/60 text-emerald-700',
-    warning: 'border-amber-200 bg-amber-50 text-amber-900',
-    critical: 'border-red-200 bg-red-50 text-red-900',
+    healthy: 'border-[#42d392]/20 bg-[#42d392]/[0.07] text-[#b5f0d0]',
+    warning: 'border-[#f3bd62]/25 bg-[#f3bd62]/[0.08] text-[#f6d797]',
+    critical: 'border-[#ff7676]/25 bg-[#ff7676]/[0.08] text-[#ffb4b4]',
   }[severity]
 
   return (
     <section
       aria-live="polite"
-      className={`relative overflow-hidden rounded-xl border px-4 py-3 ${styles}`}
+      className={`relative overflow-hidden rounded-xl border px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.13)] backdrop-blur-sm ${styles}`}
     >
       <div
         className={`absolute inset-y-0 left-0 w-1 ${
           severity === 'critical'
-            ? 'bg-red-500'
+            ? 'bg-[#ff7676]'
             : severity === 'warning'
-              ? 'bg-amber-500'
-              : 'bg-emerald-500'
+              ? 'bg-[#f3bd62]'
+              : 'bg-[#42d392]'
         }`}
       />
       <div className="flex items-start gap-3 pl-1">
         <span
           className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
             severity === 'critical'
-              ? 'bg-red-100 text-red-600'
+              ? 'bg-[#ff7676]/15 text-[#ffadad]'
               : severity === 'warning'
-                ? 'bg-amber-100 text-amber-600'
-                : 'bg-emerald-100 text-emerald-600'
+                ? 'bg-[#f3bd62]/15 text-[#f6d797]'
+                : 'bg-[#42d392]/15 text-[#93e5ba]'
           }`}
         >
           <SignalIcon severity={severity} />
@@ -383,25 +383,25 @@ export function DataReliability({
   const isStale = dataDelay !== null && dataDelay >= dataDelayWarningSeconds * 1000
   const connection = isConnecting ? '连接中' : isConnected ? '实时同步' : '连接中断'
   const connectionClassName = isConnecting
-    ? 'text-amber-600'
+    ? 'text-[#f3bd62]'
     : isConnected
-      ? 'text-emerald-600'
-      : 'text-red-600'
+      ? 'text-[#42d392]'
+      : 'text-[#ff9292]'
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <section className="rounded-xl border border-white/10 bg-[#0b2222]/75 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.13)] backdrop-blur-sm">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold tracking-wide text-slate-700">数据可信度</p>
+        <p className="text-xs font-bold tracking-wide text-[#f2f7f1]">数据可信度</p>
         <span
           className={`flex items-center gap-1.5 text-[11px] font-semibold ${connectionClassName}`}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
               isConnecting
-                ? 'animate-pulse bg-amber-500'
+                ? 'animate-pulse bg-[#f3bd62]'
                 : isConnected
-                  ? 'bg-emerald-500'
-                  : 'bg-red-500'
+                  ? 'bg-[#42d392]'
+                  : 'bg-[#ff7676]'
             }`}
           />
           {connection}
@@ -409,24 +409,24 @@ export function DataReliability({
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[#71857c]">
             数据延迟（≥ {dataDelayWarningSeconds}秒）
           </p>
-          <p className={`mt-0.5 font-semibold ${isStale ? 'text-amber-600' : 'text-slate-700'}`}>
+          <p className={`mt-0.5 font-semibold ${isStale ? 'text-[#f3bd62]' : 'text-[#e3ece5]'}`}>
             {dataDelay === null ? '等待首包' : formatDelay(dataDelay)}
           </p>
         </div>
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[#71857c]">
             本次重连
           </p>
-          <p className="mt-0.5 font-semibold text-slate-700">{reconnectCount} 次</p>
+          <p className="mt-0.5 font-semibold text-[#e3ece5]">{reconnectCount} 次</p>
         </div>
         <div className="hidden sm:block">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[#71857c]">
             推送频率
           </p>
-          <p className="mt-0.5 font-semibold text-slate-700">约 5 秒</p>
+          <p className="mt-0.5 font-semibold text-[#e3ece5]">约 5 秒</p>
         </div>
       </div>
     </section>

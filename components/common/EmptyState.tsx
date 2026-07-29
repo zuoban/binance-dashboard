@@ -22,7 +22,7 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon, title, description, action, className = '' }: EmptyStateProps) {
   const defaultIcon = (
-    <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-10 w-10 text-[#71857c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -33,16 +33,18 @@ export function EmptyState({ icon, title, description, action, className = '' }:
   )
 
   return (
-    <div className={`flex flex-col items-center justify-center p-0 ${className}`}>
+    <div
+      className={`card flex min-h-44 flex-col items-center justify-center p-6 text-center ${className}`}
+    >
       {/* 图标 */}
       <div className="mb-2">{icon || defaultIcon}</div>
 
       {/* 标题 */}
-      <h3 className="text-sm font-semibold text-slate-900 mb-1">{title}</h3>
+      <h3 className="mb-1 text-sm font-semibold text-[#f2f7f1]">{title}</h3>
 
       {/* 描述 */}
       {description && (
-        <p className="text-xs text-slate-500 mb-3 text-center max-w-md">{description}</p>
+        <p className="mb-3 max-w-md text-center text-xs text-[#a8b9b1]">{description}</p>
       )}
 
       {/* 操作按钮 */}

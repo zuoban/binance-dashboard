@@ -123,18 +123,16 @@ function PositionCardComponent({
 
   return (
     <div
-      className={`rounded-xl border bg-white shadow-sm transition-all duration-300 hover:shadow-md ${
-        positionData.isProfit
-          ? 'border-emerald-100 hover:border-emerald-200'
-          : 'border-red-100 hover:border-red-200'
-      } ${className}`}
+      className={`position-card ${positionData.isProfit ? 'position-card--profit' : 'position-card--loss'} ${className}`}
     >
-      <div className="border-b border-slate-100 px-5 py-4">
+      <div className="border-b border-white/[0.08] px-5 py-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                positionData.isLong ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                positionData.isLong
+                  ? 'bg-[#42d392]/10 text-[#73e2ad] ring-1 ring-[#42d392]/15'
+                  : 'bg-[#ff7676]/10 text-[#ff9999] ring-1 ring-[#ff7676]/15'
               }`}
             >
               {positionData.isLong ? (
@@ -158,17 +156,21 @@ function PositionCardComponent({
               )}
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">{position.symbol}</h3>
+              <h3 className="font-mono text-base font-bold tracking-tight text-[#f2f7f1]">
+                {position.symbol}
+              </h3>
               <div className="flex items-center gap-2 mt-0.5">
                 <span
                   className={`text-xs font-semibold ${
-                    positionData.isLong ? 'text-emerald-600' : 'text-red-600'
+                    positionData.isLong ? 'text-[#73e2ad]' : 'text-[#ff9999]'
                   }`}
                 >
                   {positionData.isLong ? '做多' : '做空'}
                 </span>
-                <span className="text-xs font-medium text-slate-500">·</span>
-                <span className="text-xs font-medium text-slate-500">{positionData.leverage}x</span>
+                <span className="text-xs font-medium text-[#5f7771]">·</span>
+                <span className="text-xs font-medium text-[#a8b9b1]">
+                  {positionData.leverage}x 杠杆
+                </span>
               </div>
             </div>
           </div>
@@ -176,14 +178,14 @@ function PositionCardComponent({
             <div className="flex items-baseline gap-1">
               <span
                 className={`text-lg font-bold ${
-                  positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
+                  positionData.isProfit ? 'text-[#42d392]' : 'text-[#ff8585]'
                 }`}
               >
                 {positionData.isProfit ? '+' : ''}${positionData.unrealizedProfit.toFixed(2)}
               </span>
               <span
                 className={`text-xs font-semibold ${
-                  positionData.isProfit ? 'text-emerald-600' : 'text-red-600'
+                  positionData.isProfit ? 'text-[#73e2ad]' : 'text-[#ff9999]'
                 }`}
               >
                 {positionData.isProfit ? '+' : ''}
@@ -192,7 +194,7 @@ function PositionCardComponent({
             </div>
             <div
               className={`mt-0.5 text-[10px] font-medium ${
-                positionData.isProfit ? 'text-emerald-500' : 'text-red-500'
+                positionData.isProfit ? 'text-[#73e2ad]' : 'text-[#ff9999]'
               }`}
             >
               {positionData.isProfit ? '盈利中' : '亏损中'}
@@ -201,57 +203,55 @@ function PositionCardComponent({
         </div>
       </div>
 
-      <div className="px-5 py-4">
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <div className="space-y-1">
-            <div className="text-xs text-slate-400">持仓金额</div>
-            <div className="text-sm font-semibold text-slate-900">
-              ${positionData.positionValue.toFixed(2)}
-            </div>
+      <div className="px-5 py-4 sm:px-6">
+        <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">持仓金额</div>
+            <div className="position-metric__value">${positionData.positionValue.toFixed(2)}</div>
           </div>
 
-          <div className="space-y-1">
-            <div className="text-xs text-slate-400">持仓数量</div>
-            <div className="text-sm font-semibold text-slate-900">
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">持仓数量</div>
+            <div className="position-metric__value">
               {formatAmount(Math.abs(positionData.positionAmount), position.symbol, exchangeInfo)}
             </div>
           </div>
 
-          <div className="space-y-1">
-            <div className="text-xs text-slate-400">入场价格</div>
-            <div className="text-sm font-semibold text-slate-900">
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">入场价格</div>
+            <div className="position-metric__value">
               ${formatPrice(position.entryPrice, position.symbol, exchangeInfo)}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <div className="text-xs text-slate-400">标记价格</div>
-            <div className="text-base font-bold text-slate-900">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">标记价格</div>
+            <div className="font-mono text-base font-bold tracking-tight text-[#f2f7f1]">
               ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
             </div>
           </div>
 
-          <div className="space-y-1">
-            <div className="text-xs text-slate-400">盈亏平衡价</div>
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">盈亏平衡价</div>
             {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 ? (
-              <span className="text-base font-bold text-amber-600">
+              <span className="font-mono text-base font-bold text-[#f3bd62]">
                 ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
               </span>
             ) : (
-              <span className="text-sm text-slate-300">-</span>
+              <span className="text-sm text-[#526861]">-</span>
             )}
           </div>
 
-          <div className="space-y-1">
-            <div className="text-xs text-slate-400">强平价格</div>
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">强平价格</div>
             {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 ? (
-              <span className="text-base font-bold text-red-600">
+              <span className="font-mono text-base font-bold text-[#ff8585]">
                 ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
               </span>
             ) : (
-              <span className="text-sm text-slate-300">-</span>
+              <span className="text-sm text-[#526861]">-</span>
             )}
           </div>
         </div>
@@ -267,7 +267,7 @@ function PositionCardComponent({
           visibleCount={visibleKlineCount}
         />
 
-        <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm rounded-lg shadow-md border border-slate-200 px-3 py-2">
+        <div className="absolute bottom-3 right-3 rounded-lg border border-white/10 bg-[#0a1c1c]/90 px-3 py-2 shadow-lg backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <input
               type="range"
@@ -277,11 +277,11 @@ function PositionCardComponent({
               value={visibleKlineCount}
               onChange={e => setVisibleKlineCount(Number(e.target.value))}
               style={{
-                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((visibleKlineCount - 10) / 40) * 100}%, #e2e8f0 ${((visibleKlineCount - 10) / 40) * 100}%, #e2e8f0 100%)`,
+                background: `linear-gradient(to right, #42d392 0%, #42d392 ${((visibleKlineCount - 10) / 40) * 100}%, #26433d ${((visibleKlineCount - 10) / 40) * 100}%, #26433d 100%)`,
               }}
-              className="w-32 h-1.5 rounded-full appearance-none cursor-pointer border-none outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-emerald-400 [&::-webkit-slider-thumb]:to-emerald-600 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-emerald-400/50 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gradient-to-br [&::-moz-range-thumb]:from-emerald-400 [&::-moz-range-thumb]:to-emerald-600 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:shadow-emerald-400/50 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:duration-150 [&::-moz-range-thumb]:hover:scale-110"
+              className="h-1.5 w-32 cursor-pointer appearance-none rounded-full border-none outline-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[#dff9eb] [&::-webkit-slider-thumb]:bg-[#42d392] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-[#42d392]/40 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[#dff9eb] [&::-moz-range-thumb]:bg-[#42d392]"
             />
-            <span className="text-xs font-semibold text-emerald-600 min-w-[20px] text-right tabular-nums">
+            <span className="min-w-[20px] text-right font-mono text-xs font-semibold tabular-nums text-[#73e2ad]">
               {visibleKlineCount}
             </span>
           </div>
