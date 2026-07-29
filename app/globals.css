@@ -184,6 +184,10 @@ textarea {
   text-transform: uppercase;
 }
 
+.dashboard-overline {
+  overflow-wrap: anywhere;
+}
+
 .dashboard-title {
   color: var(--text-primary);
   font-size: clamp(1.35rem, 2vw, 1.8rem);

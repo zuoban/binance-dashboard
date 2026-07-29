@@ -177,7 +177,7 @@ function DashboardHeader({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8v11" />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="dashboard-overline">Binance Futures · Private workspace</p>
             <h1 className="dashboard-title mt-1">合约交易看板</h1>
             <p className="dashboard-subtitle">以实时仓位、风险与订单信号辅助快速决策</p>
