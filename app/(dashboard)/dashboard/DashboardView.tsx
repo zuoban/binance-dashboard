@@ -6,13 +6,18 @@
 
 'use client'
 
-import { useDashboardWebSocket, useExchangeInfo, useIsMounted } from '@/lib/hooks'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  useDashboardWebSocket,
+  useExchangeInfo,
+  useIsMounted,
+  useSessionExpiryRedirect,
+} from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderModal } from '@/components/dashboard/OrderModal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
-import { useEffect, useMemo, useState } from 'react'
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -349,6 +354,7 @@ function StatsOverview({
 
 export function DashboardView() {
   const mounted = useIsMounted()
+  const handleConnectionError = useSessionExpiryRedirect()
 
   const {
     account,
@@ -363,7 +369,7 @@ export function DashboardView() {
     isConnecting,
     lastUpdate,
     reconnect,
-  } = useDashboardWebSocket()
+  } = useDashboardWebSocket({ onConnectionError: handleConnectionError })
 
   if (!mounted) {
     return <></>

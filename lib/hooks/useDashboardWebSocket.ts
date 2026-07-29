@@ -29,6 +29,8 @@ interface UseDashboardWebSocketOptions {
   onDataUpdate?: (data: DashboardData) => void
   /** 错误回调 */
   onError?: (error: string) => void
+  /** 原生 SSE 连接错误回调 */
+  onConnectionError?: () => void
   /** 连接状态变化回调 */
   onConnectionChange?: (connected: boolean) => void
 }
@@ -73,7 +75,13 @@ interface UseDashboardWebSocketReturn {
 export function useDashboardWebSocket(
   options: UseDashboardWebSocketOptions = {}
 ): UseDashboardWebSocketReturn {
-  const { autoConnect = true, onDataUpdate, onError, onConnectionChange } = options
+  const {
+    autoConnect = true,
+    onDataUpdate,
+    onError,
+    onConnectionError,
+    onConnectionChange,
+  } = options
 
   const [data, setData] = useState<DashboardData>({
     account: null,
@@ -96,12 +104,12 @@ export function useDashboardWebSocket(
 
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const callbacksRef = useRef({ onDataUpdate, onError, onConnectionChange })
+  const callbacksRef = useRef({ onDataUpdate, onError, onConnectionError, onConnectionChange })
 
   // 事件源只在 autoConnect 改变时重建；回调则始终使用最新引用，避免闭包过期。
   useEffect(() => {
-    callbacksRef.current = { onDataUpdate, onError, onConnectionChange }
-  }, [onDataUpdate, onError, onConnectionChange])
+    callbacksRef.current = { onDataUpdate, onError, onConnectionError, onConnectionChange }
+  }, [onDataUpdate, onError, onConnectionError, onConnectionChange])
 
   /**
    * 清理资源
@@ -224,6 +232,7 @@ export function useDashboardWebSocket(
         setIsConnected(false)
         callbacksRef.current.onConnectionChange?.(false)
         callbacksRef.current.onError?.(errorMessage)
+        void callbacksRef.current.onConnectionError?.()
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '实时连接失败'

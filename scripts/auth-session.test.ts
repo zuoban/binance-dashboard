@@ -6,6 +6,7 @@
 
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { NextRequest } from 'next/server'
 
 process.env.ACCESS_CODE = 'test-access-code'
 
@@ -28,4 +29,20 @@ test('过期或被篡改的会话令牌会被拒绝', async () => {
 
   assert.equal(await validateAuthSession(expiredToken), false)
   assert.equal(await validateAuthSession(tamperedToken), false)
+})
+
+test('会话校验接口会准确返回 Cookie 会话状态', async () => {
+  const { AUTH_COOKIE_NAME, createAuthSessionToken } = await getAuthModule()
+  const { GET } = await import('../app/api/auth/verify/route')
+  const token = await createAuthSessionToken(Date.now() + 60 * 1000)
+
+  const anonymousResponse = await GET(new NextRequest('http://localhost/api/auth/verify'))
+  const authenticatedResponse = await GET(
+    new NextRequest('http://localhost/api/auth/verify', {
+      headers: { cookie: `${AUTH_COOKIE_NAME}=${token}` },
+    })
+  )
+
+  assert.deepEqual(await anonymousResponse.json(), { success: false })
+  assert.deepEqual(await authenticatedResponse.json(), { success: true })
 })
