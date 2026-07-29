@@ -258,6 +258,9 @@ function StatsOverview({
 
   const orderStats = openOrdersStats || { total: 0, buy: 0, sell: 0 }
   const latestOrder = orders[0]
+  const marginSafetyPercent = Math.min(100, Math.max(0, availableMarginPercent))
+  const marginSafetyTone =
+    marginSafetyPercent <= 10 ? 'critical' : marginSafetyPercent <= 25 ? 'warning' : 'healthy'
 
   return (
     <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -275,7 +278,25 @@ function StatsOverview({
           <span className="stat-meta">
             可用保证金 <strong>${formatNumber(availableMargin)}</strong>
           </span>
-          <span className="stat-meta">{formatNumber(availableMarginPercent, 1)}%</span>
+          <div
+            className="margin-safety"
+            aria-label={`可用保证金占比 ${formatNumber(availableMarginPercent, 1)}%`}
+          >
+            <div className="margin-safety__label">
+              <span>保证金安全度</span>
+              <strong>{formatNumber(availableMarginPercent, 1)}%</strong>
+            </div>
+            <div
+              className={`margin-safety__track margin-safety__track--${marginSafetyTone}`}
+              role="progressbar"
+              aria-label="可用保证金占权益比例"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={marginSafetyPercent}
+            >
+              <span style={{ width: `${marginSafetyPercent}%` }} />
+            </div>
+          </div>
           <span
             className={`stat-account-status ${totalEquity > 0 ? 'stat-account-status--ready' : ''}`}
           >

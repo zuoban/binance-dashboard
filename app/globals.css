@@ -354,6 +354,62 @@ textarea {
   font-family: var(--font-app-mono);
 }
 
+/* 账户权益卡中的保证金安全度，利用同一阈值体系让风险状态可一眼扫读。 */
+.margin-safety {
+  display: grid;
+  min-width: 8.75rem;
+  flex: 1 1 9.75rem;
+  gap: 0.35rem;
+}
+
+.margin-safety__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+}
+
+.margin-safety__label strong {
+  color: var(--text-primary);
+  font-family: var(--font-app-mono);
+  font-size: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.margin-safety__track {
+  position: relative;
+  overflow: hidden;
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+  box-shadow: inset 0 1px 1px color-mix(in srgb, #000 16%, transparent);
+}
+
+.margin-safety__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--success);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success) 56%, transparent);
+  transition:
+    width 0.45s ease,
+    background-color 0.25s ease;
+}
+
+.margin-safety__track--warning span {
+  background: var(--warning);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--warning) 56%, transparent);
+}
+
+.margin-safety__track--critical span {
+  background: var(--danger);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--danger) 56%, transparent);
+}
+
 .position-card {
   position: relative;
   overflow: hidden;
@@ -451,6 +507,111 @@ textarea {
 }
 
 .position-liquidation {
+  color: var(--danger);
+}
+
+/* 以 25% 为满刻度展示强平安全空间，8% 处的细刻线与风险预警阈值对应。 */
+.position-risk-gauge {
+  margin-top: 1.2rem;
+  border-top: 1px solid var(--divider);
+  padding-top: 0.95rem;
+}
+
+.position-risk-gauge__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.position-risk-gauge__header > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.position-risk-gauge__header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.position-risk-gauge__header strong {
+  color: var(--text-primary);
+  font-family: var(--font-app-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.position-risk-gauge__header div span {
+  color: var(--success);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.position-risk-gauge__track {
+  position: relative;
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--danger) 18%, transparent), transparent 34%),
+    color-mix(in srgb, var(--text-muted) 16%, transparent);
+  box-shadow: inset 0 1px 1px color-mix(in srgb, #000 16%, transparent);
+}
+
+.position-risk-gauge__track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--success);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--success) 50%, transparent);
+  transition:
+    width 0.45s ease,
+    background-color 0.25s ease;
+}
+
+.position-risk-gauge__threshold {
+  position: absolute;
+  top: 50%;
+  left: 32%;
+  width: 1px;
+  height: 13px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-primary) 68%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--background) 48%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+.position-risk-gauge__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-family: var(--font-app-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.position-risk-gauge--warning .position-risk-gauge__track > span {
+  background: var(--warning);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--warning) 50%, transparent);
+}
+
+.position-risk-gauge--warning .position-risk-gauge__header div span {
+  color: var(--warning);
+}
+
+.position-risk-gauge--critical .position-risk-gauge__track > span {
+  background: var(--danger);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--danger) 50%, transparent);
+}
+
+.position-risk-gauge--critical .position-risk-gauge__header div span {
   color: var(--danger);
 }
 

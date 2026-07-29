@@ -4,9 +4,10 @@
 
 'use client'
 
-import { Position, Order, KlineData } from '@/types/binance'
-import { useExchangeInfo } from '@/lib/hooks'
 import { memo, useEffect, useMemo, useState } from 'react'
+import { useExchangeInfo } from '@/lib/hooks'
+import { calculateLiquidationDistance } from '@/lib/utils/risk'
+import { Position, Order, KlineData } from '@/types/binance'
 import { areKlineDataEqual, areRelevantOrdersEqual, KlineChart } from './KlineChart'
 
 interface PositionCardProps {
@@ -73,6 +74,52 @@ function isLongPosition(position: Position): boolean {
   )
 }
 
+/** 将强平距离映射为可快速扫读的视觉等级，与风险监控默认阈值保持一致。 */
+function getLiquidationTone(distance: number): 'safe' | 'warning' | 'critical' {
+  if (distance <= 3) {
+    return 'critical'
+  }
+  if (distance <= 8) {
+    return 'warning'
+  }
+  return 'safe'
+}
+
+/** 持仓卡内的强平安全距离。25% 以上视为充足空间，并在刻度上封顶展示。 */
+function PositionRiskGauge({ distance }: { distance: number }) {
+  const tone = getLiquidationTone(distance)
+  const filledPercent = Math.min(100, (distance / 25) * 100)
+  const status = tone === 'critical' ? '风险偏高' : tone === 'warning' ? '需要关注' : '安全区间'
+
+  return (
+    <section className={`position-risk-gauge position-risk-gauge--${tone}`}>
+      <div className="position-risk-gauge__header">
+        <span>距强平价</span>
+        <div>
+          <strong>{distance.toFixed(2)}%</strong>
+          <span>{status}</span>
+        </div>
+      </div>
+      <div
+        className="position-risk-gauge__track"
+        role="progressbar"
+        aria-label="当前持仓距强平价的安全距离"
+        aria-valuemin={0}
+        aria-valuemax={25}
+        aria-valuenow={Math.min(25, distance)}
+      >
+        <span style={{ width: `${filledPercent}%` }} />
+        <i className="position-risk-gauge__threshold" aria-hidden="true" />
+      </div>
+      <div className="position-risk-gauge__scale" aria-hidden="true">
+        <span>0%</span>
+        <span>预警 8%</span>
+        <span>25%+</span>
+      </div>
+    </section>
+  )
+}
+
 function PositionCardComponent({
   position,
   exchangeInfo,
@@ -114,6 +161,7 @@ function PositionCardComponent({
 
     const isLong = isLongPosition(position)
     const isProfit = unrealizedProfit >= 0
+    const liquidationDistance = calculateLiquidationDistance(position)
 
     return {
       unrealizedProfit,
@@ -123,6 +171,7 @@ function PositionCardComponent({
       positionValue,
       isLong,
       isProfit,
+      liquidationDistance,
     }
   }, [position])
 
@@ -252,6 +301,10 @@ function PositionCardComponent({
             )}
           </div>
         </div>
+
+        {positionData.liquidationDistance !== null && (
+          <PositionRiskGauge distance={positionData.liquidationDistance} />
+        )}
       </div>
 
       <div className="relative">
