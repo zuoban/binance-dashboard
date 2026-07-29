@@ -88,8 +88,7 @@ lib/
 ├── hooks/                # 自定义 React Hooks
 │   ├── useDashboardWebSocket.ts  # SSE 数据订阅（主要 Hook）
 │   └── useBinance*.ts            # 币安 API 调用 Hooks
-├── config/               # 配置文件
-│   └── env.ts            # 环境变量验证（Zod）
+├── config.ts             # 集中读取和校验服务端配置
 └── utils/                # 工具函数
     ├── binance-mapper.ts # 币安数据映射
     └── account-mapper.ts # 账户数据映射
@@ -106,10 +105,10 @@ app/
 
 ### 1. 环境变量验证
 
-所有环境变量通过 `lib/config/env.ts` 中的 Zod schema 验证：
+服务端通过 `lib/config.ts` 的 `getServerConfig()` 读取并校验币安凭据：
 
-- 开发环境：缺失配置时显示警告
-- 生产环境：缺失必需配置会抛出错误并阻止启动
+- 缺失 API Key 或 Secret 时会明确抛出配置错误
+- `pnpm check` 会在构建前检查本地环境配置与必需项目文件
 
 ### 2. 币安 API 调用
 

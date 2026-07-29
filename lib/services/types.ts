@@ -5,6 +5,7 @@
  */
 
 import type { AccountAsset, Position, KlineData } from '@/types/binance'
+import type { BinanceUserTrade } from '@/types/binance-api'
 
 /**
  * 简化的订单类型（只保留页面需要的字段）
@@ -58,6 +59,16 @@ export interface OpenOrdersStats {
 export interface KlinesCacheItem {
   /** K线数据 */
   data: KlineData[]
+  /** 更新时间 */
+  updatedAt: number
+}
+
+/**
+ * 用户成交记录缓存项
+ */
+export interface UserTradesCacheItem {
+  /** 成交记录 */
+  data: BinanceUserTrade[]
   /** 更新时间 */
   updatedAt: number
 }
@@ -124,6 +135,12 @@ export interface DataManagerMetrics {
   lastFetchTime: number
   /** 广播次数 */
   broadcastsSent: number
+  /** 用户成交记录 API 请求数 */
+  userTradesRequests: number
+  /** 用户成交记录缓存命中数 */
+  userTradesCacheHits: number
+  /** 用户成交记录请求失败数 */
+  userTradesFailures: number
 }
 
 /**

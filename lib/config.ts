@@ -99,10 +99,14 @@ export const config = {
 export function validateConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
-  // API Key 和 Secret 只在服务端可用，在服务端时才验证
+  // API Key 和 Secret 只在服务端可用，在服务端时才验证。
   if (typeof window === 'undefined') {
     if (!process.env.BINANCE_API_KEY) {
       errors.push('Missing BINANCE_API_KEY in environment variables')
+    }
+
+    if (!process.env.BINANCE_API_SECRET) {
+      errors.push('Missing BINANCE_API_SECRET in environment variables')
     }
   }
 
@@ -120,6 +124,11 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
 export function getServerConfig() {
   if (typeof window !== 'undefined') {
     throw new Error('getServerConfig can only be called on the server side')
+  }
+
+  const validation = validateConfig()
+  if (!validation.valid) {
+    throw new Error(`Invalid server configuration: ${validation.errors.join(', ')}`)
   }
 
   return {

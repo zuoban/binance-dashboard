@@ -7,11 +7,19 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DataManager } from '../lib/services/data-manager'
-import type { DashboardData } from '../lib/services/types'
+import type { BinanceRestClient } from '../lib/binance/rest-client'
+import type { BinanceUserTrade } from '../types/binance-api'
+import type { DashboardData, DataManagerMetrics, UserTradesCacheItem } from '../lib/services/types'
 
 interface DataManagerInternals {
   fetchWithRetry: () => Promise<DashboardData>
   broadcastError: (message: string) => void
+  fetchTradesForSymbols: (
+    client: Pick<BinanceRestClient, 'getUserTrades'>,
+    symbols: string[]
+  ) => Promise<(BinanceUserTrade & { symbol: string })[]>
+  userTradesCache: Map<string, UserTradesCacheItem>
+  metrics: DataManagerMetrics
 }
 
 const dashboardData = {
@@ -69,5 +77,64 @@ test('上游数据错误会明确通知订阅者', () => {
     assert.equal(receivedMessage, '无法获取最新交易数据')
   } finally {
     unsubscribe()
+  }
+})
+
+test('成交记录请求会限制并发并复用短期缓存', async () => {
+  const manager = DataManager.getInstance()
+  const internals = manager as unknown as DataManagerInternals
+  const originalMetrics = { ...internals.metrics }
+  const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
+  let activeRequests = 0
+  let maxActiveRequests = 0
+  let requestCount = 0
+
+  const client: Pick<BinanceRestClient, 'getUserTrades'> = {
+    async getUserTrades(symbol) {
+      requestCount++
+      activeRequests++
+      maxActiveRequests = Math.max(maxActiveRequests, activeRequests)
+
+      try {
+        await new Promise<void>(resolve => setTimeout(resolve, 5))
+        return [
+          {
+            symbol,
+            id: requestCount,
+            orderId: requestCount,
+            side: 'BUY',
+            price: '100',
+            qty: '1',
+            quoteQty: '100',
+            time: requestCount,
+            positionSide: 'BOTH',
+            maker: false,
+            buyer: true,
+            commission: '0',
+            commissionAsset: 'USDT',
+            realizedPnl: '0',
+          },
+        ]
+      } finally {
+        activeRequests--
+      }
+    },
+  }
+
+  internals.userTradesCache.clear()
+
+  try {
+    const firstTrades = await internals.fetchTradesForSymbols(client, symbols)
+    const secondTrades = await internals.fetchTradesForSymbols(client, symbols)
+
+    assert.equal(firstTrades.length, symbols.length)
+    assert.equal(secondTrades.length, symbols.length)
+    assert.equal(maxActiveRequests, 3)
+    assert.equal(requestCount, symbols.length)
+    assert.equal(internals.metrics.userTradesRequests, symbols.length)
+    assert.equal(internals.metrics.userTradesCacheHits, symbols.length)
+  } finally {
+    internals.userTradesCache.clear()
+    internals.metrics = originalMetrics
   }
 })

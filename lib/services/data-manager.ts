@@ -25,6 +25,7 @@ import type {
   DataManagerConfig,
   SimpleOrder,
   KlinesCacheItem,
+  UserTradesCacheItem,
 } from './types'
 import type { Position, KlineData } from '@/types/binance'
 import type {
@@ -80,8 +81,17 @@ export class DataManager {
   /** K线数据缓存 */
   private klinesCache: Map<string, KlinesCacheItem> = new Map()
 
+  /** 用户成交记录缓存 */
+  private userTradesCache: Map<string, UserTradesCacheItem> = new Map()
+
   /** K线数据缓存过期时间。15 分钟 K 线不需要每 5 秒重新拉取。 */
   private readonly klinesCacheTTL = 60 * 1000
+
+  /** 成交记录缓存过期时间。订单列表允许短暂延迟，以控制 USER_TRADES 请求权重。 */
+  private readonly userTradesCacheTTL = 60 * 1000
+
+  /** 同时请求成交记录的最大交易对数量 */
+  private readonly maxConcurrentUserTradesRequests = 3
 
   /** 默认K线数量 */
   private readonly defaultKlinesLimit = 50
@@ -106,6 +116,9 @@ export class DataManager {
       avgFetchTime: 0,
       lastFetchTime: 0,
       broadcastsSent: 0,
+      userTradesRequests: 0,
+      userTradesCacheHits: 0,
+      userTradesFailures: 0,
     }
 
     this.log('[DataManager] Initialized')
@@ -440,9 +453,6 @@ export class DataManager {
     account.unrealizedProfit = totalUnrealizedProfit.toString()
     account.marginBalance = calculateAccountMarginBalance(account)
 
-    // 直接汇总币安收益历史，避免进程重启或多实例时零点快照失真。
-    const todayRealizedPnl = await this.getTodayRealizedPnl(client)
-
     // 映射并过滤持仓数据
     const positions = positionsInfo
       .map((p: BinancePosition) => mapBinancePosition(p))
@@ -463,25 +473,18 @@ export class DataManager {
       }
     }
 
-    // 获取历史订单（每个 symbol 查询最近 50 条，用于后续合并）
-    const allTrades: (BinanceUserTrade & { symbol: string })[] = []
-
-    // 并发查询所有持仓交易对的最近成交记录
-    const tradesPromises = symbols.map(async symbol => {
-      try {
-        const trades = await client.getUserTrades(symbol, {
-          limit: 50, // 获取最近 50 条，确保有足够数据用于合并
-        })
-        return trades.map((t: BinanceUserTrade) => ({ ...t, symbol }))
-      } catch {
-        return []
+    for (const cachedSymbol of this.userTradesCache.keys()) {
+      if (!activeSymbols.has(cachedSymbol)) {
+        this.userTradesCache.delete(cachedSymbol)
       }
-    })
+    }
 
-    const tradesResults = await Promise.all(tradesPromises)
-    tradesResults.forEach(trades => {
-      allTrades.push(...trades)
-    })
+    // 收益、成交记录和 K 线互不依赖，首次加载时并发获取以缩短 SSE 首包时间。
+    const [todayRealizedPnl, allTrades, klines] = await Promise.all([
+      this.getTodayRealizedPnl(client),
+      this.fetchTradesForSymbols(client, symbols),
+      this.fetchKlinesForPositions(client, symbols),
+    ])
 
     // 按 orderId 合并成交记录，然后取最近 20 条
     const mergedOrders = this.mergeTradesByOrderId(allTrades)
@@ -495,9 +498,6 @@ export class DataManager {
     }
 
     const openOrders = openOrdersInfo.map(this.mapOpenOrderToOrder)
-
-    // 获取持仓交易对的K线数据
-    const klines = await this.fetchKlinesForPositions(client, symbols)
 
     return {
       account,
@@ -548,6 +548,76 @@ export class DataManager {
       this.log(`[DataManager] Failed to fetch realized PnL: ${error}`)
       return cached?.date === date ? cached.value : 0
     }
+  }
+
+  /**
+   * 获取持仓交易对的最近成交记录。
+   *
+   * USER_TRADES 是高权重接口；以交易对为粒度缓存一分钟，并限制首次加载的并发数。
+   */
+  private async fetchTradesForSymbols(
+    client: BinanceRestClient,
+    symbols: string[]
+  ): Promise<(BinanceUserTrade & { symbol: string })[]> {
+    const now = Date.now()
+    const tradesResults = await this.mapWithConcurrency(
+      symbols,
+      this.maxConcurrentUserTradesRequests,
+      async symbol => {
+        const cached = this.userTradesCache.get(symbol)
+
+        if (cached && now - cached.updatedAt < this.userTradesCacheTTL) {
+          this.metrics.userTradesCacheHits++
+          return cached.data.map(trade => ({ ...trade, symbol }))
+        }
+
+        try {
+          this.metrics.userTradesRequests++
+          const trades = await client.getUserTrades(symbol, {
+            limit: 50,
+          })
+
+          this.userTradesCache.set(symbol, {
+            data: trades,
+            updatedAt: now,
+          })
+
+          return trades.map(trade => ({ ...trade, symbol }))
+        } catch (error) {
+          this.metrics.userTradesFailures++
+          this.log(`[DataManager] Failed to fetch trades for ${symbol}: ${error}`)
+
+          // 币安短暂不可用时保留旧订单，避免单一交易对失败清空整个订单列表。
+          return cached?.data.map(trade => ({ ...trade, symbol })) || []
+        }
+      }
+    )
+
+    return tradesResults.flat()
+  }
+
+  /**
+   * 以受控并发处理异步任务，并保持输入顺序。
+   */
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    mapper: (item: T) => Promise<R>
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length)
+    let nextIndex = 0
+
+    const worker = async (): Promise<void> => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex++
+        results[currentIndex] = await mapper(items[currentIndex])
+      }
+    }
+
+    const workerCount = Math.min(concurrency, items.length)
+    await Promise.all(Array.from({ length: workerCount }, () => worker()))
+
+    return results
   }
 
   /**
@@ -787,6 +857,9 @@ export class DataManager {
         `successRate=${successRate.toFixed(1)}%, ` +
         `avgTime=${this.metrics.avgFetchTime.toFixed(0)}ms, ` +
         `broadcasts=${this.metrics.broadcastsSent}, ` +
+        `tradesRequests=${this.metrics.userTradesRequests}, ` +
+        `tradesCacheHits=${this.metrics.userTradesCacheHits}, ` +
+        `tradesFailures=${this.metrics.userTradesFailures}, ` +
         `subscribers=${this.subscribers.size}, ` +
         `refs=${this.refCount}`
     )
