@@ -176,9 +176,7 @@ function PositionCardComponent({
   }, [position])
 
   return (
-    <div
-      className={`position-card ${positionData.isProfit ? 'position-card--profit' : 'position-card--loss'} ${className}`}
-    >
+    <div className={`position-card ${className}`}>
       <div className="position-card__header px-5 py-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

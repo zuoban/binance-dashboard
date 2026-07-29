@@ -262,41 +262,111 @@ textarea {
   font-size: 0.75rem;
 }
 
-.connection-pill {
+.dashboard-header__side {
+  display: grid;
+  width: min(100%, 28rem);
+  gap: 0.75rem;
+}
+
+.dashboard-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+/* 将实时质量信息收束于页头，兼顾首屏决策效率与紧凑的终端式密度。 */
+.dashboard-telemetry {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, var(--success) 14%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  box-shadow: inset 0 1px color-mix(in srgb, #fff 5%, transparent);
+}
+
+.dashboard-telemetry__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--divider);
+  padding: 0.5rem 0.7rem;
+}
+
+.dashboard-telemetry__title {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.dashboard-telemetry__connection {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  border: 1px solid color-mix(in srgb, var(--success) 28%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--success) 9%, transparent);
-  padding: 0.4rem 0.65rem;
-  color: color-mix(in srgb, var(--success) 78%, var(--text-primary));
-  font-size: 11px;
+  gap: 0.35rem;
+  color: var(--success);
+  font-size: 10px;
   font-weight: 700;
 }
 
-.connection-pill--connecting {
-  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
-  background: color-mix(in srgb, var(--warning) 9%, transparent);
-  color: color-mix(in srgb, var(--warning) 78%, var(--text-primary));
-}
-
-.connection-pill--offline {
-  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
-  background: color-mix(in srgb, var(--danger) 9%, transparent);
-  color: color-mix(in srgb, var(--danger) 78%, var(--text-primary));
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
+.dashboard-telemetry__status-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 12%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 11%, transparent);
 }
 
-.status-dot--live {
+.dashboard-telemetry__connection--live .dashboard-telemetry__status-dot {
   animation: status-pulse 2s ease-in-out infinite;
+}
+
+.dashboard-telemetry__connection--connecting {
+  color: var(--warning);
+}
+
+.dashboard-telemetry__connection--offline {
+  color: var(--danger);
+}
+
+.dashboard-telemetry__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-telemetry__metric {
+  min-width: 0;
+  padding: 0.55rem 0.7rem 0.6rem;
+}
+
+.dashboard-telemetry__metric + .dashboard-telemetry__metric {
+  border-left: 1px solid var(--divider);
+}
+
+.dashboard-telemetry__label {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-telemetry__value {
+  margin-top: 0.14rem;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-app-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-telemetry__value--warning {
+  color: var(--warning);
 }
 
 .card-divider {
@@ -422,23 +492,6 @@ textarea {
     border-color 0.25s ease,
     box-shadow 0.25s ease,
     transform 0.25s ease;
-}
-
-.position-card::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  content: '';
-}
-
-.position-card--profit::before {
-  background: var(--success);
-}
-
-.position-card--loss::before {
-  background: var(--danger);
 }
 
 .position-card:hover {

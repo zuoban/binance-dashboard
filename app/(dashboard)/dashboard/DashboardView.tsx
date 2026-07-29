@@ -146,28 +146,21 @@ function DashboardHeader({
   isConnected,
   isConnecting,
   lastUpdate,
+  reconnectCount,
   reconnect,
+  dataDelayWarningSeconds,
   theme,
   onThemeChange,
 }: {
   isConnected: boolean
   isConnecting: boolean
   lastUpdate: number | null
+  reconnectCount: number
   reconnect: () => void
+  dataDelayWarningSeconds: number
   theme: DashboardTheme
   onThemeChange: (theme: DashboardTheme) => void
 }) {
-  const statusText = isConnecting
-    ? '正在建立连接'
-    : isConnected
-      ? '实时数据同步中'
-      : '数据连接已中断'
-  const statusClassName = isConnecting
-    ? 'connection-pill--connecting'
-    : isConnected
-      ? ''
-      : 'connection-pill--offline'
-
   return (
     <header className="dashboard-header px-5 py-5 sm:px-7 sm:py-6">
       <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -190,47 +183,52 @@ function DashboardHeader({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
-          <button
-            type="button"
-            onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
-            className="theme-toggle"
-            aria-label={theme === 'dark' ? '切换至浅色主题' : '切换至深色主题'}
-            title={theme === 'dark' ? '切换至浅色主题' : '切换至深色主题'}
-          >
-            {theme === 'dark' ? (
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3.5" strokeWidth={1.8} />
-                <path
-                  strokeLinecap="round"
-                  strokeWidth={1.8}
-                  d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.72 5.28l-1.41 1.41M6.69 17.31l-1.41 1.41M18.72 18.72l-1.41-1.41M6.69 6.69 5.28 5.28"
-                />
-              </svg>
-            ) : (
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.8}
-                  d="M20.5 15.2A8.5 8.5 0 1 1 8.8 3.5 6.7 6.7 0 0 0 20.5 15.2Z"
-                />
-              </svg>
-            )}
-            <span>{theme === 'dark' ? '浅色' : '深色'}</span>
-          </button>
-          <div className={`connection-pill ${statusClassName}`}>
-            <span className={`status-dot ${isConnected ? 'status-dot--live' : ''}`} />
-            {statusText}
-          </div>
-          {lastUpdate && (
-            <span className="header-update-pill">更新于 {formatRecentOrderTime(lastUpdate)}</span>
-          )}
-          {!isConnected && !isConnecting && (
-            <button type="button" onClick={reconnect} className="reconnect-button">
-              重新连接
+        <div className="dashboard-header__side">
+          <div className="dashboard-header__actions">
+            <button
+              type="button"
+              onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+              className="theme-toggle"
+              aria-label={theme === 'dark' ? '切换至浅色主题' : '切换至深色主题'}
+              title={theme === 'dark' ? '切换至浅色主题' : '切换至深色主题'}
+            >
+              {theme === 'dark' ? (
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3.5" strokeWidth={1.8} />
+                  <path
+                    strokeLinecap="round"
+                    strokeWidth={1.8}
+                    d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.72 5.28l-1.41 1.41M6.69 17.31l-1.41 1.41M18.72 18.72l-1.41-1.41M6.69 6.69 5.28 5.28"
+                  />
+                </svg>
+              ) : (
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M20.5 15.2A8.5 8.5 0 1 1 8.8 3.5 6.7 6.7 0 0 0 20.5 15.2Z"
+                  />
+                </svg>
+              )}
+              <span>{theme === 'dark' ? '浅色' : '深色'}</span>
             </button>
-          )}
+            {lastUpdate && (
+              <span className="header-update-pill">更新于 {formatRecentOrderTime(lastUpdate)}</span>
+            )}
+            {!isConnected && !isConnecting && (
+              <button type="button" onClick={reconnect} className="reconnect-button">
+                重新连接
+              </button>
+            )}
+          </div>
+          <DataReliability
+            lastUpdate={lastUpdate}
+            isConnected={isConnected}
+            isConnecting={isConnecting}
+            reconnectCount={reconnectCount}
+            dataDelayWarningSeconds={dataDelayWarningSeconds}
+          />
         </div>
       </div>
     </header>
@@ -481,7 +479,9 @@ export function DashboardView() {
         isConnected={isConnected}
         isConnecting={isConnecting}
         lastUpdate={lastUpdate}
+        reconnectCount={reconnectCount}
         reconnect={reconnect}
+        dataDelayWarningSeconds={thresholds.dataDelayWarningSeconds}
         theme={theme}
         onThemeChange={setTheme}
       />
@@ -522,23 +522,13 @@ export function DashboardView() {
               </button>
             </div>
           )}
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]">
-            <RiskMonitor
-              alerts={riskAlerts}
-              thresholds={thresholds}
-              onSaveThresholds={saveThresholds}
-              onResetThresholds={resetThresholds}
-              theme={theme}
-            />
-            <DataReliability
-              lastUpdate={lastUpdate}
-              isConnected={isConnected}
-              isConnecting={isConnecting}
-              reconnectCount={reconnectCount}
-              dataDelayWarningSeconds={thresholds.dataDelayWarningSeconds}
-              theme={theme}
-            />
-          </div>
+          <RiskMonitor
+            alerts={riskAlerts}
+            thresholds={thresholds}
+            onSaveThresholds={saveThresholds}
+            onResetThresholds={resetThresholds}
+            theme={theme}
+          />
           <StatsOverview
             totalEquity={totalEquity}
             availableMargin={availableMargin}

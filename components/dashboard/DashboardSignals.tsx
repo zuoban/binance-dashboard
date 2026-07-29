@@ -1,7 +1,7 @@
 /**
  * 看板信号组件
  *
- * 集中展示风险提醒与实时数据可信度，帮助用户快速判断当前看板是否适合决策。
+ * 集中展示风险提醒与页头实时数据可信度，帮助用户快速判断当前看板是否适合决策。
  */
 
 'use client'
@@ -32,7 +32,6 @@ interface DataReliabilityProps {
   isConnecting: boolean
   reconnectCount: number
   dataDelayWarningSeconds: number
-  theme: 'dark' | 'light'
 }
 
 function formatDelay(milliseconds: number): string {
@@ -307,16 +306,7 @@ export function RiskMonitor({
       aria-live="polite"
       className={`risk-monitor relative overflow-hidden rounded-xl border px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.13)] backdrop-blur-sm ${styles}`}
     >
-      <div
-        className={`absolute inset-y-0 left-0 w-1 ${
-          severity === 'critical'
-            ? 'bg-[#ff7676]'
-            : severity === 'warning'
-              ? 'bg-[#f3bd62]'
-              : 'bg-[#42d392]'
-        }`}
-      />
-      <div className="flex items-start gap-3 pl-1">
+      <div className="flex items-start gap-3">
         <span
           className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
             severity === 'critical'
@@ -366,14 +356,13 @@ export function RiskMonitor({
   )
 }
 
-/** 实时数据可信度条，显示连接状态、数据延迟和本次页面会话的重连次数。 */
+/** 页头数据可信度摘要，显示连接状态、数据延迟和本次页面会话的重连次数。 */
 export function DataReliability({
   lastUpdate,
   isConnected,
   isConnecting,
   reconnectCount,
   dataDelayWarningSeconds,
-  theme,
 }: DataReliabilityProps) {
   const [now, setNow] = useState(() => Date.now())
 
@@ -391,55 +380,35 @@ export function DataReliability({
 
   const isStale = dataDelay !== null && dataDelay >= dataDelayWarningSeconds * 1000
   const connection = isConnecting ? '连接中' : isConnected ? '实时同步' : '连接中断'
-  const connectionClassName = isConnecting
-    ? 'theme-connection--connecting'
-    : isConnected
-      ? 'theme-connection--live'
-      : 'theme-connection--offline'
+  const connectionTone = isConnecting ? 'connecting' : isConnected ? 'live' : 'offline'
 
   return (
-    <section
-      className={`data-reliability data-reliability--${theme} rounded-xl border px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.13)] backdrop-blur-sm`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <p className="theme-text-primary text-xs font-bold tracking-wide">数据可信度</p>
+    <section className="dashboard-telemetry" aria-label="数据可信度">
+      <div className="dashboard-telemetry__header">
+        <p className="dashboard-telemetry__title">数据可信度</p>
         <span
-          className={`flex items-center gap-1.5 text-[11px] font-semibold ${connectionClassName}`}
+          className={`dashboard-telemetry__connection dashboard-telemetry__connection--${connectionTone}`}
         >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              isConnecting
-                ? 'animate-pulse bg-[#f3bd62]'
-                : isConnected
-                  ? 'bg-[#42d392]'
-                  : 'bg-[#ff7676]'
-            }`}
-          />
+          <span className="dashboard-telemetry__status-dot" />
           {connection}
         </span>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
-        <div>
-          <p className="theme-text-muted text-[10px] font-medium uppercase tracking-wider">
-            数据延迟（≥ {dataDelayWarningSeconds}秒）
-          </p>
+      <div className="dashboard-telemetry__metrics">
+        <div className="dashboard-telemetry__metric">
+          <p className="dashboard-telemetry__label">数据延迟（≥ {dataDelayWarningSeconds}秒）</p>
           <p
-            className={`theme-data-value mt-0.5 font-semibold ${isStale ? 'theme-text-warning' : ''}`}
+            className={`dashboard-telemetry__value ${isStale ? 'dashboard-telemetry__value--warning' : ''}`}
           >
             {dataDelay === null ? '等待首包' : formatDelay(dataDelay)}
           </p>
         </div>
-        <div>
-          <p className="theme-text-muted text-[10px] font-medium uppercase tracking-wider">
-            本次重连
-          </p>
-          <p className="theme-data-value mt-0.5 font-semibold">{reconnectCount} 次</p>
+        <div className="dashboard-telemetry__metric">
+          <p className="dashboard-telemetry__label">本次重连</p>
+          <p className="dashboard-telemetry__value">{reconnectCount} 次</p>
         </div>
-        <div className="hidden sm:block">
-          <p className="theme-text-muted text-[10px] font-medium uppercase tracking-wider">
-            推送频率
-          </p>
-          <p className="theme-data-value mt-0.5 font-semibold">约 5 秒</p>
+        <div className="dashboard-telemetry__metric">
+          <p className="dashboard-telemetry__label">推送频率</p>
+          <p className="dashboard-telemetry__value">约 5 秒</p>
         </div>
       </div>
     </section>
