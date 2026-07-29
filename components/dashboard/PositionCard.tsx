@@ -4,7 +4,7 @@
 
 'use client'
 
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useMemo } from 'react'
 import { useExchangeInfo } from '@/lib/hooks'
 import { calculateLiquidationDistance } from '@/lib/utils/risk'
 import { Position, Order, KlineData } from '@/types/binance'
@@ -129,23 +129,6 @@ function PositionCardComponent({
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
-  const [visibleKlineCount, setVisibleKlineCount] = useState<number>(() => {
-    if (typeof window === 'undefined') return 30
-    try {
-      const saved = localStorage.getItem('kline-visible-count')
-      return saved ? Number.parseInt(saved, 10) : 30
-    } catch {
-      return 30
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('kline-visible-count', visibleKlineCount.toString())
-    } catch (error) {
-      console.error('Failed to save kline visible count:', error)
-    }
-  }, [visibleKlineCount])
 
   const pricePrecision = useMemo(
     () => getSymbolPrecision(position.symbol, exchangeInfo),
@@ -248,7 +231,7 @@ function PositionCardComponent({
       </div>
 
       <div className="px-5 py-4 sm:px-6">
-        <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
           <div className="position-metric space-y-1">
             <div className="position-metric__label">持仓金额</div>
             <div className="position-metric__value">${positionData.positionValue.toFixed(2)}</div>
@@ -267,15 +250,6 @@ function PositionCardComponent({
               ${formatPrice(position.entryPrice, position.symbol, exchangeInfo)}
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
-          <div className="position-metric space-y-1">
-            <div className="position-metric__label">标记价格</div>
-            <div className="position-metric__value text-base font-bold">
-              ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
-            </div>
-          </div>
 
           <div className="position-metric space-y-1">
             <div className="position-metric__label">盈亏平衡价</div>
@@ -286,6 +260,13 @@ function PositionCardComponent({
             ) : (
               <span className="theme-text-muted text-sm">-</span>
             )}
+          </div>
+
+          <div className="position-metric space-y-1">
+            <div className="position-metric__label">标记价格</div>
+            <div className="position-metric__value text-base font-bold">
+              ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
+            </div>
           </div>
 
           <div className="position-metric space-y-1">
@@ -312,29 +293,8 @@ function PositionCardComponent({
           height={400}
           pricePrecision={pricePrecision}
           openOrders={openOrders}
-          visibleCount={visibleKlineCount}
           theme={theme}
         />
-
-        <div className="chart-density-control absolute bottom-3 right-3 px-3 py-2 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min="10"
-              max="50"
-              step="10"
-              value={visibleKlineCount}
-              onChange={e => setVisibleKlineCount(Number(e.target.value))}
-              style={{
-                background: `linear-gradient(to right, var(--success) 0%, var(--success) ${((visibleKlineCount - 10) / 40) * 100}%, var(--range-track) ${((visibleKlineCount - 10) / 40) * 100}%, var(--range-track) 100%)`,
-              }}
-              className="h-1.5 w-32 cursor-pointer appearance-none rounded-full border-none outline-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[#dff9eb] [&::-webkit-slider-thumb]:bg-[#42d392] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-[#42d392]/40 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[#dff9eb] [&::-moz-range-thumb]:bg-[#42d392]"
-            />
-            <span className="theme-success-text min-w-[20px] text-right font-mono text-xs font-semibold tabular-nums">
-              {visibleKlineCount}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   )

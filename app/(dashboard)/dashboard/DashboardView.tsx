@@ -24,6 +24,8 @@ import { getDashboardRiskAlerts } from '@/lib/utils/risk'
 
 type DashboardTheme = 'dark' | 'light'
 
+const RECENT_ORDER_LIMIT = 20
+
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
     if (order.realizedPnl !== undefined) {
@@ -99,49 +101,6 @@ function formatTimeDuration(ms: number): string {
   return `${seconds}秒`
 }
 
-function LastUpdateTime({ lastUpdate }: { lastUpdate: number | null }) {
-  const [lastUpdateText, setLastUpdateText] = useState(() =>
-    lastUpdate ? formatRecentOrderTime(lastUpdate) : ''
-  )
-
-  useEffect(() => {
-    const updateTime = () => {
-      setLastUpdateText(lastUpdate ? formatRecentOrderTime(lastUpdate) : '')
-    }
-
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-
-    return () => clearInterval(interval)
-  }, [lastUpdate])
-
-  if (!lastUpdateText) {
-    return null
-  }
-
-  return (
-    <>
-      <div className="theme-divider h-3 w-px" />
-      <div className="flex items-center gap-1.5">
-        <svg
-          className="theme-text-muted h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <span className="theme-text-secondary text-xs font-medium">{lastUpdateText}</span>
-      </div>
-    </>
-  )
-}
-
 function DashboardHeader({
   isConnected,
   isConnecting,
@@ -166,15 +125,7 @@ function DashboardHeader({
       <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start gap-3.5">
           <div className="dashboard-brand-mark" aria-hidden="true">
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.2}
-                d="m5 15 7-7 7 7"
-              />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8v11" />
-            </svg>
+            <span>₿</span>
           </div>
           <div className="min-w-0">
             <p className="dashboard-overline">Binance Futures · Private workspace</p>
@@ -213,9 +164,6 @@ function DashboardHeader({
               )}
               <span>{theme === 'dark' ? '浅色' : '深色'}</span>
             </button>
-            {lastUpdate && (
-              <span className="header-update-pill">更新于 {formatRecentOrderTime(lastUpdate)}</span>
-            )}
             {!isConnected && !isConnecting && (
               <button type="button" onClick={reconnect} className="reconnect-button">
                 重新连接
@@ -242,7 +190,6 @@ function StatsOverview({
   openOrdersStats,
   orders,
   totalPnl,
-  lastUpdate,
 }: {
   totalEquity: number
   availableMargin: number
@@ -250,12 +197,12 @@ function StatsOverview({
   openOrdersStats: { total: number; buy: number; sell: number } | null
   orders: Order[]
   totalPnl: number
-  lastUpdate: number | null
 }) {
   const { exchangeInfo } = useExchangeInfo()
 
+  const recentOrders = orders.slice(0, RECENT_ORDER_LIMIT)
   const orderStats = openOrdersStats || { total: 0, buy: 0, sell: 0 }
-  const latestOrder = orders[0]
+  const latestOrder = recentOrders[0]
   const marginSafetyPercent = Math.min(100, Math.max(0, availableMarginPercent))
   const marginSafetyTone =
     marginSafetyPercent <= 10 ? 'critical' : marginSafetyPercent <= 25 ? 'warning' : 'healthy'
@@ -295,13 +242,6 @@ function StatsOverview({
               <span style={{ width: `${marginSafetyPercent}%` }} />
             </div>
           </div>
-          <span
-            className={`stat-account-status ${totalEquity > 0 ? 'stat-account-status--ready' : ''}`}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" />
-            {totalEquity > 0 ? '交易就绪' : '空仓状态'}
-          </span>
-          <LastUpdateTime lastUpdate={lastUpdate} />
         </div>
       </article>
 
@@ -339,7 +279,7 @@ function StatsOverview({
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <p className="stat-label">最近订单盈亏</p>
-            <span className="stat-order-total">{orders.length}</span>
+            <span className="stat-order-total">{recentOrders.length}</span>
           </div>
           <span className="stat-icon stat-icon--gold" aria-hidden="true">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,13 +318,15 @@ function StatsOverview({
             <span className="theme-text-muted text-[11px] font-medium">等待订单数据</span>
           )}
           <div className="flex items-center gap-2">
-            {orders.length >= 2 && (
+            {recentOrders.length >= 2 && (
               <span className="theme-text-muted hidden text-[10px] sm:inline">
-                {formatTimeDuration(orders[0].time - orders[orders.length - 1].time)}
+                {formatTimeDuration(
+                  recentOrders[0].time - recentOrders[recentOrders.length - 1].time
+                )}
               </span>
             )}
-            <div className="grid grid-cols-5 gap-1.5">
-              {orders.slice(0, 10).map(order => {
+            <div className="grid grid-cols-10 gap-2">
+              {recentOrders.map(order => {
                 const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`
 
                 return (
@@ -463,7 +405,7 @@ export function DashboardView() {
   const availableMargin = account ? parseFloat(account.availableBalance) || 0 : 0
   const availableMarginPercent = totalEquity > 0 ? (availableMargin / totalEquity) * 100 : 0
 
-  const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
+  const totalPnl = orders.length > 0 ? calculateTotalPnl(orders.slice(0, RECENT_ORDER_LIMIT)) : 0
   const hasNoData = !account && positions.length === 0
   const riskAlerts = getDashboardRiskAlerts({
     positions,
@@ -535,7 +477,6 @@ export function DashboardView() {
             openOrdersStats={openOrdersStats}
             orders={orders}
             totalPnl={totalPnl}
-            lastUpdate={lastUpdate}
           />
 
           <div className="space-y-4">

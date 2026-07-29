@@ -38,7 +38,7 @@ function KlineChartComponent({
   className = '',
   pricePrecision,
   openOrders = [],
-  visibleCount,
+  visibleCount = 30,
   theme,
 }: KlineChartProps) {
   const isMobile = useIsMobile()
