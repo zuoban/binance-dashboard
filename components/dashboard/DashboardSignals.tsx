@@ -7,10 +7,18 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { RiskAlert } from '@/lib/utils/risk'
+import {
+  DEFAULT_RISK_THRESHOLDS,
+  isRiskThresholds,
+  type RiskAlert,
+  type RiskThresholds,
+} from '@/lib/utils/risk'
 
 interface RiskMonitorProps {
   alerts: RiskAlert[]
+  thresholds: RiskThresholds
+  onSaveThresholds: (thresholds: RiskThresholds) => boolean
+  onResetThresholds: () => void
 }
 
 interface DataReliabilityProps {
@@ -18,6 +26,7 @@ interface DataReliabilityProps {
   isConnected: boolean
   isConnecting: boolean
   reconnectCount: number
+  dataDelayWarningSeconds: number
 }
 
 function formatDelay(milliseconds: number): string {
@@ -54,8 +63,156 @@ function SignalIcon({ severity }: { severity: 'healthy' | RiskAlert['severity'] 
   )
 }
 
+function RiskThresholdSettings({
+  thresholds,
+  onSaveThresholds,
+  onResetThresholds,
+}: Omit<RiskMonitorProps, 'alerts'>) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [draft, setDraft] = useState(thresholds)
+  const [error, setError] = useState('')
+
+  const openSettings = () => {
+    setDraft(thresholds)
+    setError('')
+    setIsOpen(true)
+  }
+
+  const updateDraft = (field: keyof RiskThresholds, value: string) => {
+    setDraft(current => ({ ...current, [field]: Number(value) }))
+  }
+
+  const handleSave = () => {
+    if (!isRiskThresholds(draft) || !onSaveThresholds(draft)) {
+      setError('严重阈值需小于或等于预警阈值，所有数值必须在有效范围内。')
+      return
+    }
+
+    setIsOpen(false)
+  }
+
+  const handleReset = () => {
+    onResetThresholds()
+    setDraft(DEFAULT_RISK_THRESHOLDS)
+    setError('')
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={openSettings}
+        className="rounded-md border border-current/20 px-2 py-1 text-[10px] font-bold tracking-wide opacity-75 transition hover:bg-white/45 hover:opacity-100"
+      >
+        阈值设置
+      </button>
+      {isOpen && (
+        <div className="mt-3 border-t border-current/15 pt-3">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <label className="text-[11px] font-semibold">
+              强平预警（%）
+              <input
+                type="number"
+                min="0.1"
+                max="100"
+                step="0.1"
+                value={draft.liquidationWarningPercent}
+                onChange={event => updateDraft('liquidationWarningPercent', event.target.value)}
+                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+              />
+            </label>
+            <label className="text-[11px] font-semibold">
+              强平严重（%）
+              <input
+                type="number"
+                min="0.1"
+                max="100"
+                step="0.1"
+                value={draft.liquidationCriticalPercent}
+                onChange={event => updateDraft('liquidationCriticalPercent', event.target.value)}
+                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+              />
+            </label>
+            <label className="text-[11px] font-semibold">
+              保证金预警（%）
+              <input
+                type="number"
+                min="0.1"
+                max="100"
+                step="0.1"
+                value={draft.availableMarginWarningPercent}
+                onChange={event => updateDraft('availableMarginWarningPercent', event.target.value)}
+                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+              />
+            </label>
+            <label className="text-[11px] font-semibold">
+              保证金严重（%）
+              <input
+                type="number"
+                min="0.1"
+                max="100"
+                step="0.1"
+                value={draft.availableMarginCriticalPercent}
+                onChange={event =>
+                  updateDraft('availableMarginCriticalPercent', event.target.value)
+                }
+                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+              />
+            </label>
+            <label className="text-[11px] font-semibold">
+              数据延迟预警（秒）
+              <input
+                type="number"
+                min="1"
+                max="300"
+                step="1"
+                value={draft.dataDelayWarningSeconds}
+                onChange={event => updateDraft('dataDelayWarningSeconds', event.target.value)}
+                className="mt-1 block w-full rounded-md border border-current/20 bg-white/70 px-2 py-1 text-xs text-slate-900 outline-none ring-0 focus:border-current"
+              />
+            </label>
+          </div>
+          {error && (
+            <p role="alert" className="mt-2 text-[11px] font-semibold text-red-700">
+              {error}
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="rounded-md bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white transition hover:bg-slate-700"
+            >
+              保存到此浏览器
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="rounded-md border border-current/20 px-2.5 py-1.5 text-[11px] font-bold opacity-80 transition hover:bg-white/45 hover:opacity-100"
+            >
+              恢复默认
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="px-1 text-[11px] font-semibold opacity-70 transition hover:opacity-100"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** 风险监控条。无风险时保持低干扰状态，有风险时突出显示最高等级信号。 */
-export function RiskMonitor({ alerts }: RiskMonitorProps) {
+export function RiskMonitor({
+  alerts,
+  thresholds,
+  onSaveThresholds,
+  onResetThresholds,
+}: RiskMonitorProps) {
   const visibleAlerts = alerts.slice(0, 3)
   const hasCriticalAlert = alerts.some(alert => alert.severity === 'critical')
   const severity = hasCriticalAlert ? 'critical' : alerts.length > 0 ? 'warning' : 'healthy'
@@ -95,9 +252,15 @@ export function RiskMonitor({ alerts }: RiskMonitorProps) {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="text-xs font-bold tracking-wide">风险监控</p>
             <span className="text-[11px] font-medium opacity-70">
-              强平距离 ≤ 8% · 可用保证金 ≤ 25%
+              强平距离 ≤ {thresholds.liquidationWarningPercent}% · 可用保证金 ≤{' '}
+              {thresholds.availableMarginWarningPercent}%
             </span>
           </div>
+          <RiskThresholdSettings
+            thresholds={thresholds}
+            onSaveThresholds={onSaveThresholds}
+            onResetThresholds={onResetThresholds}
+          />
           {visibleAlerts.length > 0 ? (
             <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
               {visibleAlerts.map(alert => (
@@ -127,6 +290,7 @@ export function DataReliability({
   isConnected,
   isConnecting,
   reconnectCount,
+  dataDelayWarningSeconds,
 }: DataReliabilityProps) {
   const [now, setNow] = useState(() => Date.now())
 
@@ -142,7 +306,7 @@ export function DataReliability({
     return Math.max(0, now - lastUpdate)
   }, [lastUpdate, now])
 
-  const isStale = dataDelay !== null && dataDelay >= 15000
+  const isStale = dataDelay !== null && dataDelay >= dataDelayWarningSeconds * 1000
   const connection = isConnecting ? '连接中' : isConnected ? '实时同步' : '连接中断'
   const connectionClassName = isConnecting
     ? 'text-amber-600'
@@ -172,7 +336,7 @@ export function DataReliability({
       <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
-            数据延迟
+            数据延迟（≥ {dataDelayWarningSeconds}秒）
           </p>
           <p className={`mt-0.5 font-semibold ${isStale ? 'text-amber-600' : 'text-slate-700'}`}>
             {dataDelay === null ? '等待首包' : formatDelay(dataDelay)}

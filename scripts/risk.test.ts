@@ -5,7 +5,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { Position } from '../types/binance'
-import { calculateLiquidationDistance, getDashboardRiskAlerts } from '../lib/utils/risk'
+import {
+  calculateLiquidationDistance,
+  getDashboardRiskAlerts,
+  isRiskThresholds,
+} from '../lib/utils/risk'
 
 function createPosition(overrides: Partial<Position> = {}): Position {
   return {
@@ -50,6 +54,35 @@ test('风险监控汇总临近强平、低可用保证金与断线信号', () =>
       ['available-margin', 'critical'],
       ['liquidation-BTCUSDC-LONG', 'critical'],
       ['realtime-connection', 'warning'],
+    ]
+  )
+})
+
+test('自定义风险阈值需要有效范围并会影响告警等级', () => {
+  const thresholds = {
+    liquidationWarningPercent: 6,
+    liquidationCriticalPercent: 2,
+    availableMarginWarningPercent: 30,
+    availableMarginCriticalPercent: 15,
+    dataDelayWarningSeconds: 20,
+  }
+
+  assert.equal(isRiskThresholds(thresholds), true)
+  assert.equal(isRiskThresholds({ ...thresholds, liquidationCriticalPercent: 7 }), false)
+
+  const alerts = getDashboardRiskAlerts({
+    positions: [createPosition({ liquidationPrice: '95' })],
+    availableMarginPercent: 20,
+    isConnected: true,
+    isConnecting: false,
+    thresholds,
+  })
+
+  assert.deepEqual(
+    alerts.map(alert => [alert.id, alert.severity]),
+    [
+      ['available-margin', 'warning'],
+      ['liquidation-BTCUSDC-LONG', 'warning'],
     ]
   )
 })

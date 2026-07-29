@@ -11,6 +11,7 @@ import {
   useDashboardWebSocket,
   useExchangeInfo,
   useIsMounted,
+  useRiskThresholds,
   useSessionExpiryRedirect,
 } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
@@ -357,6 +358,7 @@ function StatsOverview({
 export function DashboardView() {
   const mounted = useIsMounted()
   const handleConnectionError = useSessionExpiryRedirect()
+  const { thresholds, saveThresholds, resetThresholds } = useRiskThresholds()
 
   const {
     account,
@@ -391,6 +393,7 @@ export function DashboardView() {
     availableMarginPercent,
     isConnected,
     isConnecting,
+    thresholds,
   })
 
   return (
@@ -433,12 +436,18 @@ export function DashboardView() {
             </div>
           )}
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]">
-            <RiskMonitor alerts={riskAlerts} />
+            <RiskMonitor
+              alerts={riskAlerts}
+              thresholds={thresholds}
+              onSaveThresholds={saveThresholds}
+              onResetThresholds={resetThresholds}
+            />
             <DataReliability
               lastUpdate={lastUpdate}
               isConnected={isConnected}
               isConnecting={isConnecting}
               reconnectCount={reconnectCount}
+              dataDelayWarningSeconds={thresholds.dataDelayWarningSeconds}
             />
           </div>
           <StatsOverview

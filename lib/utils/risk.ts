@@ -19,17 +19,51 @@ export interface RiskAlert {
   description: string
 }
 
+export interface RiskThresholds {
+  /** 强平距离预警阈值（百分比） */
+  liquidationWarningPercent: number
+  /** 强平距离严重阈值（百分比） */
+  liquidationCriticalPercent: number
+  /** 可用保证金预警阈值（百分比） */
+  availableMarginWarningPercent: number
+  /** 可用保证金严重阈值（百分比） */
+  availableMarginCriticalPercent: number
+  /** 数据延迟预警阈值（秒） */
+  dataDelayWarningSeconds: number
+}
+
 interface DashboardRiskOptions {
   positions: Position[]
   availableMarginPercent: number
   isConnected: boolean
   isConnecting: boolean
+  thresholds?: RiskThresholds
 }
 
-const LIQUIDATION_DISTANCE_CRITICAL = 3
-const LIQUIDATION_DISTANCE_WARNING = 8
-const AVAILABLE_MARGIN_CRITICAL = 10
-const AVAILABLE_MARGIN_WARNING = 25
+/** 默认风险偏好，适用于未设置本地配置的用户。 */
+export const DEFAULT_RISK_THRESHOLDS: RiskThresholds = {
+  liquidationWarningPercent: 8,
+  liquidationCriticalPercent: 3,
+  availableMarginWarningPercent: 25,
+  availableMarginCriticalPercent: 10,
+  dataDelayWarningSeconds: 15,
+}
+
+/** 校验用户输入的风险偏好，防止反向或无效阈值造成误提示。 */
+export function isRiskThresholds(value: RiskThresholds): boolean {
+  const values = Object.values(value)
+  if (values.some(item => !Number.isFinite(item) || item <= 0)) {
+    return false
+  }
+
+  return (
+    value.liquidationCriticalPercent <= value.liquidationWarningPercent &&
+    value.availableMarginCriticalPercent <= value.availableMarginWarningPercent &&
+    value.liquidationWarningPercent <= 100 &&
+    value.availableMarginWarningPercent <= 100 &&
+    value.dataDelayWarningSeconds <= 300
+  )
+}
 
 function isLongPosition(position: Position): boolean {
   return (
@@ -61,11 +95,11 @@ export function calculateLiquidationDistance(position: Position): number | null 
   return Math.max(0, distance)
 }
 
-function getLiquidationSeverity(distance: number): RiskSeverity | null {
-  if (distance <= LIQUIDATION_DISTANCE_CRITICAL) {
+function getLiquidationSeverity(distance: number, thresholds: RiskThresholds): RiskSeverity | null {
+  if (distance <= thresholds.liquidationCriticalPercent) {
     return 'critical'
   }
-  if (distance <= LIQUIDATION_DISTANCE_WARNING) {
+  if (distance <= thresholds.liquidationWarningPercent) {
     return 'warning'
   }
   return null
@@ -79,6 +113,7 @@ export function getDashboardRiskAlerts({
   availableMarginPercent,
   isConnected,
   isConnecting,
+  thresholds = DEFAULT_RISK_THRESHOLDS,
 }: DashboardRiskOptions): RiskAlert[] {
   const alerts: RiskAlert[] = []
 
@@ -88,7 +123,7 @@ export function getDashboardRiskAlerts({
       continue
     }
 
-    const severity = getLiquidationSeverity(distance)
+    const severity = getLiquidationSeverity(distance, thresholds)
     if (severity) {
       alerts.push({
         id: `liquidation-${position.symbol}-${position.positionSide}`,
@@ -101,9 +136,9 @@ export function getDashboardRiskAlerts({
 
   if (Number.isFinite(availableMarginPercent)) {
     const marginSeverity =
-      availableMarginPercent <= AVAILABLE_MARGIN_CRITICAL
+      availableMarginPercent <= thresholds.availableMarginCriticalPercent
         ? 'critical'
-        : availableMarginPercent <= AVAILABLE_MARGIN_WARNING
+        : availableMarginPercent <= thresholds.availableMarginWarningPercent
           ? 'warning'
           : null
 
