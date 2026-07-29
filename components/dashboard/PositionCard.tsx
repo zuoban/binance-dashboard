@@ -18,6 +18,8 @@ interface PositionCardProps {
   openOrders?: Order[]
   /** K线数据 */
   klines?: Record<string, KlineData[]>
+  /** 当前主题 */
+  theme: 'dark' | 'light'
   /** 自定义样式类名 */
   className?: string
 }
@@ -29,6 +31,8 @@ interface PositionCardsProps {
   openOrders?: Order[]
   /** K线数据 */
   klines?: Record<string, KlineData[]>
+  /** 当前主题 */
+  theme: 'dark' | 'light'
   /** 自定义样式类名 */
   className?: string
 }
@@ -74,6 +78,7 @@ function PositionCardComponent({
   exchangeInfo,
   openOrders = [],
   klines,
+  theme,
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
@@ -125,7 +130,7 @@ function PositionCardComponent({
     <div
       className={`position-card ${positionData.isProfit ? 'position-card--profit' : 'position-card--loss'} ${className}`}
     >
-      <div className="border-b border-white/[0.08] px-5 py-4 sm:px-6">
+      <div className="position-card__header px-5 py-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
@@ -156,19 +161,17 @@ function PositionCardComponent({
               )}
             </div>
             <div>
-              <h3 className="font-mono text-base font-bold tracking-tight text-[#f2f7f1]">
+              <h3 className="theme-text-primary font-mono text-base font-bold tracking-tight">
                 {position.symbol}
               </h3>
               <div className="flex items-center gap-2 mt-0.5">
                 <span
-                  className={`text-xs font-semibold ${
-                    positionData.isLong ? 'text-[#73e2ad]' : 'text-[#ff9999]'
-                  }`}
+                  className={`position-direction ${positionData.isLong ? 'position-direction--long' : 'position-direction--short'}`}
                 >
                   {positionData.isLong ? '做多' : '做空'}
                 </span>
-                <span className="text-xs font-medium text-[#5f7771]">·</span>
-                <span className="text-xs font-medium text-[#a8b9b1]">
+                <span className="theme-text-muted text-xs font-medium">·</span>
+                <span className="theme-text-secondary text-xs font-medium">
                   {positionData.leverage}x 杠杆
                 </span>
               </div>
@@ -177,25 +180,19 @@ function PositionCardComponent({
           <div className="text-right">
             <div className="flex items-baseline gap-1">
               <span
-                className={`text-lg font-bold ${
-                  positionData.isProfit ? 'text-[#42d392]' : 'text-[#ff8585]'
-                }`}
+                className={`position-pnl ${positionData.isProfit ? 'position-pnl--positive' : 'position-pnl--negative'}`}
               >
                 {positionData.isProfit ? '+' : ''}${positionData.unrealizedProfit.toFixed(2)}
               </span>
               <span
-                className={`text-xs font-semibold ${
-                  positionData.isProfit ? 'text-[#73e2ad]' : 'text-[#ff9999]'
-                }`}
+                className={`position-pnl-percent ${positionData.isProfit ? 'position-pnl--positive' : 'position-pnl--negative'}`}
               >
                 {positionData.isProfit ? '+' : ''}
                 {((positionData.unrealizedProfit / positionData.positionValue) * 100).toFixed(2)}%
               </span>
             </div>
             <div
-              className={`mt-0.5 text-[10px] font-medium ${
-                positionData.isProfit ? 'text-[#73e2ad]' : 'text-[#ff9999]'
-              }`}
+              className={`position-pnl-status ${positionData.isProfit ? 'position-pnl--positive' : 'position-pnl--negative'}`}
             >
               {positionData.isProfit ? '盈利中' : '亏损中'}
             </div>
@@ -228,7 +225,7 @@ function PositionCardComponent({
         <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
           <div className="position-metric space-y-1">
             <div className="position-metric__label">标记价格</div>
-            <div className="font-mono text-base font-bold tracking-tight text-[#f2f7f1]">
+            <div className="position-metric__value text-base font-bold">
               ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
             </div>
           </div>
@@ -236,22 +233,22 @@ function PositionCardComponent({
           <div className="position-metric space-y-1">
             <div className="position-metric__label">盈亏平衡价</div>
             {position.breakEvenPrice && parseFloat(position.breakEvenPrice) > 0 ? (
-              <span className="font-mono text-base font-bold text-[#f3bd62]">
+              <span className="position-break-even">
                 ${formatPrice(position.breakEvenPrice, position.symbol, exchangeInfo)}
               </span>
             ) : (
-              <span className="text-sm text-[#526861]">-</span>
+              <span className="theme-text-muted text-sm">-</span>
             )}
           </div>
 
           <div className="position-metric space-y-1">
             <div className="position-metric__label">强平价格</div>
             {position.liquidationPrice && parseFloat(position.liquidationPrice) > 0 ? (
-              <span className="font-mono text-base font-bold text-[#ff8585]">
+              <span className="position-liquidation">
                 ${formatPrice(position.liquidationPrice, position.symbol, exchangeInfo)}
               </span>
             ) : (
-              <span className="text-sm text-[#526861]">-</span>
+              <span className="theme-text-muted text-sm">-</span>
             )}
           </div>
         </div>
@@ -265,9 +262,10 @@ function PositionCardComponent({
           pricePrecision={pricePrecision}
           openOrders={openOrders}
           visibleCount={visibleKlineCount}
+          theme={theme}
         />
 
-        <div className="absolute bottom-3 right-3 rounded-lg border border-white/10 bg-[#0a1c1c]/90 px-3 py-2 shadow-lg backdrop-blur-sm">
+        <div className="chart-density-control absolute bottom-3 right-3 px-3 py-2 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <input
               type="range"
@@ -277,11 +275,11 @@ function PositionCardComponent({
               value={visibleKlineCount}
               onChange={e => setVisibleKlineCount(Number(e.target.value))}
               style={{
-                background: `linear-gradient(to right, #42d392 0%, #42d392 ${((visibleKlineCount - 10) / 40) * 100}%, #26433d ${((visibleKlineCount - 10) / 40) * 100}%, #26433d 100%)`,
+                background: `linear-gradient(to right, var(--success) 0%, var(--success) ${((visibleKlineCount - 10) / 40) * 100}%, var(--range-track) ${((visibleKlineCount - 10) / 40) * 100}%, var(--range-track) 100%)`,
               }}
               className="h-1.5 w-32 cursor-pointer appearance-none rounded-full border-none outline-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[#dff9eb] [&::-webkit-slider-thumb]:bg-[#42d392] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-[#42d392]/40 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[#dff9eb] [&::-moz-range-thumb]:bg-[#42d392]"
             />
-            <span className="min-w-[20px] text-right font-mono text-xs font-semibold tabular-nums text-[#73e2ad]">
+            <span className="theme-success-text min-w-[20px] text-right font-mono text-xs font-semibold tabular-nums">
               {visibleKlineCount}
             </span>
           </div>
@@ -314,6 +312,7 @@ function arePositionCardPropsEqual(previous: PositionCardProps, next: PositionCa
     isPositionEqual &&
     previous.exchangeInfo === next.exchangeInfo &&
     previous.className === next.className &&
+    previous.theme === next.theme &&
     areKlineDataEqual(previous.klines?.[symbol] || [], next.klines?.[symbol] || []) &&
     areRelevantOrdersEqual(previous.openOrders || [], next.openOrders || [], symbol)
   )
@@ -325,6 +324,7 @@ export function PositionCards({
   positions,
   openOrders,
   klines,
+  theme,
   className = '',
 }: PositionCardsProps) {
   const { exchangeInfo } = useExchangeInfo()
@@ -338,6 +338,7 @@ export function PositionCards({
           exchangeInfo={exchangeInfo}
           openOrders={openOrders}
           klines={klines}
+          theme={theme}
         />
       ))}
     </div>

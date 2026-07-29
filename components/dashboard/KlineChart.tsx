@@ -28,6 +28,7 @@ interface KlineChartProps {
   pricePrecision?: number
   openOrders?: Order[]
   visibleCount?: number
+  theme: 'dark' | 'light'
 }
 
 function KlineChartComponent({
@@ -38,6 +39,7 @@ function KlineChartComponent({
   pricePrecision,
   openOrders = [],
   visibleCount,
+  theme,
 }: KlineChartProps) {
   const isMobile = useIsMobile()
   const displayData = useMemo(() => {
@@ -79,6 +81,43 @@ function KlineChartComponent({
   }, [])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const options: any = useMemo(() => {
+    const chartTheme =
+      theme === 'light'
+        ? {
+            axis: '#6b7e74',
+            grid: 'rgba(51, 87, 74, 0.14)',
+            axisBorder: 'rgba(51, 87, 74, 0.22)',
+            tooltipBackground: 'rgba(255, 255, 252, 0.98)',
+            tooltipText: '#16342c',
+            tooltipMuted: '#697d73',
+            tooltipDivider: 'rgba(51, 87, 74, 0.16)',
+            tooltipShadow: 'rgba(41, 68, 55, 0.16)',
+            annotationPositive: '#e9f8ef',
+            annotationNegative: '#fff0f0',
+            annotationPositiveText: '#0b6e43',
+            annotationNegativeText: '#a83a3a',
+            positive: '#159b63',
+            negative: '#d95555',
+            warning: '#ad7120',
+          }
+        : {
+            axis: '#94a3b8',
+            grid: 'rgba(148, 163, 184, 0.1)',
+            axisBorder: 'rgba(148, 163, 184, 0.2)',
+            tooltipBackground: 'rgba(8, 26, 26, 0.97)',
+            tooltipText: '#f2f7f1',
+            tooltipMuted: '#a8b9b1',
+            tooltipDivider: 'rgba(202, 221, 210, 0.12)',
+            tooltipShadow: 'rgba(0, 0, 0, 0.32)',
+            annotationPositive: '#167249',
+            annotationNegative: '#952f2f',
+            annotationPositiveText: '#dff9eb',
+            annotationNegativeText: '#ffe2e2',
+            positive: '#42d392',
+            negative: '#ff7676',
+            warning: '#f3bd62',
+          }
+
     if (displayData.length === 0) {
       return {
         chart: {
@@ -89,7 +128,7 @@ function KlineChartComponent({
           text: '加载中...',
           align: 'center',
           style: {
-            color: '#94a3b8',
+            color: chartTheme.axis,
             fontSize: '12px',
           },
         },
@@ -182,8 +221,8 @@ function KlineChartComponent({
       plotOptions: {
         candlestick: {
           colors: {
-            upward: '#42d392',
-            downward: '#ff7676',
+            upward: chartTheme.positive,
+            downward: chartTheme.negative,
           },
           wick: {
             useFillColor: true,
@@ -204,7 +243,7 @@ function KlineChartComponent({
         labels: {
           show: true,
           style: {
-            colors: '#94a3b8',
+            colors: chartTheme.axis,
             fontSize: isMobile ? '9px' : '10px',
             fontFamily: 'ui-monospace, monospace',
           },
@@ -218,7 +257,7 @@ function KlineChartComponent({
         },
         axisBorder: {
           show: true,
-          color: 'rgba(148, 163, 184, 0.2)',
+          color: chartTheme.axisBorder,
           height: 1,
         },
         axisTicks: {
@@ -233,7 +272,7 @@ function KlineChartComponent({
           position: 'back',
           opacity: 0.9,
           stroke: {
-            color: '#94a3b8',
+            color: chartTheme.axis,
             width: 1,
             dashArray: 3,
           },
@@ -246,7 +285,7 @@ function KlineChartComponent({
         labels: {
           show: true,
           style: {
-            colors: '#94a3b8',
+            colors: chartTheme.axis,
             fontSize: isMobile ? '9px' : '10px',
             fontFamily: 'ui-monospace, monospace',
           },
@@ -264,14 +303,14 @@ function KlineChartComponent({
           show: true,
           position: 'back',
           stroke: {
-            color: '#94a3b8',
+            color: chartTheme.axis,
             width: 1,
             dashArray: 3,
           },
         },
       },
       grid: {
-        borderColor: 'rgba(148, 163, 184, 0.1)',
+        borderColor: chartTheme.grid,
         strokeDashArray: 4,
         xaxis: {
           lines: {
@@ -297,7 +336,7 @@ function KlineChartComponent({
         x: {
           format: 'MM/dd HH:mm',
         },
-        theme: 'dark',
+        theme,
         style: {
           fontSize: '12px',
           fontFamily: "'Avenir Next', 'PingFang SC', sans-serif",
@@ -314,7 +353,7 @@ function KlineChartComponent({
           if (!kline) return ''
 
           const changePercent = kline.open > 0 ? ((kline.close - kline.open) / kline.open) * 100 : 0
-          const changeColor = changePercent >= 0 ? '#42d392' : '#ff7676'
+          const changeColor = changePercent >= 0 ? chartTheme.positive : chartTheme.negative
           const changeBgColor =
             changePercent >= 0 ? 'rgba(66, 211, 146, 0.12)' : 'rgba(255, 118, 118, 0.12)'
 
@@ -324,12 +363,12 @@ function KlineChartComponent({
 
           // 移动端样式优化
           const containerStyle = isMobile
-            ? `padding: 8px; min-width: 140px; background: rgba(8, 26, 26, 0.97); border: 1px solid ${changeColor}; border-radius: 6px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32); backdrop-filter: blur(10px);`
-            : `padding: 12px; min-width: 220px; background: rgba(8, 26, 26, 0.97); border: 1px solid ${changeColor}; border-radius: 8px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32); backdrop-filter: blur(10px);`
+            ? `padding: 8px; min-width: 140px; background: ${chartTheme.tooltipBackground}; border: 1px solid ${changeColor}; border-radius: 6px; box-shadow: 0 8px 22px ${chartTheme.tooltipShadow}; backdrop-filter: blur(10px);`
+            : `padding: 12px; min-width: 220px; background: ${chartTheme.tooltipBackground}; border: 1px solid ${changeColor}; border-radius: 8px; box-shadow: 0 12px 28px ${chartTheme.tooltipShadow}; backdrop-filter: blur(10px);`
 
           const headerStyle = isMobile
-            ? 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(202, 221, 210, 0.12);'
-            : 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(202, 221, 210, 0.12);'
+            ? `display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid ${chartTheme.tooltipDivider};`
+            : `display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid ${chartTheme.tooltipDivider};`
 
           const fontSizeDate = isMobile ? '10px' : '11px'
           const fontSizeLabel = isMobile ? '10px' : '12px'
@@ -340,7 +379,7 @@ function KlineChartComponent({
             <div style="${containerStyle}">
               <div style="${headerStyle}">
                 <div>
-                  <div style="font-size: ${fontSizeDate}; color: #a8b9b1; font-weight: 500; margin-bottom: 2px;">
+                  <div style="font-size: ${fontSizeDate}; color: ${chartTheme.tooltipMuted}; font-weight: 500; margin-bottom: 2px;">
                     ${date.toLocaleString('zh-CN', {
                       month: '2-digit',
                       day: '2-digit',
@@ -348,7 +387,7 @@ function KlineChartComponent({
                       minute: '2-digit',
                     })}
                   </div>
-                  ${!isMobile ? `<div style="font-size: 10px; color: #71857c;">15分钟 K线</div>` : ''}
+                  ${!isMobile ? `<div style="font-size: 10px; color: ${chartTheme.axis};">15分钟 K线</div>` : ''}
                 </div>
                 <div style="text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 4px; padding: ${isMobile ? '2px 6px' : '4px 8px'}; border-radius: 6px; background: ${changeBgColor};">
@@ -361,34 +400,34 @@ function KlineChartComponent({
 
               <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: ${gridGap}; font-size: ${fontSizeValue};">
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #71857c; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">开</span>
-                  <span style="font-weight: 600; color: #f2f7f1; font-family: ui-monospace, monospace;">
+                  <span style="color: ${chartTheme.axis}; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">开</span>
+                  <span style="font-weight: 600; color: ${chartTheme.tooltipText}; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.open)}
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #71857c; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">高</span>
-                  <span style="font-weight: 600; color: #42d392; font-family: ui-monospace, monospace;">
+                  <span style="color: ${chartTheme.axis}; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">高</span>
+                  <span style="font-weight: 600; color: ${chartTheme.positive}; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.high)}
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #71857c; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">收</span>
-                  <span style="font-weight: 600; color: ${kline.close >= kline.open ? '#42d392' : '#ff7676'}; font-family: ui-monospace, monospace;">
+                  <span style="color: ${chartTheme.axis}; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">收</span>
+                  <span style="font-weight: 600; color: ${kline.close >= kline.open ? chartTheme.positive : chartTheme.negative}; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.close)}
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #71857c; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">低</span>
-                  <span style="font-weight: 600; color: #ff7676; font-family: ui-monospace, monospace;">
+                  <span style="color: ${chartTheme.axis}; font-size: ${fontSizeLabel}; width: ${isMobile ? '12px' : '24px'};">低</span>
+                  <span style="font-weight: 600; color: ${chartTheme.negative}; font-family: ui-monospace, monospace;">
                     ${formatPrice(kline.low)}
                   </span>
                 </div>
               </div>
 
-              <div style="margin-top: ${isMobile ? '8px' : '12px'}; padding-top: ${isMobile ? '4px' : '8px'}; border-top: 1px solid rgba(202, 221, 210, 0.12); display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #a8b9b1; font-size: ${fontSizeLabel}; font-weight: 500;">振幅</span>
-                <span style="font-size: ${isMobile ? '12px' : '14px'}; font-weight: 700; color: #f3bd62; font-family: ui-monospace, monospace;">
+              <div style="margin-top: ${isMobile ? '8px' : '12px'}; padding-top: ${isMobile ? '4px' : '8px'}; border-top: 1px solid ${chartTheme.tooltipDivider}; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: ${chartTheme.tooltipMuted}; font-size: ${fontSizeLabel}; font-weight: 500;">振幅</span>
+                <span style="font-size: ${isMobile ? '12px' : '14px'}; font-weight: 700; color: ${chartTheme.warning}; font-family: ui-monospace, monospace;">
                   ${amplitude.toFixed(2)}%
                 </span>
               </div>
@@ -400,13 +439,17 @@ function KlineChartComponent({
         yaxis: [
           {
             y: lastClose,
-            borderColor: isPositive ? '#42d392' : '#ff7676',
+            borderColor: isPositive ? chartTheme.positive : chartTheme.negative,
             strokeDashArray: 4,
             label: {
-              borderColor: isPositive ? '#42d392' : '#ff7676',
+              borderColor: isPositive ? chartTheme.positive : chartTheme.negative,
               style: {
-                color: isPositive ? '#dff9eb' : '#ffe2e2',
-                background: isPositive ? '#167249' : '#952f2f',
+                color: isPositive
+                  ? chartTheme.annotationPositiveText
+                  : chartTheme.annotationNegativeText,
+                background: isPositive
+                  ? chartTheme.annotationPositive
+                  : chartTheme.annotationNegative,
                 fontSize: '10px',
                 fontWeight: 'bold',
                 fontFamily: 'ui-monospace, monospace',
@@ -418,23 +461,23 @@ function KlineChartComponent({
           },
           ...nearbyOrders.map(({ order, price }) => ({
             y: price,
-            borderColor: order.side === 'BUY' ? '#42d392' : '#ff7676',
+            borderColor: order.side === 'BUY' ? chartTheme.positive : chartTheme.negative,
             strokeDashArray: 2,
             offsetY: 0,
           })),
         ],
       },
     }
-  }, [displayData, symbol, height, pricePrecision, openOrders, isMobile])
+  }, [displayData, symbol, height, pricePrecision, openOrders, isMobile, theme])
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (displayData.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg bg-[#0a1c1c] ${className}`}
+        className={`chart-placeholder flex items-center justify-center rounded-lg ${className}`}
         style={{ height }}
       >
-        <span className="text-xs text-[#71857c]">加载中...</span>
+        <span className="theme-text-muted text-xs">加载中...</span>
       </div>
     )
   }
@@ -451,10 +494,10 @@ function KlineChartComponent({
         />
       ) : (
         <div
-          className="flex h-full items-center justify-center rounded-lg bg-[#0a1c1c]"
+          className="chart-placeholder flex h-full items-center justify-center rounded-lg"
           aria-busy="true"
         >
-          <span className="text-xs text-[#71857c]">图表加载中...</span>
+          <span className="theme-text-muted text-xs">图表加载中...</span>
         </div>
       )}
     </div>

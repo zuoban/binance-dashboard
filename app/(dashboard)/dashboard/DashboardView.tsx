@@ -22,6 +22,8 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
 import { getDashboardRiskAlerts } from '@/lib/utils/risk'
 
+type DashboardTheme = 'dark' | 'light'
+
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
     if (order.realizedPnl !== undefined) {
@@ -119,10 +121,10 @@ function LastUpdateTime({ lastUpdate }: { lastUpdate: number | null }) {
 
   return (
     <>
-      <div className="h-3 w-px bg-white/10" />
+      <div className="theme-divider h-3 w-px" />
       <div className="flex items-center gap-1.5">
         <svg
-          className="h-3.5 w-3.5 text-[#71857c]"
+          className="theme-text-muted h-3.5 w-3.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -134,7 +136,7 @@ function LastUpdateTime({ lastUpdate }: { lastUpdate: number | null }) {
             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span className="text-xs font-medium text-[#a8b9b1]">{lastUpdateText}</span>
+        <span className="theme-text-secondary text-xs font-medium">{lastUpdateText}</span>
       </div>
     </>
   )
@@ -145,11 +147,15 @@ function DashboardHeader({
   isConnecting,
   lastUpdate,
   reconnect,
+  theme,
+  onThemeChange,
 }: {
   isConnected: boolean
   isConnecting: boolean
   lastUpdate: number | null
   reconnect: () => void
+  theme: DashboardTheme
+  onThemeChange: (theme: DashboardTheme) => void
 }) {
   const statusText = isConnecting
     ? '正在建立连接'
@@ -185,21 +191,43 @@ function DashboardHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
+          <button
+            type="button"
+            onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+            className="theme-toggle"
+            aria-label={theme === 'dark' ? '切换至浅色主题' : '切换至深色主题'}
+            title={theme === 'dark' ? '切换至浅色主题' : '切换至深色主题'}
+          >
+            {theme === 'dark' ? (
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3.5" strokeWidth={1.8} />
+                <path
+                  strokeLinecap="round"
+                  strokeWidth={1.8}
+                  d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.72 5.28l-1.41 1.41M6.69 17.31l-1.41 1.41M18.72 18.72l-1.41-1.41M6.69 6.69 5.28 5.28"
+                />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M20.5 15.2A8.5 8.5 0 1 1 8.8 3.5 6.7 6.7 0 0 0 20.5 15.2Z"
+                />
+              </svg>
+            )}
+            <span>{theme === 'dark' ? '浅色' : '深色'}</span>
+          </button>
           <div className={`connection-pill ${statusClassName}`}>
             <span className={`status-dot ${isConnected ? 'status-dot--live' : ''}`} />
             {statusText}
           </div>
           {lastUpdate && (
-            <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1.5 text-[11px] font-medium text-[#a8b9b1]">
-              更新于 {formatRecentOrderTime(lastUpdate)}
-            </span>
+            <span className="header-update-pill">更新于 {formatRecentOrderTime(lastUpdate)}</span>
           )}
           {!isConnected && !isConnecting && (
-            <button
-              type="button"
-              onClick={reconnect}
-              className="rounded-full border border-[#d8b36a]/35 bg-[#d8b36a]/10 px-3 py-1.5 text-[11px] font-bold text-[#edcf90] transition hover:border-[#d8b36a]/70 hover:bg-[#d8b36a]/18"
-            >
+            <button type="button" onClick={reconnect} className="reconnect-button">
               重新连接
             </button>
           )}
@@ -236,9 +264,7 @@ function StatsOverview({
       <article className="card dashboard-stat-card dashboard-stat-card--primary">
         <div className="relative z-10 flex items-center justify-between">
           <p className="stat-label">账户权益</p>
-          <span className="rounded-full border border-[#d8b36a]/25 bg-[#d8b36a]/10 px-2 py-1 font-mono text-[10px] font-bold text-[#edcf90]">
-            USDC
-          </span>
+          <span className="stat-currency-pill">USDC</span>
         </div>
         <div className="relative z-10 mt-5 flex items-end gap-2">
           <p className="stat-number">${formatNumber(totalEquity)}</p>
@@ -251,11 +277,9 @@ function StatsOverview({
           </span>
           <span className="stat-meta">{formatNumber(availableMarginPercent, 1)}%</span>
           <span
-            className={`flex items-center gap-1.5 text-[11px] font-bold ${totalEquity > 0 ? 'text-[#93e5ba]' : 'text-[#71857c]'}`}
+            className={`stat-account-status ${totalEquity > 0 ? 'stat-account-status--ready' : ''}`}
           >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${totalEquity > 0 ? 'bg-[#42d392]' : 'bg-[#71857c]'}`}
-            />
+            <span className="h-1.5 w-1.5 rounded-full" />
             {totalEquity > 0 ? '交易就绪' : '空仓状态'}
           </span>
           <LastUpdateTime lastUpdate={lastUpdate} />
@@ -265,10 +289,7 @@ function StatsOverview({
       <article className="card dashboard-stat-card">
         <div className="relative z-10 flex items-center justify-between">
           <p className="stat-label">当前委托</p>
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7aa8ff]/10 text-[#9dbdff]"
-            aria-hidden="true"
-          >
+          <span className="stat-icon stat-icon--info" aria-hidden="true">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -285,13 +306,12 @@ function StatsOverview({
         </div>
         <div className="card-divider relative z-10 mt-4" />
         <div className="relative z-10 mt-3 flex items-center gap-4 text-xs">
-          <span className="text-[#a8b9b1]">
-            买入 <strong className="ml-1 font-mono text-sm text-[#42d392]">{orderStats.buy}</strong>
+          <span className="stat-order-count">
+            买入 <strong className="stat-order-count--buy">{orderStats.buy}</strong>
           </span>
-          <span className="h-4 w-px bg-white/10" />
-          <span className="text-[#a8b9b1]">
-            卖出{' '}
-            <strong className="ml-1 font-mono text-sm text-[#ff9292]">{orderStats.sell}</strong>
+          <span className="theme-divider h-4 w-px" />
+          <span className="stat-order-count">
+            卖出 <strong className="stat-order-count--sell">{orderStats.sell}</strong>
           </span>
         </div>
       </article>
@@ -300,14 +320,9 @@ function StatsOverview({
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <p className="stat-label">最近订单盈亏</p>
-            <span className="rounded-full bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-[#71857c]">
-              {orders.length}
-            </span>
+            <span className="stat-order-total">{orders.length}</span>
           </div>
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#d8b36a]/10 text-[#edcf90]"
-            aria-hidden="true"
-          >
+          <span className="stat-icon stat-icon--gold" aria-hidden="true">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -321,7 +336,7 @@ function StatsOverview({
         </div>
         <div className="relative z-10 mt-5 flex items-end gap-2">
           <p
-            className={`stat-number stat-number--compact ${totalPnl >= 0 ? 'text-[#42d392]' : 'text-[#ff8585]'}`}
+            className={`stat-number stat-number--compact ${totalPnl >= 0 ? 'stat-number--positive' : 'stat-number--negative'}`}
           >
             {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
           </p>
@@ -332,20 +347,20 @@ function StatsOverview({
           {latestOrder ? (
             <div className="flex items-center gap-2">
               <span
-                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${latestOrder.side === 'BUY' ? 'bg-[#42d392]/10 text-[#93e5ba]' : 'bg-[#ff7676]/10 text-[#ffadad]'}`}
+                className={`stat-order-side ${latestOrder.side === 'BUY' ? 'stat-order-side--buy' : 'stat-order-side--sell'}`}
               >
                 {latestOrder.side === 'BUY' ? '买入' : '卖出'}
               </span>
-              <span className="text-[11px] font-medium text-[#a8b9b1]">
+              <span className="theme-text-secondary text-[11px] font-medium">
                 {formatRecentOrderTime(latestOrder.time)}
               </span>
             </div>
           ) : (
-            <span className="text-[11px] font-medium text-[#71857c]">等待订单数据</span>
+            <span className="theme-text-muted text-[11px] font-medium">等待订单数据</span>
           )}
           <div className="flex items-center gap-2">
             {orders.length >= 2 && (
-              <span className="hidden text-[10px] text-[#71857c] sm:inline">
+              <span className="theme-text-muted hidden text-[10px] sm:inline">
                 {formatTimeDuration(orders[0].time - orders[orders.length - 1].time)}
               </span>
             )}
@@ -362,7 +377,7 @@ function StatsOverview({
                     <button
                       type="button"
                       aria-label={`查看订单详情：${orderLabel}`}
-                      className={`h-2 w-2 rounded-full transition hover:scale-125 ${order.side === 'BUY' ? 'bg-[#42d392] hover:ring-2 hover:ring-[#42d392]/25' : 'bg-[#ff7676] hover:ring-2 hover:ring-[#ff7676]/25'}`}
+                      className={`activity-dot ${order.side === 'BUY' ? 'activity-dot--buy' : 'activity-dot--sell'}`}
                       title={orderLabel}
                     />
                   </OrderModal>
@@ -380,6 +395,28 @@ export function DashboardView() {
   const mounted = useIsMounted()
   const handleConnectionError = useSessionExpiryRedirect()
   const { thresholds, saveThresholds, resetThresholds } = useRiskThresholds()
+  const [theme, setTheme] = useState<DashboardTheme>(() => {
+    if (typeof window === 'undefined') {
+      return 'dark'
+    }
+
+    try {
+      const savedTheme = window.localStorage.getItem('dashboard-theme')
+      return savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark'
+    } catch {
+      // 隐私模式下存储可能不可用，继续使用深色默认主题。
+      return 'dark'
+    }
+  })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      window.localStorage.setItem('dashboard-theme', theme)
+    } catch {
+      // 存储失败不影响本次会话内的主题切换。
+    }
+  }, [theme])
 
   const {
     account,
@@ -424,6 +461,8 @@ export function DashboardView() {
         isConnecting={isConnecting}
         lastUpdate={lastUpdate}
         reconnect={reconnect}
+        theme={theme}
+        onThemeChange={setTheme}
       />
       {loading && hasNoData && (
         <div className="card flex justify-center py-16">
@@ -468,6 +507,7 @@ export function DashboardView() {
               thresholds={thresholds}
               onSaveThresholds={saveThresholds}
               onResetThresholds={resetThresholds}
+              theme={theme}
             />
             <DataReliability
               lastUpdate={lastUpdate}
@@ -475,6 +515,7 @@ export function DashboardView() {
               isConnecting={isConnecting}
               reconnectCount={reconnectCount}
               dataDelayWarningSeconds={thresholds.dataDelayWarningSeconds}
+              theme={theme}
             />
           </div>
           <StatsOverview
@@ -492,7 +533,12 @@ export function DashboardView() {
               <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
             ) : (
               <div className="space-y-2">
-                <PositionCards positions={positions} openOrders={openOrders} klines={klines} />
+                <PositionCards
+                  positions={positions}
+                  openOrders={openOrders}
+                  klines={klines}
+                  theme={theme}
+                />
               </div>
             )}
           </div>
