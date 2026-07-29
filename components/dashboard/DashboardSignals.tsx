@@ -7,6 +7,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { formatISO } from 'date-fns'
 import {
   DEFAULT_RISK_THRESHOLDS,
@@ -23,7 +24,6 @@ interface RiskMonitorProps {
   thresholds: RiskThresholds
   onSaveThresholds: (thresholds: RiskThresholds) => boolean
   onResetThresholds: () => void
-  theme: 'dark' | 'light'
 }
 
 interface DataReliabilityProps {
@@ -102,107 +102,167 @@ function RiskThresholdSettings({
     setError('')
   }
 
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
   return (
-    <div className="mt-2">
+    <div className="risk-threshold-settings">
       <button
         type="button"
         onClick={openSettings}
-        className="rounded-md border border-current/20 px-2 py-1 text-[10px] font-bold tracking-wide opacity-75 transition hover:bg-white/45 hover:opacity-100"
+        className="risk-monitor__settings"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
       >
         阈值设置
       </button>
-      {isOpen && (
-        <div className="mt-3 border-t border-current/15 pt-3">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            <label className="text-[11px] font-semibold">
-              强平预警（%）
-              <input
-                type="number"
-                min="0.1"
-                max="100"
-                step="0.1"
-                value={draft.liquidationWarningPercent}
-                onChange={event => updateDraft('liquidationWarningPercent', event.target.value)}
-                className="theme-field"
-              />
-            </label>
-            <label className="text-[11px] font-semibold">
-              强平严重（%）
-              <input
-                type="number"
-                min="0.1"
-                max="100"
-                step="0.1"
-                value={draft.liquidationCriticalPercent}
-                onChange={event => updateDraft('liquidationCriticalPercent', event.target.value)}
-                className="theme-field"
-              />
-            </label>
-            <label className="text-[11px] font-semibold">
-              保证金预警（%）
-              <input
-                type="number"
-                min="0.1"
-                max="100"
-                step="0.1"
-                value={draft.availableMarginWarningPercent}
-                onChange={event => updateDraft('availableMarginWarningPercent', event.target.value)}
-                className="theme-field"
-              />
-            </label>
-            <label className="text-[11px] font-semibold">
-              保证金严重（%）
-              <input
-                type="number"
-                min="0.1"
-                max="100"
-                step="0.1"
-                value={draft.availableMarginCriticalPercent}
-                onChange={event =>
-                  updateDraft('availableMarginCriticalPercent', event.target.value)
-                }
-                className="theme-field"
-              />
-            </label>
-            <label className="text-[11px] font-semibold">
-              数据延迟预警（秒）
-              <input
-                type="number"
-                min="1"
-                max="300"
-                step="1"
-                value={draft.dataDelayWarningSeconds}
-                onChange={event => updateDraft('dataDelayWarningSeconds', event.target.value)}
-                className="theme-field"
-              />
-            </label>
-          </div>
-          {error && (
-            <p role="alert" className="mt-2 text-[11px] font-semibold text-red-700">
-              {error}
-            </p>
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={handleSave} className="theme-action-button">
-              保存到此浏览器
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="rounded-md border border-current/20 px-2.5 py-1.5 text-[11px] font-bold opacity-80 transition hover:bg-white/45 hover:opacity-100"
+      {isOpen &&
+        createPortal(
+          <div
+            className="risk-modal"
+            role="presentation"
+            onMouseDown={event => {
+              if (event.target === event.currentTarget) {
+                setIsOpen(false)
+              }
+            }}
+          >
+            <section
+              className="risk-modal__dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="risk-threshold-dialog-title"
             >
-              恢复默认
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="px-1 text-[11px] font-semibold opacity-70 transition hover:opacity-100"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
+              <header className="risk-modal__header">
+                <div>
+                  <p className="risk-modal__eyebrow">Risk controls</p>
+                  <h2 id="risk-threshold-dialog-title">风险阈值设置</h2>
+                  <p>仅保存到当前浏览器，用于调整看板风险提醒的敏感度。</p>
+                </div>
+                <button
+                  type="button"
+                  className="risk-modal__close"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="关闭阈值设置"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="m6 6 12 12M18 6 6 18"
+                    />
+                  </svg>
+                </button>
+              </header>
+              <div className="risk-modal__form">
+                <label className="risk-modal__field">
+                  强平预警（%）
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="100"
+                    step="0.1"
+                    value={draft.liquidationWarningPercent}
+                    onChange={event => updateDraft('liquidationWarningPercent', event.target.value)}
+                    className="theme-field"
+                  />
+                </label>
+                <label className="risk-modal__field">
+                  强平严重（%）
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="100"
+                    step="0.1"
+                    value={draft.liquidationCriticalPercent}
+                    onChange={event =>
+                      updateDraft('liquidationCriticalPercent', event.target.value)
+                    }
+                    className="theme-field"
+                  />
+                </label>
+                <label className="risk-modal__field">
+                  保证金预警（%）
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="100"
+                    step="0.1"
+                    value={draft.availableMarginWarningPercent}
+                    onChange={event =>
+                      updateDraft('availableMarginWarningPercent', event.target.value)
+                    }
+                    className="theme-field"
+                  />
+                </label>
+                <label className="risk-modal__field">
+                  保证金严重（%）
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="100"
+                    step="0.1"
+                    value={draft.availableMarginCriticalPercent}
+                    onChange={event =>
+                      updateDraft('availableMarginCriticalPercent', event.target.value)
+                    }
+                    className="theme-field"
+                  />
+                </label>
+                <label className="risk-modal__field">
+                  数据延迟预警（秒）
+                  <input
+                    type="number"
+                    min="1"
+                    max="300"
+                    step="1"
+                    value={draft.dataDelayWarningSeconds}
+                    onChange={event => updateDraft('dataDelayWarningSeconds', event.target.value)}
+                    className="theme-field"
+                  />
+                </label>
+              </div>
+              {error && (
+                <p role="alert" className="risk-modal__error">
+                  {error}
+                </p>
+              )}
+              <footer className="risk-modal__footer">
+                <button type="button" onClick={handleSave} className="theme-action-button">
+                  保存到此浏览器
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="risk-modal__secondary-action"
+                >
+                  恢复默认
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="risk-modal__cancel"
+                >
+                  取消
+                </button>
+              </footer>
+            </section>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
@@ -218,26 +278,22 @@ function RiskHistoryTimeline({
   const visibleHistory = history.slice(0, 6)
 
   return (
-    <div className="mt-3 border-t border-current/15 pt-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="risk-history">
+      <div className="risk-history__header">
         <div>
-          <p className="text-[11px] font-bold">风险历史</p>
-          <p className="text-[10px] font-medium opacity-70">本地保留最近 100 条事件</p>
+          <p className="risk-history__title">风险历史</p>
+          <p className="risk-history__caption">本地保留最近 100 条事件</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="risk-history__actions">
           {history.length > 0 && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="text-[10px] font-bold opacity-70 transition hover:opacity-100"
-            >
+            <button type="button" onClick={onClear} className="risk-history__clear">
               清空
             </button>
           )}
           <button
             type="button"
             onClick={() => setIsOpen(current => !current)}
-            className="rounded-md border border-current/20 px-2 py-1 text-[10px] font-bold transition hover:bg-white/45"
+            className="risk-history__toggle"
             aria-expanded={isOpen}
           >
             {isOpen ? '收起' : `查看${history.length > 0 ? `（${history.length}）` : ''}`}
@@ -245,12 +301,12 @@ function RiskHistoryTimeline({
         </div>
       </div>
       {isOpen && (
-        <div className="mt-3 space-y-2 border-l border-current/20 pl-3">
+        <div className="risk-history__timeline">
           {visibleHistory.length > 0 ? (
             visibleHistory.map(event => (
-              <div key={event.id} className="relative">
+              <div key={event.id} className="risk-history__event">
                 <span
-                  className={`absolute -left-[1.05rem] top-1.5 h-1.5 w-1.5 rounded-full ${
+                  className={`risk-history__event-dot ${
                     event.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
                   }`}
                 />
@@ -275,79 +331,61 @@ function RiskHistoryTimeline({
   )
 }
 
-/** 风险监控条。无风险时保持低干扰状态，有风险时突出显示最高等级信号。 */
+/** 风险监控条。健康状态采用中性终端表面，预警时才增强对应风险色。 */
 export function RiskMonitor({
   alerts,
   thresholds,
   onSaveThresholds,
   onResetThresholds,
-  theme,
 }: RiskMonitorProps) {
   const { history, clearHistory } = useRiskHistory(alerts)
   const visibleAlerts = alerts.slice(0, 3)
   const hasCriticalAlert = alerts.some(alert => alert.severity === 'critical')
   const severity = hasCriticalAlert ? 'critical' : alerts.length > 0 ? 'warning' : 'healthy'
-  const styles = (
-    theme === 'light'
-      ? {
-          healthy: 'border-[#159b63]/25 bg-[#159b63]/[0.08] text-[#125b3b]',
-          warning: 'border-[#ad7120]/25 bg-[#ad7120]/[0.09] text-[#70450c]',
-          critical: 'border-[#d95555]/25 bg-[#d95555]/[0.08] text-[#842f2f]',
-        }
-      : {
-          healthy: 'border-[#42d392]/20 bg-[#42d392]/[0.07] text-[#b5f0d0]',
-          warning: 'border-[#f3bd62]/25 bg-[#f3bd62]/[0.08] text-[#f6d797]',
-          critical: 'border-[#ff7676]/25 bg-[#ff7676]/[0.08] text-[#ffb4b4]',
-        }
-  )[severity]
+  const statusLabel =
+    severity === 'critical' ? '需立即处理' : severity === 'warning' ? '需要关注' : '监控正常'
 
   return (
-    <section
-      aria-live="polite"
-      className={`risk-monitor relative overflow-hidden rounded-xl border px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.13)] backdrop-blur-sm ${styles}`}
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-            severity === 'critical'
-              ? 'bg-[#ff7676]/15 text-[#ffadad]'
-              : severity === 'warning'
-                ? 'bg-[#f3bd62]/15 text-[#f6d797]'
-                : 'bg-[#42d392]/15 text-[#93e5ba]'
-          }`}
-        >
+    <section aria-live="polite" className={`risk-monitor risk-monitor--${severity}`}>
+      <div className="risk-monitor__body">
+        <span className="risk-monitor__icon">
           <SignalIcon severity={severity} />
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="text-xs font-bold tracking-wide">风险监控</p>
-            <span className="text-[11px] font-medium opacity-70">
-              强平距离 ≤ {thresholds.liquidationWarningPercent}% · 可用保证金 ≤{' '}
-              {thresholds.availableMarginWarningPercent}%
-            </span>
+        <div className="risk-monitor__content">
+          <div className="risk-monitor__toolbar">
+            <div className="risk-monitor__heading">
+              <div className="risk-monitor__title-row">
+                <p>风险监控</p>
+                <span className="risk-monitor__state">{statusLabel}</span>
+              </div>
+              <p className="risk-monitor__thresholds">
+                强平预警 ≤ <strong>{thresholds.liquidationWarningPercent}%</strong>
+                <span aria-hidden="true">·</span>
+                可用保证金 ≤ <strong>{thresholds.availableMarginWarningPercent}%</strong>
+              </p>
+            </div>
+            <RiskThresholdSettings
+              thresholds={thresholds}
+              onSaveThresholds={onSaveThresholds}
+              onResetThresholds={onResetThresholds}
+            />
           </div>
-          <RiskThresholdSettings
-            thresholds={thresholds}
-            onSaveThresholds={onSaveThresholds}
-            onResetThresholds={onResetThresholds}
-            theme={theme}
-          />
           {visibleAlerts.length > 0 ? (
-            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+            <div className="risk-monitor__alerts">
               {visibleAlerts.map(alert => (
-                <div key={alert.id} className="min-w-0">
-                  <p className="truncate text-xs font-semibold">{alert.title}</p>
-                  <p className="truncate text-[11px] opacity-75">{alert.description}</p>
+                <div key={alert.id} className="risk-monitor__alert">
+                  <p>{alert.title}</p>
+                  <span>{alert.description}</span>
                 </div>
               ))}
               {alerts.length > visibleAlerts.length && (
-                <p className="text-[11px] font-semibold opacity-75">
+                <p className="risk-monitor__more-alerts">
                   另有 {alerts.length - visibleAlerts.length} 项提醒
                 </p>
               )}
             </div>
           ) : (
-            <p className="mt-1 text-[11px] font-medium opacity-75">风险指标处于当前预设阈值内。</p>
+            <p className="risk-monitor__summary">当前风险指标正常，持续监控中。</p>
           )}
           <RiskHistoryTimeline history={history} onClear={clearHistory} />
         </div>

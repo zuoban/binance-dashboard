@@ -527,7 +527,6 @@ export function DashboardView() {
             thresholds={thresholds}
             onSaveThresholds={saveThresholds}
             onResetThresholds={resetThresholds}
-            theme={theme}
           />
           <StatsOverview
             totalEquity={totalEquity}
