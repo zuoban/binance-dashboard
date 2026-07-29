@@ -15,9 +15,11 @@ import {
 } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { OrderModal } from '@/components/dashboard/OrderModal'
+import { DataReliability, RiskMonitor } from '@/components/dashboard/DashboardSignals'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Order } from '@/types/binance'
+import { getDashboardRiskAlerts } from '@/lib/utils/risk'
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -368,6 +370,7 @@ export function DashboardView() {
     isConnected,
     isConnecting,
     lastUpdate,
+    reconnectCount,
     reconnect,
   } = useDashboardWebSocket({ onConnectionError: handleConnectionError })
 
@@ -383,6 +386,12 @@ export function DashboardView() {
 
   const totalPnl = orders.length > 0 ? calculateTotalPnl(orders) : 0
   const hasNoData = !account && positions.length === 0
+  const riskAlerts = getDashboardRiskAlerts({
+    positions,
+    availableMarginPercent,
+    isConnected,
+    isConnecting,
+  })
 
   return (
     <div className="space-y-4">
@@ -423,6 +432,15 @@ export function DashboardView() {
               </button>
             </div>
           )}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]">
+            <RiskMonitor alerts={riskAlerts} />
+            <DataReliability
+              lastUpdate={lastUpdate}
+              isConnected={isConnected}
+              isConnecting={isConnecting}
+              reconnectCount={reconnectCount}
+            />
+          </div>
           <StatsOverview
             totalEquity={totalEquity}
             availableMargin={availableMargin}

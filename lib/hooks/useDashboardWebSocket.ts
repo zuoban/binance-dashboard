@@ -60,6 +60,8 @@ interface UseDashboardWebSocketReturn {
   isConnecting: boolean
   /** 最后更新时间 */
   lastUpdate: number | null
+  /** 当前页面会话中的重连次数 */
+  reconnectCount: number
   /** 手动重连 */
   reconnect: () => void
   /** 手动断开 */
@@ -101,6 +103,7 @@ export function useDashboardWebSocket(
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
+  const [reconnectCount, setReconnectCount] = useState(0)
 
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -230,6 +233,7 @@ export function useDashboardWebSocket(
         setLoading(false)
         setIsConnecting(false)
         setIsConnected(false)
+        setReconnectCount(count => count + 1)
         callbacksRef.current.onConnectionChange?.(false)
         callbacksRef.current.onError?.(errorMessage)
         void callbacksRef.current.onConnectionError?.()
@@ -256,6 +260,7 @@ export function useDashboardWebSocket(
 
   const reconnect = useCallback(() => {
     disconnect()
+    setReconnectCount(count => count + 1)
     // 短暂延迟后重连
     reconnectTimeoutRef.current = setTimeout(() => {
       connect()
@@ -291,6 +296,7 @@ export function useDashboardWebSocket(
     isConnected,
     isConnecting,
     lastUpdate,
+    reconnectCount,
     reconnect,
     disconnect,
   }
