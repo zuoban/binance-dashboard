@@ -10,24 +10,30 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RiskAlert } from '@/lib/utils/risk'
 import {
   appendRiskHistory,
-  parseRiskHistory,
+  clearRiskHistory,
+  getNewRiskAlerts,
+  getRiskAlertKey,
+  loadRiskHistory,
+  saveRiskHistory,
+  type RiskHistoryStorage,
   type RiskHistoryEvent,
 } from '@/lib/utils/risk-history'
 
-const RISK_HISTORY_STORAGE_KEY = 'dashboard-risk-history'
-
-function getStoredRiskHistory(): RiskHistoryEvent[] {
+function getBrowserStorage(): RiskHistoryStorage | null {
   if (typeof window === 'undefined') {
-    return []
+    return null
   }
 
   try {
-    return parseRiskHistory(
-      JSON.parse(window.localStorage.getItem(RISK_HISTORY_STORAGE_KEY) || 'null') as unknown
-    )
+    return window.localStorage
   } catch {
-    return []
+    return null
   }
+}
+
+function getStoredRiskHistory(): RiskHistoryEvent[] {
+  const storage = getBrowserStorage()
+  return storage ? loadRiskHistory(storage) : []
 }
 
 /** 返回本地风险时间线和清空操作。 */
@@ -38,18 +44,15 @@ export function useRiskHistory(alerts: RiskAlert[]) {
   const clearHistory = useCallback(() => {
     setHistory([])
 
-    try {
-      window.localStorage.removeItem(RISK_HISTORY_STORAGE_KEY)
-    } catch {
-      // 存储不可用时仅清空当前页面中的时间线。
+    const storage = getBrowserStorage()
+    if (storage) {
+      clearRiskHistory(storage)
     }
   }, [])
 
   useEffect(() => {
-    const currentAlertKeys = new Set(alerts.map(alert => `${alert.id}-${alert.severity}`))
-    const newAlerts = alerts.filter(
-      alert => !activeAlertKeysRef.current.has(`${alert.id}-${alert.severity}`)
-    )
+    const currentAlertKeys = new Set(alerts.map(getRiskAlertKey))
+    const newAlerts = getNewRiskAlerts(alerts, activeAlertKeysRef.current)
     activeAlertKeysRef.current = currentAlertKeys
 
     if (newAlerts.length === 0) {
@@ -59,11 +62,10 @@ export function useRiskHistory(alerts: RiskAlert[]) {
     // 风险事件来自外部实时数据流，写入本地时间线需要同步 React 状态。
     setHistory(previous => {
       const next = appendRiskHistory(previous, newAlerts, Date.now())
+      const storage = getBrowserStorage()
 
-      try {
-        window.localStorage.setItem(RISK_HISTORY_STORAGE_KEY, JSON.stringify(next))
-      } catch {
-        // 存储不可用时仍保留本次页面会话中的记录。
+      if (storage) {
+        saveRiskHistory(storage, next)
       }
 
       return next

@@ -9,11 +9,34 @@ import type { RiskAlert } from './risk'
 /** 本地风险时间线的最大保留数量。 */
 export const MAX_RISK_HISTORY_EVENTS = 100
 
+/** 浏览器中保存风险历史的 localStorage 键。 */
+export const RISK_HISTORY_STORAGE_KEY = 'dashboard-risk-history'
+
+/** 风险历史持久化所需的最小存储接口，便于在非浏览器环境测试。 */
+export interface RiskHistoryStorage {
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+  removeItem(key: string): void
+}
+
 export interface RiskHistoryEvent extends RiskAlert {
   /** 事件发生时间 */
   occurredAt: number
   /** 触发该事件的风险项标识 */
   alertId: string
+}
+
+/** 生成用于判断实时告警是否已经存在的稳定标识。 */
+export function getRiskAlertKey(alert: RiskAlert): string {
+  return `${alert.id}-${alert.severity}`
+}
+
+/** 筛选本轮实时数据中首次出现的风险告警。 */
+export function getNewRiskAlerts(
+  alerts: RiskAlert[],
+  activeAlertKeys: ReadonlySet<string>
+): RiskAlert[] {
+  return alerts.filter(alert => !activeAlertKeys.has(getRiskAlertKey(alert)))
 }
 
 /** 将新出现的风险信号写入时间线，并保留最近的有限记录。 */
@@ -52,4 +75,35 @@ export function parseRiskHistory(value: unknown): RiskHistoryEvent[] {
         Number.isFinite(event.occurredAt)
     )
     .slice(0, MAX_RISK_HISTORY_EVENTS)
+}
+
+/** 从存储中读取并校验风险历史，损坏的数据会降级为空历史。 */
+export function loadRiskHistory(storage: RiskHistoryStorage): RiskHistoryEvent[] {
+  try {
+    return parseRiskHistory(
+      JSON.parse(storage.getItem(RISK_HISTORY_STORAGE_KEY) || 'null') as unknown
+    )
+  } catch {
+    return []
+  }
+}
+
+/** 将风险历史写入存储，存储不可用时返回失败状态。 */
+export function saveRiskHistory(storage: RiskHistoryStorage, history: RiskHistoryEvent[]): boolean {
+  try {
+    storage.setItem(RISK_HISTORY_STORAGE_KEY, JSON.stringify(parseRiskHistory(history)))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** 清除已持久化的风险历史，存储不可用时返回失败状态。 */
+export function clearRiskHistory(storage: RiskHistoryStorage): boolean {
+  try {
+    storage.removeItem(RISK_HISTORY_STORAGE_KEY)
+    return true
+  } catch {
+    return false
+  }
 }
