@@ -201,8 +201,9 @@ function StatsOverview({
   const { exchangeInfo } = useExchangeInfo()
 
   const recentOrders = orders.slice(0, RECENT_ORDER_LIMIT)
+  const recentBuyCount = recentOrders.filter(order => order.side === 'BUY').length
+  const recentSellCount = recentOrders.filter(order => order.side === 'SELL').length
   const orderStats = openOrdersStats || { total: 0, buy: 0, sell: 0 }
-  const latestOrder = recentOrders[0]
   const marginSafetyPercent = Math.min(100, Math.max(0, availableMarginPercent))
   const marginSafetyTone =
     marginSafetyPercent <= 10 ? 'critical' : marginSafetyPercent <= 25 ? 'warning' : 'healthy'
@@ -303,20 +304,18 @@ function StatsOverview({
         </div>
         <div className="card-divider relative z-10 mt-4" />
         <div className="relative z-10 mt-3 flex items-center justify-between gap-3">
-          {latestOrder ? (
-            <div className="flex items-center gap-2">
-              <span
-                className={`stat-order-side ${latestOrder.side === 'BUY' ? 'stat-order-side--buy' : 'stat-order-side--sell'}`}
-              >
-                {latestOrder.side === 'BUY' ? '买入' : '卖出'}
-              </span>
-              <span className="theme-text-secondary text-[11px] font-medium">
-                {formatRecentOrderTime(latestOrder.time)}
-              </span>
-            </div>
-          ) : (
-            <span className="theme-text-muted text-[11px] font-medium">等待订单数据</span>
-          )}
+          <div
+            className="flex shrink-0 items-center gap-3 whitespace-nowrap"
+            aria-label={`近 ${recentOrders.length} 单方向统计，买入 ${recentBuyCount} 单，卖出 ${recentSellCount} 单`}
+          >
+            <span className="stat-order-count">
+              买入 <strong className="stat-order-count--buy">{recentBuyCount}</strong>
+            </span>
+            <span className="theme-divider h-4 w-px" />
+            <span className="stat-order-count">
+              卖出 <strong className="stat-order-count--sell">{recentSellCount}</strong>
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             {recentOrders.length >= 2 && (
               <span className="theme-text-muted hidden text-[10px] sm:inline">
@@ -325,7 +324,7 @@ function StatsOverview({
                 )}
               </span>
             )}
-            <div className="grid grid-cols-10 gap-2">
+            <div className="grid grid-cols-10 gap-1 sm:gap-2 md:hidden xl:grid">
               {recentOrders.map(order => {
                 const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`
 

@@ -311,8 +311,6 @@ function PositionCardComponent({
           pricePrecision={pricePrecision}
           openOrders={openOrders}
           markPrice={liveMarkPrice}
-          entryPrice={Number.parseFloat(position.entryPrice)}
-          breakEvenPrice={Number.parseFloat(position.breakEvenPrice)}
           liquidationPrice={Number.parseFloat(position.liquidationPrice)}
           feedMode={feedMode}
           theme={theme}

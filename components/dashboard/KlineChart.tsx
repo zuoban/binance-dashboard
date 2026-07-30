@@ -32,10 +32,6 @@ interface KlineChartProps {
   visibleCount?: number
   /** 与图表同源的最新标记价格，用作当前价格线。 */
   markPrice?: number
-  /** 当前持仓入场价格。 */
-  entryPrice?: number
-  /** 当前持仓盈亏平衡价格。 */
-  breakEvenPrice?: number
   /** 当前持仓强平价格。 */
   liquidationPrice?: number
   /** 当前标记价格行情源状态。 */
@@ -78,8 +74,6 @@ function KlineChartComponent({
   openOrders = [],
   visibleCount = 30,
   markPrice,
-  entryPrice,
-  breakEvenPrice,
   liquidationPrice,
   feedMode = 'loading',
   theme,
@@ -91,6 +85,30 @@ function KlineChartComponent({
     }
     return data
   }, [data, visibleCount])
+  const latestClose = displayData[displayData.length - 1]?.close
+  const displayedMarkPrice =
+    markPrice !== undefined && Number.isFinite(markPrice) && markPrice > 0 ? markPrice : latestClose
+  const nextOrderPrices = useMemo(() => {
+    const activeOrderLevels = resolveChartOrderLevels(
+      openOrders.filter(
+        order =>
+          order.symbol === symbol && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
+      )
+    )
+    const referencePrice = displayedMarkPrice ?? 0
+    const findNearestPrice = (side: 'BUY' | 'SELL') =>
+      activeOrderLevels
+        .filter(level => level.order.side === side)
+        .sort(
+          (left, right) =>
+            Math.abs(left.price - referencePrice) - Math.abs(right.price - referencePrice)
+        )[0]?.price
+
+    return {
+      buy: findNearestPrice('BUY'),
+      sell: findNearestPrice('SELL'),
+    }
+  }, [displayedMarkPrice, openOrders, symbol])
 
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const displayDataRef = useRef(displayData)
@@ -212,47 +230,37 @@ function KlineChartComponent({
       theme === 'light'
         ? {
             axis: '#6b7e74',
-            grid: 'rgba(51, 87, 74, 0.14)',
+            grid: 'rgba(51, 87, 74, 0.09)',
             axisBorder: 'rgba(51, 87, 74, 0.22)',
             tooltipBackground: 'rgba(255, 255, 252, 0.98)',
             tooltipText: '#16342c',
             tooltipMuted: '#697d73',
             tooltipDivider: 'rgba(51, 87, 74, 0.16)',
             tooltipShadow: 'rgba(41, 68, 55, 0.16)',
-            annotationPositive: '#e9f8ef',
-            annotationNegative: '#fff0f0',
-            annotationPositiveText: '#0b6e43',
-            annotationNegativeText: '#a83a3a',
-            annotationMark: '#fff1d4',
-            annotationMarkText: '#84530d',
             positive: '#159b63',
             negative: '#d95555',
             warning: '#ad7120',
-            entry: '#6b7e74',
-            breakEven: '#3979b7',
-            liquidation: '#c94646',
+            markLine: 'rgba(173, 113, 32, 0.88)',
+            buyLine: 'rgba(21, 155, 99, 0.55)',
+            sellLine: 'rgba(217, 85, 85, 0.55)',
+            liquidationLine: 'rgba(201, 70, 70, 0.88)',
           }
         : {
             axis: '#94a3b8',
-            grid: 'rgba(148, 163, 184, 0.1)',
+            grid: 'rgba(148, 163, 184, 0.07)',
             axisBorder: 'rgba(148, 163, 184, 0.2)',
             tooltipBackground: 'rgba(8, 26, 26, 0.97)',
             tooltipText: '#f2f7f1',
             tooltipMuted: '#a8b9b1',
             tooltipDivider: 'rgba(202, 221, 210, 0.12)',
             tooltipShadow: 'rgba(0, 0, 0, 0.32)',
-            annotationPositive: '#167249',
-            annotationNegative: '#952f2f',
-            annotationPositiveText: '#dff9eb',
-            annotationNegativeText: '#ffe2e2',
-            annotationMark: '#4b3516',
-            annotationMarkText: '#ffe0a3',
             positive: '#42d392',
             negative: '#ff7676',
             warning: '#f3bd62',
-            entry: '#9bacb4',
-            breakEven: '#70b7ff',
-            liquidation: '#ff7676',
+            markLine: 'rgba(243, 189, 98, 0.9)',
+            buyLine: 'rgba(66, 211, 146, 0.62)',
+            sellLine: 'rgba(255, 118, 118, 0.62)',
+            liquidationLine: 'rgba(255, 118, 118, 0.9)',
           }
 
     if (displayData.length === 0) {
@@ -282,36 +290,7 @@ function KlineChartComponent({
     const klineMinPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
     const klineMaxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0
 
-    const priceChange =
-      displayData.length >= 2 ? displayData[displayData.length - 1].close - displayData[0].open : 0
-    const isPositive = priceChange >= 0
-
     const formatPrice = (value: number) => formatChartPrice(value, pricePrecision)
-
-    const lastKline = displayData[displayData.length - 1]
-    const lastClose = lastKline?.close ?? 0
-    const referencePrice = hasMarkPrice ? markPrice : lastClose
-    const referencePriceFormatted = formatPrice(referencePrice)
-    const referencePriceColor = hasMarkPrice
-      ? chartTheme.warning
-      : isPositive
-        ? chartTheme.positive
-        : chartTheme.negative
-    const referencePriceBackground = hasMarkPrice
-      ? chartTheme.annotationMark
-      : isPositive
-        ? chartTheme.annotationPositive
-        : chartTheme.annotationNegative
-    const referencePriceTextColor = hasMarkPrice
-      ? chartTheme.annotationMarkText
-      : isPositive
-        ? chartTheme.annotationPositiveText
-        : chartTheme.annotationNegativeText
-
-    const activeOrders = openOrders.filter(
-      order =>
-        order.symbol === symbol && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
-    )
 
     const priceRange = klineMaxPrice - klineMinPrice
     const padding = Math.max(priceRange * 0.05, Math.max(Math.abs(klineMaxPrice) * 0.0005, 0.01))
@@ -319,25 +298,24 @@ function KlineChartComponent({
     const minPrice = klineMinPrice - padding
     const maxPrice = klineMaxPrice + padding
 
-    const ordersWithDistance = resolveChartOrderLevels(activeOrders).map(level => ({
-      ...level,
-      distance: Math.abs(level.price - referencePrice),
-    }))
-
-    const visibleOrders = ordersWithDistance
-      .filter(level => level.price >= minPrice && level.price <= maxPrice)
-      .sort((a, b) => a.distance - b.distance)
-
-    const nearbyOrders = (['BUY', 'SELL'] as const).flatMap(side =>
-      visibleOrders.filter(level => level.order.side === side).slice(0, 1)
+    // 入场价和盈亏平衡价已在持仓信息区展示；图内仅保留进入可视区的强平风险线。
+    const riskLevels = [
+      { price: liquidationPrice, color: chartTheme.liquidationLine, strokeDashArray: 10 },
+    ].filter(
+      (level): level is { price: number; color: string; strokeDashArray: number } =>
+        level.price !== undefined &&
+        Number.isFinite(level.price) &&
+        level.price > 0 &&
+        level.price >= minPrice &&
+        level.price <= maxPrice
     )
 
-    const positionLevels = [
-      { price: entryPrice, color: chartTheme.entry },
-      { price: breakEvenPrice, color: chartTheme.breakEven },
-      { price: liquidationPrice, color: chartTheme.liquidation },
+    const marketLevels = [
+      { price: nextOrderPrices.buy, color: chartTheme.buyLine, strokeDashArray: 6 },
+      { price: nextOrderPrices.sell, color: chartTheme.sellLine, strokeDashArray: 6 },
+      { price: displayedMarkPrice, color: chartTheme.markLine, strokeDashArray: 0 },
     ].filter(
-      (level): level is { price: number; color: string } =>
+      (level): level is { price: number; color: string; strokeDashArray: number } =>
         level.price !== undefined &&
         Number.isFinite(level.price) &&
         level.price > 0 &&
@@ -488,7 +466,7 @@ function KlineChartComponent({
       },
       grid: {
         borderColor: chartTheme.grid,
-        strokeDashArray: 4,
+        strokeDashArray: 0,
         xaxis: {
           lines: {
             show: false,
@@ -613,70 +591,24 @@ function KlineChartComponent({
         },
       },
       annotations: {
-        yaxis: [
-          {
-            y: referencePrice,
-            borderColor: referencePriceColor,
-            strokeDashArray: 4,
-            label: {
-              borderColor: referencePriceColor,
-              style: {
-                color: referencePriceTextColor,
-                background: referencePriceBackground,
-                fontSize: '10px',
-                fontWeight: 'bold',
-                fontFamily: 'ui-monospace, monospace',
-              },
-              text: hasMarkPrice ? `标记 ${referencePriceFormatted}` : referencePriceFormatted,
-              position: 'center',
-              offsetX: 0,
-            },
-          },
-          ...positionLevels.map(level => ({
-            y: level.price,
-            borderColor: level.color,
-            strokeDashArray: 5,
-          })),
-          ...nearbyOrders.map(level => {
-            const isBuy = level.order.side === 'BUY'
-            const color = isBuy ? chartTheme.positive : chartTheme.negative
-
-            return {
-              y: level.price,
-              borderColor: color,
-              strokeDashArray: 2,
-              label: {
-                borderColor: color,
-                position: 'left',
-                offsetX: isMobile ? 58 : 8,
-                style: {
-                  color: isBuy
-                    ? chartTheme.annotationPositiveText
-                    : chartTheme.annotationNegativeText,
-                  background: isBuy ? chartTheme.annotationPositive : chartTheme.annotationNegative,
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  fontFamily: 'ui-monospace, monospace',
-                },
-                text: `${isBuy ? '买' : '卖'} ${formatPrice(level.price)}`,
-              },
-            }
-          }),
-        ],
+        yaxis: [...marketLevels, ...riskLevels].map(level => ({
+          y: level.price,
+          borderColor: level.color,
+          borderWidth: 1,
+          strokeDashArray: level.strokeDashArray,
+        })),
       },
     }
   }, [
-    breakEvenPrice,
     chartHeight,
     displayData,
-    entryPrice,
+    displayedMarkPrice,
     isMobile,
     liquidationPrice,
     markPrice,
-    openOrders,
+    nextOrderPrices,
     pricePrecision,
     selectKlineByIndex,
-    symbol,
     theme,
   ])
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -762,6 +694,95 @@ function KlineChartComponent({
           </div>
         </dl>
       </div>
+
+      <dl
+        className="kline-levels"
+        aria-label="当前关键交易价位"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          margin: '0 clamp(1rem, 2vw, 1.25rem) 0.25rem',
+          borderBottom: '1px solid var(--divider)',
+          padding: '0.125rem 0 0.5rem',
+        }}
+      >
+        {[
+          {
+            key: 'buy',
+            label: '下一个买单',
+            value: nextOrderPrices.buy,
+            color: 'var(--success)',
+          },
+          {
+            key: 'mark',
+            label: '标记价格',
+            value: displayedMarkPrice,
+            color: 'var(--warning)',
+          },
+          {
+            key: 'sell',
+            label: '下一个卖单',
+            value: nextOrderPrices.sell,
+            color: 'var(--danger)',
+          },
+        ].map((level, index) => {
+          const formattedValue =
+            typeof level.value === 'number' ? formatChartPrice(level.value, pricePrecision) : '--'
+
+          return (
+            <div
+              key={level.key}
+              className="kline-levels__item"
+              style={{
+                minWidth: 0,
+                borderLeft: index === 0 ? undefined : '1px solid var(--divider)',
+                padding: '0 clamp(0.5rem, 1.5vw, 0.75rem)',
+              }}
+            >
+              <dt
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  color: level.color,
+                  fontSize: '0.625rem',
+                  fontWeight: 750,
+                  letterSpacing: '0.035em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <i
+                  aria-hidden="true"
+                  style={{
+                    width: '0.375rem',
+                    height: '0.375rem',
+                    flex: '0 0 auto',
+                    borderRadius: '999px',
+                    background: 'currentColor',
+                  }}
+                />
+                {level.label}
+              </dt>
+              <dd
+                title={formattedValue}
+                style={{
+                  marginTop: '0.25rem',
+                  overflow: 'hidden',
+                  color: level.color,
+                  fontFamily: 'var(--font-app-mono)',
+                  fontSize: '0.75rem',
+                  fontWeight: 750,
+                  letterSpacing: '-0.025em',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {formattedValue}
+              </dd>
+            </div>
+          )
+        })}
+      </dl>
 
       <div
         ref={chartContainerRef}
@@ -862,8 +883,6 @@ export const KlineChart = memo(KlineChartComponent, (previous, next) => {
     previous.pricePrecision === next.pricePrecision &&
     previous.visibleCount === next.visibleCount &&
     previous.markPrice === next.markPrice &&
-    previous.entryPrice === next.entryPrice &&
-    previous.breakEvenPrice === next.breakEvenPrice &&
     previous.liquidationPrice === next.liquidationPrice &&
     previous.feedMode === next.feedMode &&
     previous.theme === next.theme &&
