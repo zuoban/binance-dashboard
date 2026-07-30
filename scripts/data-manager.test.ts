@@ -8,8 +8,18 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DataManager } from '../lib/services/data-manager'
 import type { BinanceRestClient } from '../lib/binance/rest-client'
-import type { BinanceUserTrade } from '../types/binance-api'
-import type { DashboardData, DataManagerMetrics, UserTradesCacheItem } from '../lib/services/types'
+import type { BinanceOrder, BinanceUserTrade } from '../types/binance-api'
+import type {
+  DashboardData,
+  DataManagerMetrics,
+  SimpleOrder,
+  UserTradesCacheItem,
+} from '../lib/services/types'
+
+type BinanceOpenOrder = Omit<BinanceOrder, 'reduceOnly'> & {
+  reduceOnly: string | boolean
+  closePosition?: string | boolean
+}
 
 interface DataManagerInternals {
   fetchWithRetry: () => Promise<DashboardData>
@@ -23,6 +33,7 @@ interface DataManagerInternals {
     client: Pick<BinanceRestClient, 'getUserTrades'>,
     symbols: string[]
   ) => Promise<(BinanceUserTrade & { symbol: string })[]>
+  mapOpenOrderToOrder: (order: BinanceOpenOrder) => SimpleOrder
   userTradesCache: Map<string, UserTradesCacheItem>
   metrics: DataManagerMetrics
 }
@@ -164,4 +175,50 @@ test('受控并发映射限制 K 线等批量请求并保留结果顺序', async
 
   assert.equal(maxActiveRequests, 3)
   assert.deepEqual(results, [2, 4, 6, 8, 10])
+})
+
+test('开放条件订单保留图表标注字段并正确转换字符串布尔值', () => {
+  const manager = DataManager.getInstance()
+  const internals = manager as unknown as DataManagerInternals
+  const baseOrder: BinanceOpenOrder = {
+    symbol: 'ETHUSDC',
+    orderId: 42,
+    clientOrderId: 'conditional-order',
+    price: '0',
+    origQty: '0.5',
+    executedQty: '0',
+    reduceOnly: 'false',
+    side: 'SELL',
+    positionSide: 'LONG',
+    status: 'NEW',
+    timeInForce: 'GTC',
+    type: 'STOP_MARKET',
+    stopPrice: '1800.5',
+    workingType: 'MARK_PRICE',
+    priceProtect: 'false',
+    origType: 'STOP_MARKET',
+    time: 1,
+    updateTime: 2,
+    closePosition: 'true',
+  }
+
+  const mappedOrder = internals.mapOpenOrderToOrder(baseOrder)
+
+  assert.equal(mappedOrder.type, 'STOP_MARKET')
+  assert.equal(mappedOrder.stopPrice, '1800.5')
+  assert.equal(mappedOrder.reduceOnly, false)
+  assert.equal(mappedOrder.workingType, 'MARK_PRICE')
+  assert.equal(mappedOrder.positionSide, 'LONG')
+  assert.equal(mappedOrder.closePosition, true)
+  assert.equal(mappedOrder.origType, 'STOP_MARKET')
+
+  const booleanOrder = internals.mapOpenOrderToOrder({
+    ...baseOrder,
+    orderId: 43,
+    reduceOnly: true,
+    closePosition: false,
+  })
+
+  assert.equal(booleanOrder.reduceOnly, true)
+  assert.equal(booleanOrder.closePosition, false)
 })

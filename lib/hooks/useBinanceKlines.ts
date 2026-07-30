@@ -21,6 +21,9 @@ type KlineInterval =
   | '1w'
   | '1M'
 
+/** 当前用于驱动标记价格 K 线的有效数据源。 */
+export type KlineFeedMode = 'loading' | 'stream' | 'polling' | 'error'
+
 interface UseBinanceKlinesOptions {
   symbol: string
   interval?: KlineInterval
@@ -28,12 +31,14 @@ interface UseBinanceKlinesOptions {
   enableWS?: boolean
 }
 
-interface UseBinanceKlinesReturn {
+export interface UseBinanceKlinesReturn {
   /** 与 K 线同源的最新标记价格。 */
   markPrice: number | null
   klines: KlineData[]
   loading: boolean
   error: string | null
+  /** 当前有效价格源，用于区分长连接、REST 轮询及不可用状态。 */
+  feedMode: KlineFeedMode
   wsConnected: boolean
   lastUpdate: number | null
   refresh: () => Promise<void>
@@ -47,6 +52,9 @@ interface MarkPriceSnapshot {
 const MARK_PRICE_POLL_INTERVAL = 1000
 const HISTORY_RESYNC_INTERVAL = 60 * 1000
 const STREAM_STALE_TIMEOUT = 6000
+const REST_REQUEST_TIMEOUT = 8000
+const WEBSOCKET_CONNECT_TIMEOUT = 8000
+const MARK_PRICE_STALE_TIMEOUT = 8000
 const MAX_RECONNECT_DELAY = 30000
 
 function convertKlineData(binanceKline: unknown): KlineData | null {
@@ -98,6 +106,7 @@ function isMarkPriceMessage(message: unknown): message is BinanceMarkPriceWSMess
     candidate.e === 'markPriceUpdate' &&
     typeof candidate.p === 'string' &&
     typeof candidate.E === 'number' &&
+    Number.isFinite(candidate.E) &&
     typeof candidate.s === 'string'
   )
 }
@@ -219,6 +228,7 @@ export function useBinanceKlines({
   const [klines, setKlines] = useState<KlineData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [feedMode, setFeedMode] = useState<KlineFeedMode>('loading')
   const [wsConnected, setWsConnected] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
 
@@ -227,41 +237,147 @@ export function useBinanceKlines({
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const historyResyncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const streamStaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const markPriceStaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestControllersRef = useRef<Set<AbortController>>(new Set())
   const latestMarkPriceRef = useRef<MarkPriceSnapshot | null>(null)
+  const lastRealtimeMarkPriceAtRef = useRef<number | null>(null)
+  const hasUsableDataRef = useRef(false)
+  const streamActiveRef = useRef(false)
+  const markPriceStaleRef = useRef(false)
+  const pollingInFlightRef = useRef(false)
+  const requestGenerationRef = useRef(0)
   const reconnectAttemptsRef = useRef(0)
   const shouldReconnectRef = useRef(false)
   const connectWebSocketRef = useRef<() => void>(() => {})
 
-  const applyMarkPrice = useCallback(
-    (price: number, timestamp: number) => {
-      if (!Number.isFinite(price) || price <= 0) {
+  const clearConnectionTimeout = useCallback(() => {
+    if (connectionTimeoutRef.current !== null) {
+      clearTimeout(connectionTimeoutRef.current)
+      connectionTimeoutRef.current = null
+    }
+  }, [])
+
+  const clearMarkPriceStaleTimer = useCallback(() => {
+    if (markPriceStaleTimerRef.current !== null) {
+      clearTimeout(markPriceStaleTimerRef.current)
+      markPriceStaleTimerRef.current = null
+    }
+  }, [])
+
+  /** 没有新标记价格时，不让旧历史 K 线永久掩盖实时行情中断。 */
+  const scheduleMarkPriceStaleCheck = useCallback(() => {
+    clearMarkPriceStaleTimer()
+    const lastSuccessAt = lastRealtimeMarkPriceAtRef.current
+    const deadlineBase = lastSuccessAt ?? Date.now()
+    const timeoutDelay = Math.max(0, MARK_PRICE_STALE_TIMEOUT - (Date.now() - deadlineBase))
+
+    markPriceStaleTimerRef.current = setTimeout(() => {
+      if (!shouldReconnectRef.current || lastRealtimeMarkPriceAtRef.current !== lastSuccessAt) {
         return
+      }
+
+      if (Date.now() - deadlineBase < MARK_PRICE_STALE_TIMEOUT) {
+        return
+      }
+
+      markPriceStaleTimerRef.current = null
+      markPriceStaleRef.current = true
+      streamActiveRef.current = false
+      setFeedMode('error')
+      setError('标记价格超过 8 秒未更新')
+    }, timeoutDelay)
+  }, [clearMarkPriceStaleTimer])
+
+  /** 仅在采纳到更新的 premiumIndex 或 WS 标记价格时刷新实时健康度。 */
+  const recordRealtimeMarkPrice = useCallback(() => {
+    lastRealtimeMarkPriceAtRef.current = Date.now()
+    markPriceStaleRef.current = false
+    scheduleMarkPriceStaleCheck()
+  }, [scheduleMarkPriceStaleCheck])
+
+  /** 为浏览器端公开 REST 请求提供可清理的超时与组件卸载取消能力。 */
+  const fetchWithTimeout = useCallback(async (url: string): Promise<Response> => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), REST_REQUEST_TIMEOUT)
+    requestControllersRef.current.add(controller)
+
+    try {
+      return await fetch(url, {
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeoutId)
+      requestControllersRef.current.delete(controller)
+    }
+  }, [])
+
+  /**
+   * REST 轮询与长连接会短暂并存。仅当长连接仍未提供有效价格时才将状态标为 polling，
+   * 以免已经到达的流消息被较晚完成的 REST 请求覆盖。
+   */
+  const setAvailableFeedMode = useCallback(() => {
+    if (markPriceStaleRef.current) {
+      setFeedMode('error')
+      return
+    }
+
+    setFeedMode(streamActiveRef.current && !pollingTimerRef.current ? 'stream' : 'polling')
+  }, [])
+
+  /** 请求失败时，只有没有任何可用价格或 K 线才进入 error。 */
+  const setFeedFailure = useCallback(() => {
+    if (markPriceStaleRef.current) {
+      setFeedMode('error')
+      return
+    }
+
+    if (hasUsableDataRef.current || latestMarkPriceRef.current) {
+      setAvailableFeedMode()
+      return
+    }
+
+    setFeedMode('error')
+  }, [setAvailableFeedMode])
+
+  const applyMarkPrice = useCallback(
+    (price: number, timestamp: number): boolean => {
+      if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(timestamp) || timestamp <= 0) {
+        return false
       }
 
       const previousSnapshot = latestMarkPriceRef.current
-      if (previousSnapshot && timestamp < previousSnapshot.time) {
-        return
+      if (previousSnapshot && timestamp <= previousSnapshot.time) {
+        return false
       }
 
       latestMarkPriceRef.current = { price, time: timestamp }
+      hasUsableDataRef.current = true
       setMarkPrice(previous => (previous === price ? previous : price))
       setKlines(previous => applyMarkPriceToKlines(previous, price, timestamp, interval, limit))
       setLastUpdate(timestamp)
+      return true
     },
     [interval, limit]
   )
 
   const fetchHistoricalKlines = useCallback(
     async (showLoading: boolean = true) => {
-      try {
-        if (showLoading) {
-          setLoading(true)
-        }
-        setError(null)
+      const requestGeneration = requestGenerationRef.current
+      const isCurrentRequest = () => requestGeneration === requestGenerationRef.current
 
-        const response = await fetch(
-          `${binanceConfig.restApi}/fapi/v1/markPriceKlines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
-          { cache: 'no-store' }
+      try {
+        if (showLoading && isCurrentRequest()) {
+          setLoading(true)
+          setFeedMode('loading')
+        }
+        if (isCurrentRequest()) {
+          setError(null)
+        }
+
+        const response = await fetchWithTimeout(
+          `${binanceConfig.restApi}/fapi/v1/markPriceKlines?symbol=${symbol}&interval=${interval}&limit=${limit}`
         )
 
         if (!response.ok) {
@@ -269,6 +385,10 @@ export function useBinanceKlines({
         }
 
         const payload = (await response.json()) as unknown
+        if (!isCurrentRequest()) {
+          return
+        }
+
         if (!Array.isArray(payload)) {
           throw new Error('Invalid mark price kline response')
         }
@@ -276,6 +396,10 @@ export function useBinanceKlines({
         const historicalKlines = payload
           .map(convertKlineData)
           .filter((kline): kline is KlineData => kline !== null)
+        if (historicalKlines.length === 0) {
+          throw new Error('No mark price kline data')
+        }
+
         const latestMarkPrice = latestMarkPriceRef.current
         const nextKlines = latestMarkPrice
           ? applyMarkPriceToKlines(
@@ -289,24 +413,33 @@ export function useBinanceKlines({
 
         setKlines(nextKlines)
         setMarkPrice(previous => previous ?? nextKlines[nextKlines.length - 1]?.close ?? null)
+        hasUsableDataRef.current = nextKlines.length > 0 || latestMarkPrice !== null
         setLastUpdate(Date.now())
+        setAvailableFeedMode()
       } catch (err) {
+        if (!isCurrentRequest()) {
+          return
+        }
+
         const message = err instanceof Error ? err.message : 'Failed to fetch mark price klines'
         setError(message)
+        setFeedFailure()
       } finally {
-        if (showLoading) {
+        if (showLoading && isCurrentRequest()) {
           setLoading(false)
         }
       }
     },
-    [interval, limit, symbol]
+    [fetchWithTimeout, interval, limit, setAvailableFeedMode, setFeedFailure, symbol]
   )
 
   const fetchLatestMarkPrice = useCallback(async () => {
+    const requestGeneration = requestGenerationRef.current
+    const isCurrentRequest = () => requestGeneration === requestGenerationRef.current
+
     try {
-      const response = await fetch(
-        `${binanceConfig.restApi}/fapi/v1/premiumIndex?symbol=${symbol}`,
-        { cache: 'no-store' }
+      const response = await fetchWithTimeout(
+        `${binanceConfig.restApi}/fapi/v1/premiumIndex?symbol=${symbol}`
       )
 
       if (!response.ok) {
@@ -314,17 +447,54 @@ export function useBinanceKlines({
       }
 
       const snapshot = parseMarkPriceSnapshot((await response.json()) as unknown)
+      if (!isCurrentRequest()) {
+        return
+      }
+
       if (!snapshot) {
         throw new Error('Invalid mark price response')
       }
 
-      applyMarkPrice(snapshot.price, snapshot.time)
+      if (applyMarkPrice(snapshot.price, snapshot.time)) {
+        recordRealtimeMarkPrice()
+      }
       setError(null)
+      setAvailableFeedMode()
     } catch (err) {
+      if (!isCurrentRequest()) {
+        return
+      }
+
       const message = err instanceof Error ? err.message : 'Failed to fetch latest mark price'
       setError(message)
+      setFeedFailure()
     }
-  }, [applyMarkPrice, symbol])
+  }, [
+    applyMarkPrice,
+    fetchWithTimeout,
+    recordRealtimeMarkPrice,
+    setAvailableFeedMode,
+    setFeedFailure,
+    symbol,
+  ])
+
+  /** 单个交易对在慢网络下最多保留一个轮询请求，避免 1 秒定时器堆积请求。 */
+  const pollLatestMarkPrice = useCallback(async (): Promise<void> => {
+    if (pollingInFlightRef.current) {
+      return
+    }
+
+    const requestGeneration = requestGenerationRef.current
+    pollingInFlightRef.current = true
+
+    try {
+      await fetchLatestMarkPrice()
+    } finally {
+      if (requestGeneration === requestGenerationRef.current) {
+        pollingInFlightRef.current = false
+      }
+    }
+  }, [fetchLatestMarkPrice])
 
   const stopPolling = useCallback(() => {
     if (pollingTimerRef.current) {
@@ -338,11 +508,16 @@ export function useBinanceKlines({
       return
     }
 
-    void fetchLatestMarkPrice()
+    streamActiveRef.current = false
+    if (!markPriceStaleRef.current) {
+      setFeedMode('polling')
+    }
+    scheduleMarkPriceStaleCheck()
+    void pollLatestMarkPrice()
     pollingTimerRef.current = setInterval(() => {
-      void fetchLatestMarkPrice()
+      void pollLatestMarkPrice()
     }, MARK_PRICE_POLL_INTERVAL)
-  }, [fetchLatestMarkPrice])
+  }, [pollLatestMarkPrice, scheduleMarkPriceStaleCheck])
 
   const stopHistoryResync = useCallback(() => {
     if (historyResyncTimerRef.current) {
@@ -406,12 +581,23 @@ export function useBinanceKlines({
           return
         }
 
+        if (message.s.toUpperCase() !== symbol.toUpperCase()) {
+          return
+        }
+
         const price = Number.parseFloat(message.p)
         if (!Number.isFinite(price) || price <= 0) {
           return
         }
 
-        applyMarkPrice(price, message.E)
+        if (!applyMarkPrice(price, message.E)) {
+          return
+        }
+
+        recordRealtimeMarkPrice()
+        reconnectAttemptsRef.current = 0
+        streamActiveRef.current = true
+        setFeedMode('stream')
         setError(null)
         stopPolling()
         scheduleStreamFallback()
@@ -419,7 +605,7 @@ export function useBinanceKlines({
         // 单条行情消息解析失败不应中断后续长连接。
       }
     },
-    [applyMarkPrice, scheduleStreamFallback, stopPolling]
+    [applyMarkPrice, recordRealtimeMarkPrice, scheduleStreamFallback, stopPolling, symbol]
   )
 
   const connectWebSocket = useCallback(() => {
@@ -436,6 +622,8 @@ export function useBinanceKlines({
       return
     }
 
+    clearConnectionTimeout()
+
     try {
       const webSocket = new WebSocket(getMarkPriceStreamUrl(symbol))
       wsRef.current = webSocket
@@ -445,14 +633,20 @@ export function useBinanceKlines({
           return
         }
 
-        reconnectAttemptsRef.current = 0
+        clearConnectionTimeout()
         setWsConnected(true)
         // 某些网络可建立连接却收不到标记价事件，先启用轮询，首条 WS 消息到达后自动关闭。
         startPolling()
+        // 重连可能跨越完整 K 线周期，连接恢复后立即用 REST 回补 OHLC。
+        void fetchHistoricalKlines(false)
         scheduleStreamFallback()
       }
 
-      webSocket.onmessage = handleWSMessage
+      webSocket.onmessage = event => {
+        if (wsRef.current === webSocket) {
+          handleWSMessage(event)
+        }
+      }
 
       webSocket.onerror = () => {
         webSocket.close()
@@ -463,15 +657,38 @@ export function useBinanceKlines({
           return
         }
 
+        clearConnectionTimeout()
         wsRef.current = null
         setWsConnected(false)
         scheduleReconnect()
       }
+
+      connectionTimeoutRef.current = setTimeout(() => {
+        if (wsRef.current !== webSocket || webSocket.readyState === WebSocket.OPEN) {
+          return
+        }
+
+        connectionTimeoutRef.current = null
+        wsRef.current = null
+        setWsConnected(false)
+        startPolling()
+        webSocket.close()
+        scheduleReconnect()
+      }, WEBSOCKET_CONNECT_TIMEOUT)
     } catch {
       setWsConnected(false)
       scheduleReconnect()
     }
-  }, [enableWS, handleWSMessage, scheduleReconnect, scheduleStreamFallback, startPolling, symbol])
+  }, [
+    clearConnectionTimeout,
+    enableWS,
+    fetchHistoricalKlines,
+    handleWSMessage,
+    scheduleReconnect,
+    scheduleStreamFallback,
+    startPolling,
+    symbol,
+  ])
 
   useEffect(() => {
     connectWebSocketRef.current = connectWebSocket
@@ -482,27 +699,41 @@ export function useBinanceKlines({
   }, [fetchHistoricalKlines, fetchLatestMarkPrice])
 
   useEffect(() => {
+    const requestControllers = requestControllersRef.current
+
+    requestGenerationRef.current += 1
     shouldReconnectRef.current = true
     reconnectAttemptsRef.current = 0
     latestMarkPriceRef.current = null
+    lastRealtimeMarkPriceAtRef.current = null
+    hasUsableDataRef.current = false
+    streamActiveRef.current = false
+    markPriceStaleRef.current = false
+    pollingInFlightRef.current = false
     setMarkPrice(null)
     setKlines([])
+    setLoading(true)
+    setError(null)
+    setFeedMode('loading')
+    setLastUpdate(null)
     startHistoryResync()
-
-    void Promise.all([fetchHistoricalKlines(), fetchLatestMarkPrice()]).finally(() => {
-      if (!shouldReconnectRef.current) {
-        return
-      }
-
-      if (enableWS) {
-        connectWebSocketRef.current()
-      } else {
-        startPolling()
-      }
-    })
+    // 不等待 REST 首包：轮询与 WS 同时启动，任一路径可用即可恢复最新标记价。
+    startPolling()
+    if (enableWS) {
+      connectWebSocket()
+    }
+    void fetchHistoricalKlines()
 
     return () => {
+      requestGenerationRef.current += 1
       shouldReconnectRef.current = false
+      streamActiveRef.current = false
+      pollingInFlightRef.current = false
+
+      for (const controller of requestControllers) {
+        controller.abort()
+      }
+      requestControllers.clear()
 
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current)
@@ -510,6 +741,8 @@ export function useBinanceKlines({
       }
 
       clearStreamStaleTimer()
+      clearConnectionTimeout()
+      clearMarkPriceStaleTimer()
       stopPolling()
       stopHistoryResync()
 
@@ -519,10 +752,12 @@ export function useBinanceKlines({
       setWsConnected(false)
     }
   }, [
+    clearConnectionTimeout,
+    clearMarkPriceStaleTimer,
     clearStreamStaleTimer,
+    connectWebSocket,
     enableWS,
     fetchHistoricalKlines,
-    fetchLatestMarkPrice,
     startHistoryResync,
     startPolling,
     stopHistoryResync,
@@ -534,6 +769,7 @@ export function useBinanceKlines({
     klines,
     loading,
     error,
+    feedMode,
     wsConnected,
     lastUpdate,
     refresh,

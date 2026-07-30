@@ -25,6 +25,20 @@ export interface SimpleOrder {
   executedQty: string
   /** 买卖方向 */
   side: 'BUY' | 'SELL'
+  /** 订单类型（开放订单提供） */
+  type?: string
+  /** 条件触发价格（开放订单提供） */
+  stopPrice?: string
+  /** 是否只减仓（开放订单提供） */
+  reduceOnly?: boolean
+  /** 条件价格来源（开放订单提供） */
+  workingType?: string
+  /** 持仓方向（开放订单提供） */
+  positionSide?: string
+  /** 是否触发后全平（开放订单提供） */
+  closePosition?: boolean
+  /** 原始订单类型（开放订单提供） */
+  origType?: string
   /** 订单状态 */
   status: string
   /** 订单创建时间 */

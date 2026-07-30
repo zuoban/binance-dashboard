@@ -35,6 +35,16 @@ import type {
   BinanceAsset,
 } from '@/types/binance-api'
 
+type BinanceOpenOrder = Omit<BinanceOrder, 'reduceOnly'> & {
+  reduceOnly: string | boolean
+  closePosition?: string | boolean
+}
+
+/** 将币安订单响应中的字符串布尔值转换为真正的布尔值 */
+function mapOrderBoolean(value: string | boolean | undefined): boolean {
+  return value === true || (typeof value === 'string' && value.toLowerCase() === 'true')
+}
+
 /**
  * 数据管理器类（单例模式）
  */
@@ -788,7 +798,7 @@ export class DataManager {
   /**
    * 将 getOpenOrders API 返回的数据映射为简化订单类型
    */
-  private mapOpenOrderToOrder(order: BinanceOrder): SimpleOrder {
+  private mapOpenOrderToOrder(order: BinanceOpenOrder): SimpleOrder {
     return {
       orderId: order.orderId,
       symbol: order.symbol,
@@ -796,6 +806,13 @@ export class DataManager {
       origQty: order.origQty,
       executedQty: order.executedQty,
       side: order.side,
+      type: order.type,
+      stopPrice: order.stopPrice,
+      reduceOnly: mapOrderBoolean(order.reduceOnly),
+      workingType: order.workingType,
+      positionSide: order.positionSide,
+      closePosition: mapOrderBoolean(order.closePosition),
+      origType: order.origType,
       status: order.status,
       time: order.time,
       updateTime: order.updateTime,

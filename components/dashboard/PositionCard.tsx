@@ -129,7 +129,11 @@ function PositionCardComponent({
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
-  const { klines: realtimeKlines, markPrice: realtimeMarkPrice } = useBinanceKlines({
+  const {
+    klines: realtimeKlines,
+    markPrice: realtimeMarkPrice,
+    feedMode,
+  } = useBinanceKlines({
     symbol: position.symbol,
     interval: '15m',
     limit: 50,
@@ -307,6 +311,10 @@ function PositionCardComponent({
           pricePrecision={pricePrecision}
           openOrders={openOrders}
           markPrice={liveMarkPrice}
+          entryPrice={Number.parseFloat(position.entryPrice)}
+          breakEvenPrice={Number.parseFloat(position.breakEvenPrice)}
+          liquidationPrice={Number.parseFloat(position.liquidationPrice)}
+          feedMode={feedMode}
           theme={theme}
         />
       </div>
