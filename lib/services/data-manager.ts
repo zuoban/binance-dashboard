@@ -677,9 +677,9 @@ export class DataManager {
             return { symbol, klines: cached.data }
           }
 
-          // 直接调用币安 API 获取 K 线数据（返回数组格式）
+          // 使用标记价格 K 线，与持仓的风险计算和前端标记价格保持同一价格口径。
           const response = await fetch(
-            `${config.binance.restApi}/fapi/v1/klines?${new URLSearchParams({
+            `${config.binance.restApi}/fapi/v1/markPriceKlines?${new URLSearchParams({
               symbol,
               interval: this.defaultKlinesInterval,
               limit: this.defaultKlinesLimit.toString(),

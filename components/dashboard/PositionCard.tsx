@@ -5,7 +5,7 @@
 'use client'
 
 import { memo, useMemo } from 'react'
-import { useExchangeInfo } from '@/lib/hooks'
+import { useBinanceKlines, useExchangeInfo } from '@/lib/hooks'
 import { calculateLiquidationDistance } from '@/lib/utils/risk'
 import { Position, Order, KlineData } from '@/types/binance'
 import { areKlineDataEqual, areRelevantOrdersEqual, KlineChart } from './KlineChart'
@@ -129,6 +129,17 @@ function PositionCardComponent({
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
+  const { klines: realtimeKlines, markPrice: realtimeMarkPrice } = useBinanceKlines({
+    symbol: position.symbol,
+    interval: '15m',
+    limit: 50,
+    enableWS: true,
+  })
+  const chartData = realtimeKlines.length > 0 ? realtimeKlines : klineData
+  const liveMarkPrice = useMemo(() => {
+    const value = realtimeMarkPrice ?? Number.parseFloat(position.markPrice)
+    return Number.isFinite(value) && value > 0 ? value : undefined
+  }, [position.markPrice, realtimeMarkPrice])
 
   const pricePrecision = useMemo(
     () => getSymbolPrecision(position.symbol, exchangeInfo),
@@ -144,7 +155,9 @@ function PositionCardComponent({
 
     const isLong = isLongPosition(position)
     const isProfit = unrealizedProfit >= 0
-    const liquidationDistance = calculateLiquidationDistance(position)
+    const liquidationDistance = calculateLiquidationDistance(
+      liveMarkPrice ? { ...position, markPrice: liveMarkPrice.toString() } : position
+    )
 
     return {
       unrealizedProfit,
@@ -156,7 +169,7 @@ function PositionCardComponent({
       isProfit,
       liquidationDistance,
     }
-  }, [position])
+  }, [liveMarkPrice, position])
 
   return (
     <div className={`position-card ${className}`}>
@@ -265,7 +278,7 @@ function PositionCardComponent({
           <div className="position-metric space-y-1">
             <div className="position-metric__label">标记价格</div>
             <div className="position-metric__value text-base font-bold">
-              ${formatPrice(position.markPrice, position.symbol, exchangeInfo)}
+              ${formatPrice(liveMarkPrice ?? position.markPrice, position.symbol, exchangeInfo)}
             </div>
           </div>
 
@@ -289,10 +302,11 @@ function PositionCardComponent({
       <div className="relative">
         <KlineChart
           symbol={position.symbol}
-          data={klineData}
+          data={chartData}
           height={400}
           pricePrecision={pricePrecision}
           openOrders={openOrders}
+          markPrice={liveMarkPrice}
           theme={theme}
         />
       </div>

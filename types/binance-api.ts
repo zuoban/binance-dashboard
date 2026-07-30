@@ -198,3 +198,20 @@ export interface BinanceKlineWSMessage {
     Q: string
   }
 }
+
+/** 币安 WebSocket 标记价格更新。 */
+export interface BinanceMarkPriceWSMessage {
+  e: 'markPriceUpdate'
+  E: number
+  s: string
+  /** 标记价格 */
+  p: string
+  /** 指数价格 */
+  i: string
+  /** 预估结算价格 */
+  P: string
+  /** 最新资金费率 */
+  r: string
+  /** 下次资金费时间 */
+  T: number
+}

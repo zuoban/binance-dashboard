@@ -28,6 +28,8 @@ interface KlineChartProps {
   pricePrecision?: number
   openOrders?: Order[]
   visibleCount?: number
+  /** 与图表同源的最新标记价格，用作当前价格线。 */
+  markPrice?: number
   theme: 'dark' | 'light'
 }
 
@@ -39,6 +41,7 @@ function KlineChartComponent({
   pricePrecision,
   openOrders = [],
   visibleCount = 30,
+  markPrice,
   theme,
 }: KlineChartProps) {
   const isMobile = useIsMobile()
@@ -96,6 +99,8 @@ function KlineChartComponent({
             annotationNegative: '#fff0f0',
             annotationPositiveText: '#0b6e43',
             annotationNegativeText: '#a83a3a',
+            annotationMark: '#fff1d4',
+            annotationMarkText: '#84530d',
             positive: '#159b63',
             negative: '#d95555',
             warning: '#ad7120',
@@ -113,6 +118,8 @@ function KlineChartComponent({
             annotationNegative: '#952f2f',
             annotationPositiveText: '#dff9eb',
             annotationNegativeText: '#ffe2e2',
+            annotationMark: '#4b3516',
+            annotationMarkText: '#ffe0a3',
             positive: '#42d392',
             negative: '#ff7676',
             warning: '#f3bd62',
@@ -135,7 +142,11 @@ function KlineChartComponent({
       }
     }
 
+    const hasMarkPrice = markPrice !== undefined && Number.isFinite(markPrice) && markPrice > 0
     const allPrices = displayData.flatMap(d => [d.open ?? 0, d.close ?? 0, d.low ?? 0, d.high ?? 0])
+    if (hasMarkPrice) {
+      allPrices.push(markPrice)
+    }
     const klineMinPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
     const klineMaxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0
 
@@ -152,7 +163,23 @@ function KlineChartComponent({
 
     const lastKline = displayData[displayData.length - 1]
     const lastClose = lastKline?.close ?? 0
-    const lastCloseFormatted = formatPrice(lastClose)
+    const referencePrice = hasMarkPrice ? markPrice : lastClose
+    const referencePriceFormatted = formatPrice(referencePrice)
+    const referencePriceColor = hasMarkPrice
+      ? chartTheme.warning
+      : isPositive
+        ? chartTheme.positive
+        : chartTheme.negative
+    const referencePriceBackground = hasMarkPrice
+      ? chartTheme.annotationMark
+      : isPositive
+        ? chartTheme.annotationPositive
+        : chartTheme.annotationNegative
+    const referencePriceTextColor = hasMarkPrice
+      ? chartTheme.annotationMarkText
+      : isPositive
+        ? chartTheme.annotationPositiveText
+        : chartTheme.annotationNegativeText
 
     const activeOrders = openOrders.filter(
       order =>
@@ -162,16 +189,16 @@ function KlineChartComponent({
     const ordersWithDistance = activeOrders.map(order => ({
       order,
       price: parseFloat(order.price),
-      distance: Math.abs(parseFloat(order.price) - lastClose),
+      distance: Math.abs(parseFloat(order.price) - referencePrice),
     }))
 
     const ordersAbove = ordersWithDistance
-      .filter(o => o.price > lastClose)
+      .filter(o => o.price > referencePrice)
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 3)
 
     const ordersBelow = ordersWithDistance
-      .filter(o => o.price < lastClose)
+      .filter(o => o.price < referencePrice)
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 3)
 
@@ -187,7 +214,7 @@ function KlineChartComponent({
     }
 
     const priceRange = maxPrice - minPrice
-    const padding = priceRange * 0.05 // 增加一点内边距，防止最高/最低价贴边
+    const padding = Math.max(priceRange * 0.05, Math.max(Math.abs(maxPrice) * 0.0005, 0.01))
 
     const dates = displayData.map(d => {
       const date = new Date(d.time * 1000)
@@ -387,7 +414,7 @@ function KlineChartComponent({
                       minute: '2-digit',
                     })}
                   </div>
-                  ${!isMobile ? `<div style="font-size: 10px; color: ${chartTheme.axis};">15分钟 K线</div>` : ''}
+                  ${!isMobile ? `<div style="font-size: 10px; color: ${chartTheme.axis};">15分钟标记价格 K 线</div>` : ''}
                 </div>
                 <div style="text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 4px; padding: ${isMobile ? '2px 6px' : '4px 8px'}; border-radius: 6px; background: ${changeBgColor};">
@@ -438,23 +465,19 @@ function KlineChartComponent({
       annotations: {
         yaxis: [
           {
-            y: lastClose,
-            borderColor: isPositive ? chartTheme.positive : chartTheme.negative,
+            y: referencePrice,
+            borderColor: referencePriceColor,
             strokeDashArray: 4,
             label: {
-              borderColor: isPositive ? chartTheme.positive : chartTheme.negative,
+              borderColor: referencePriceColor,
               style: {
-                color: isPositive
-                  ? chartTheme.annotationPositiveText
-                  : chartTheme.annotationNegativeText,
-                background: isPositive
-                  ? chartTheme.annotationPositive
-                  : chartTheme.annotationNegative,
+                color: referencePriceTextColor,
+                background: referencePriceBackground,
                 fontSize: '10px',
                 fontWeight: 'bold',
                 fontFamily: 'ui-monospace, monospace',
               },
-              text: lastCloseFormatted,
+              text: hasMarkPrice ? `标记 ${referencePriceFormatted}` : referencePriceFormatted,
               position: 'center',
               offsetX: 0,
             },
@@ -468,7 +491,7 @@ function KlineChartComponent({
         ],
       },
     }
-  }, [displayData, symbol, height, pricePrecision, openOrders, isMobile, theme])
+  }, [displayData, symbol, height, pricePrecision, openOrders, isMobile, markPrice, theme])
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (displayData.length === 0) {
@@ -562,6 +585,7 @@ export const KlineChart = memo(KlineChartComponent, (previous, next) => {
     previous.height === next.height &&
     previous.className === next.className &&
     previous.pricePrecision === next.pricePrecision &&
+    previous.markPrice === next.markPrice &&
     areRelevantOrdersEqual(previous.openOrders || [], next.openOrders || [], previous.symbol)
   )
 })
