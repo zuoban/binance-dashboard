@@ -55,6 +55,41 @@ function formatChartPrice(value: number, pricePrecision?: number): string {
   return value < 1 ? value.toFixed(4) : value.toFixed(2)
 }
 
+interface PriceGap {
+  absolute: number
+  percent: number
+  relation: '高于' | '低于' | '等于'
+}
+
+function calculatePriceGap(markPrice?: number, orderPrice?: number): PriceGap | null {
+  if (
+    typeof markPrice !== 'number' ||
+    !Number.isFinite(markPrice) ||
+    markPrice <= 0 ||
+    typeof orderPrice !== 'number' ||
+    !Number.isFinite(orderPrice) ||
+    orderPrice <= 0
+  ) {
+    return null
+  }
+
+  const absolute = Math.abs(orderPrice - markPrice)
+  const percent = (absolute / markPrice) * 100
+  if (!Number.isFinite(percent)) {
+    return null
+  }
+
+  return {
+    absolute,
+    percent,
+    relation: orderPrice > markPrice ? '高于' : orderPrice < markPrice ? '低于' : '等于',
+  }
+}
+
+function formatPriceGapPercent(percent: number): string {
+  return percent > 0 && percent < 0.01 ? '<0.01%' : `${percent.toFixed(2)}%`
+}
+
 function formatKlineTime(timestamp: number): string {
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
@@ -87,21 +122,28 @@ function KlineChartComponent({
   }, [data, visibleCount])
   const latestClose = displayData[displayData.length - 1]?.close
   const displayedMarkPrice =
-    markPrice !== undefined && Number.isFinite(markPrice) && markPrice > 0 ? markPrice : latestClose
+    typeof markPrice === 'number' && Number.isFinite(markPrice) && markPrice > 0
+      ? markPrice
+      : typeof latestClose === 'number' && Number.isFinite(latestClose) && latestClose > 0
+        ? latestClose
+        : undefined
   const nextOrderPrices = useMemo(() => {
+    if (displayedMarkPrice === undefined) {
+      return { buy: undefined, sell: undefined }
+    }
+
     const activeOrderLevels = resolveChartOrderLevels(
       openOrders.filter(
         order =>
           order.symbol === symbol && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
       )
     )
-    const referencePrice = displayedMarkPrice ?? 0
     const findNearestPrice = (side: 'BUY' | 'SELL') =>
       activeOrderLevels
         .filter(level => level.order.side === side)
         .sort(
           (left, right) =>
-            Math.abs(left.price - referencePrice) - Math.abs(right.price - referencePrice)
+            Math.abs(left.price - displayedMarkPrice) - Math.abs(right.price - displayedMarkPrice)
         )[0]?.price
 
     return {
@@ -109,6 +151,23 @@ function KlineChartComponent({
       sell: findNearestPrice('SELL'),
     }
   }, [displayedMarkPrice, openOrders, symbol])
+  const priceGaps = {
+    buy: calculatePriceGap(displayedMarkPrice, nextOrderPrices.buy),
+    sell: calculatePriceGap(displayedMarkPrice, nextOrderPrices.sell),
+  }
+  const formatGapValue = (gap: PriceGap | null) =>
+    gap
+      ? {
+          absolute: formatChartPrice(gap.absolute, pricePrecision),
+          percent: formatPriceGapPercent(gap.percent),
+        }
+      : null
+  const buyGapValue = formatGapValue(priceGaps.buy)
+  const sellGapValue = formatGapValue(priceGaps.sell)
+  const describeGap = (side: '买' | '卖', gap: PriceGap | null) =>
+    gap
+      ? `下一个${side}单价格${gap.relation}标记价格 ${formatChartPrice(gap.absolute, pricePrecision)}，价差占标记价格 ${formatPriceGapPercent(gap.percent)}`
+      : `暂无下一个${side}单价差`
 
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const displayDataRef = useRef(displayData)
@@ -701,9 +760,8 @@ function KlineChartComponent({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          margin: '0 clamp(1rem, 2vw, 1.25rem) 0.25rem',
-          borderBottom: '1px solid var(--divider)',
-          padding: '0.125rem 0 0.5rem',
+          margin: '0 clamp(1rem, 2vw, 1.25rem)',
+          padding: '0.125rem 0 0.25rem',
         }}
       >
         {[
@@ -783,6 +841,45 @@ function KlineChartComponent({
           )
         })}
       </dl>
+
+      <div
+        className="kline-gaps"
+        role="group"
+        aria-label={`${describeGap('买', priceGaps.buy)}；${describeGap('卖', priceGaps.sell)}`}
+      >
+        <span className="kline-gaps__item kline-gaps__item--buy" aria-hidden="true">
+          <i className="kline-gaps__arrow">←</i>
+          <span className="kline-gaps__text">
+            {buyGapValue ? (
+              <>
+                距买 <span className="kline-gaps__absolute">{buyGapValue.absolute}</span>
+                <span className="kline-gaps__separator"> · </span>
+                <span>{buyGapValue.percent}</span>
+              </>
+            ) : displayedMarkPrice === undefined ? (
+              '暂无价差'
+            ) : (
+              '无买单'
+            )}
+          </span>
+        </span>
+        <span className="kline-gaps__item kline-gaps__item--sell" aria-hidden="true">
+          <span className="kline-gaps__text">
+            {sellGapValue ? (
+              <>
+                距卖 <span className="kline-gaps__absolute">{sellGapValue.absolute}</span>
+                <span className="kline-gaps__separator"> · </span>
+                <span>{sellGapValue.percent}</span>
+              </>
+            ) : displayedMarkPrice === undefined ? (
+              '暂无价差'
+            ) : (
+              '无卖单'
+            )}
+          </span>
+          <i className="kline-gaps__arrow">→</i>
+        </span>
+      </div>
 
       <div
         ref={chartContainerRef}

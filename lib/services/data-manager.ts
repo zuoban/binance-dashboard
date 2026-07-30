@@ -791,8 +791,14 @@ export class DataManager {
       })
     })
 
-    // 按时间降序排序
-    return mergedOrders.sort((a, b) => b.time - a.time)
+    // 按末笔成交时间降序排序；异常数据回退到首笔成交时间。
+    const getTradeTime = (order: SimpleOrder) =>
+      Number.isFinite(order.updateTime) && order.updateTime > 0 ? order.updateTime : order.time
+
+    return mergedOrders.sort((left, right) => {
+      const tradeTimeDifference = getTradeTime(right) - getTradeTime(left)
+      return tradeTimeDifference !== 0 ? tradeTimeDifference : right.time - left.time
+    })
   }
 
   /**

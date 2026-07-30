@@ -7,6 +7,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { format, formatISO } from 'date-fns'
 import {
   useDashboardWebSocket,
   useExchangeInfo,
@@ -19,8 +20,8 @@ import { OrderModal } from '@/components/dashboard/OrderModal'
 import { DataReliability, RiskMonitor } from '@/components/dashboard/DashboardSignals'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
-import { Order } from '@/types/binance'
 import { getDashboardRiskAlerts } from '@/lib/utils/risk'
+import type { Order } from '@/types/binance'
 
 type DashboardTheme = 'dark' | 'light'
 
@@ -34,6 +35,26 @@ function calculateTotalPnl(orders: Order[]): number {
     }
     return total
   }, 0)
+}
+
+/**
+ * 合并后的订单以末笔成交时间作为真实交易时间，异常数据再回退到首笔成交时间。
+ */
+function getOrderTradeTime(order: Order): number {
+  if (Number.isFinite(order.updateTime) && order.updateTime > 0) {
+    return order.updateTime
+  }
+
+  return Number.isFinite(order.time) && order.time > 0 ? order.time : 0
+}
+
+function getRecentOrders(orders: Order[]): Order[] {
+  return [...orders]
+    .sort((left, right) => {
+      const tradeTimeDifference = getOrderTradeTime(right) - getOrderTradeTime(left)
+      return tradeTimeDifference !== 0 ? tradeTimeDifference : right.time - left.time
+    })
+    .slice(0, RECENT_ORDER_LIMIT)
 }
 
 function formatRecentOrderTime(timestamp: number): string {
@@ -65,12 +86,7 @@ function formatRecentOrderTime(timestamp: number): string {
     return `${days}天前`
   }
 
-  const date = new Date(timestamp)
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const h = String(date.getHours()).padStart(2, '0')
-  const m = String(date.getMinutes()).padStart(2, '0')
-  return `${month}-${day} ${h}:${m}`
+  return format(timestamp, 'MM-dd HH:mm')
 }
 
 function formatNumber(num: number, decimals: number = 2): string {
@@ -79,26 +95,6 @@ function formatNumber(num: number, decimals: number = 2): string {
     return formatted.replace(/\.?0+$/, '')
   }
   return formatted
-}
-
-function formatTimeDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) {
-    const remainingHours = hours % 24
-    return remainingHours > 0 ? `${days}天${remainingHours}小时` : `${days}天`
-  }
-  if (hours > 0) {
-    const remainingMinutes = minutes % 60
-    return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`
-  }
-  if (minutes > 0) {
-    return `${minutes}分钟`
-  }
-  return `${seconds}秒`
 }
 
 function DashboardHeader({
@@ -189,20 +185,22 @@ function StatsOverview({
   availableMarginPercent,
   openOrdersStats,
   orders,
-  totalPnl,
 }: {
   totalEquity: number
   availableMargin: number
   availableMarginPercent: number
   openOrdersStats: { total: number; buy: number; sell: number } | null
   orders: Order[]
-  totalPnl: number
 }) {
   const { exchangeInfo } = useExchangeInfo()
 
-  const recentOrders = orders.slice(0, RECENT_ORDER_LIMIT)
+  const recentOrders = getRecentOrders(orders)
+  const totalPnl = calculateTotalPnl(recentOrders)
   const recentBuyCount = recentOrders.filter(order => order.side === 'BUY').length
   const recentSellCount = recentOrders.filter(order => order.side === 'SELL').length
+  const latestOrderTime = recentOrders[0] ? getOrderTradeTime(recentOrders[0]) : 0
+  const latestOrderRelativeTime =
+    latestOrderTime > 0 ? formatRecentOrderTime(latestOrderTime) : null
   const orderStats = openOrdersStats || { total: 0, buy: 0, sell: 0 }
   const marginSafetyPercent = Math.min(100, Math.max(0, availableMarginPercent))
   const marginSafetyTone =
@@ -317,16 +315,20 @@ function StatsOverview({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {recentOrders.length >= 2 && (
-              <span className="theme-text-muted hidden text-[10px] sm:inline">
-                {formatTimeDuration(
-                  recentOrders[0].time - recentOrders[recentOrders.length - 1].time
-                )}
-              </span>
+            {latestOrderRelativeTime && (
+              <time
+                className="stat-latest-order-time"
+                dateTime={formatISO(latestOrderTime)}
+                aria-label={`最近一条订单交易时间：${latestOrderRelativeTime}`}
+              >
+                <span>最近成交</span>
+                <strong>{latestOrderRelativeTime}</strong>
+              </time>
             )}
             <div className="grid grid-cols-10 gap-1 sm:gap-2 md:hidden xl:grid">
               {recentOrders.map(order => {
-                const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${formatRecentOrderTime(order.time)}`
+                const orderTradeTime = getOrderTradeTime(order)
+                const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${orderTradeTime > 0 ? formatRecentOrderTime(orderTradeTime) : '时间未知'}`
 
                 return (
                   <OrderModal
@@ -404,7 +406,6 @@ export function DashboardView() {
   const availableMargin = account ? parseFloat(account.availableBalance) || 0 : 0
   const availableMarginPercent = totalEquity > 0 ? (availableMargin / totalEquity) * 100 : 0
 
-  const totalPnl = orders.length > 0 ? calculateTotalPnl(orders.slice(0, RECENT_ORDER_LIMIT)) : 0
   const hasNoData = !account && positions.length === 0
   const riskAlerts = getDashboardRiskAlerts({
     positions,
@@ -475,7 +476,6 @@ export function DashboardView() {
             availableMarginPercent={availableMarginPercent}
             openOrdersStats={openOrdersStats}
             orders={orders}
-            totalPnl={totalPnl}
           />
 
           <div className="space-y-4">
