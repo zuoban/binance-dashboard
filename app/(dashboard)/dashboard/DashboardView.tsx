@@ -117,21 +117,40 @@ function DashboardHeader({
   onThemeChange: (theme: DashboardTheme) => void
 }) {
   return (
-    <header className="dashboard-header px-5 py-5 sm:px-7 sm:py-6">
-      <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-start gap-3.5">
+    <header className="dashboard-header">
+      <div className="dashboard-header__layout relative z-10">
+        <div className="dashboard-identity">
           <div className="dashboard-brand-mark" aria-hidden="true">
-            <span>₿</span>
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="m16 5 4.2 4.2L16 13.4l-4.2-4.2L16 5Z" fill="currentColor" />
+              <path d="m8.8 12.2 4.2 4.2-4.2 4.2-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+              <path d="m23.2 12.2 4.2 4.2-4.2 4.2-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+              <path d="m16 19.4 4.2 4.2L16 27.8l-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+              <path d="m16 12.2 4.2 4.2-4.2 4.2-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+            </svg>
           </div>
           <div className="min-w-0">
-            <p className="dashboard-overline">Binance Futures · Private workspace</p>
-            <h1 className="dashboard-title mt-1">合约交易看板</h1>
-            <p className="dashboard-subtitle">以实时仓位、风险与订单信号辅助快速决策</p>
+            <div className="dashboard-identity__eyebrow">
+              <p className="dashboard-overline">Futures intelligence</p>
+              <span>Private desk</span>
+            </div>
+            <h1 className="dashboard-title">合约交易看板</h1>
+            <div className="dashboard-context" aria-label="工作台信息">
+              <span>USDC-M</span>
+              <i aria-hidden="true" />
+              <span>实时仓位</span>
+              <i aria-hidden="true" />
+              <span>风险与订单信号</span>
+            </div>
           </div>
         </div>
 
         <div className="dashboard-header__side">
           <div className="dashboard-header__actions">
+            <span className="dashboard-session-badge">
+              <i aria-hidden="true" />
+              LIVE SESSION
+            </span>
             <button
               type="button"
               onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
@@ -207,7 +226,7 @@ function StatsOverview({
     marginSafetyPercent <= 10 ? 'critical' : marginSafetyPercent <= 25 ? 'warning' : 'healthy'
 
   return (
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <section className="dashboard-stats-grid">
       <article className="card dashboard-stat-card dashboard-stat-card--primary">
         <div className="relative z-10 flex items-center justify-between">
           <p className="stat-label">账户权益</p>
@@ -416,7 +435,7 @@ export function DashboardView() {
   })
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="dashboard-workspace">
       <DashboardHeader
         isConnected={isConnected}
         isConnecting={isConnecting}
@@ -428,8 +447,18 @@ export function DashboardView() {
         onThemeChange={setTheme}
       />
       {loading && hasNoData && (
-        <div className="card flex justify-center py-16">
-          <LoadingSpinner size="md" showText />
+        <div className="card dashboard-loading-state">
+          <div className="dashboard-loading-state__visual" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div>
+            <p>正在建立实时数据链路</p>
+            <span>账户、仓位和行情数据将在连接后自动同步</span>
+          </div>
+          <LoadingSpinner size="md" />
         </div>
       )}
 
@@ -451,15 +480,9 @@ export function DashboardView() {
       {(!loading || positions.length > 0) && !(error && hasNoData) && (
         <>
           {error && (
-            <div
-              role="alert"
-              className="flex items-center justify-between gap-3 rounded-xl border border-[#f3bd62]/25 bg-[#f3bd62]/10 px-4 py-3 text-sm text-[#f6d797]"
-            >
+            <div role="alert" className="dashboard-inline-alert">
               <span>{error}</span>
-              <button
-                onClick={reconnect}
-                className="shrink-0 text-xs font-bold text-[#f6d797] underline underline-offset-2"
-              >
+              <button onClick={reconnect} className="dashboard-inline-alert__action">
                 重试
               </button>
             </div>
@@ -478,20 +501,36 @@ export function DashboardView() {
             orders={orders}
           />
 
-          <div className="space-y-4">
+          <section className="dashboard-positions">
+            <header className="dashboard-section-header">
+              <div>
+                <div className="dashboard-section-header__eyebrow">
+                  <span>POSITION BOOK</span>
+                  <i aria-hidden="true" />
+                  <span>MARK PRICE</span>
+                </div>
+                <h2>活跃持仓</h2>
+                <p>逐仓追踪盈亏、强平距离与关键委托价位</p>
+              </div>
+              <div
+                className="dashboard-section-header__count"
+                aria-label={`${positions.length} 个持仓`}
+              >
+                <strong>{positions.length}</strong>
+                <span>OPEN</span>
+              </div>
+            </header>
             {positions.length === 0 ? (
               <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
             ) : (
-              <div className="space-y-2">
-                <PositionCards
-                  positions={positions}
-                  openOrders={openOrders}
-                  klines={klines}
-                  theme={theme}
-                />
-              </div>
+              <PositionCards
+                positions={positions}
+                openOrders={openOrders}
+                klines={klines}
+                theme={theme}
+              />
             )}
-          </div>
+          </section>
         </>
       )}
     </div>

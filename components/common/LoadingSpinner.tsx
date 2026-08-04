@@ -37,12 +37,10 @@ export function LoadingSpinner({
   return (
     <div className={wrapperClassName}>
       {/* Spinner */}
-      <div
-        className={`${spinnerSizeClass} animate-spin rounded-full border-2 border-white/10 border-t-[#d8b36a]`}
-      />
+      <div className={`${spinnerSizeClass} loading-spinner`} />
 
       {/* 文本 */}
-      {showText && <p className="text-xs text-[#a8b9b1]">{text}</p>}
+      {showText && <p className="loading-spinner__text">{text}</p>}
     </div>
   )
 }
@@ -64,8 +62,8 @@ export function PageLoading({ text = '加载中...' }: { text?: string }) {
 export function InlineLoading({ className = '' }: { className?: string }) {
   return (
     <div className={`inline-flex items-center gap-1 ${className}`}>
-      <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/10 border-t-[#d8b36a]" />
-      <span className="text-xs text-[#a8b9b1]">加载中...</span>
+      <div className="loading-spinner h-3 w-3" />
+      <span className="loading-spinner__text">加载中...</span>
     </div>
   )
 }

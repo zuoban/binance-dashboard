@@ -47,103 +47,110 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(66,211,146,0.16),transparent_27rem),radial-gradient(circle_at_84%_72%,rgba(216,179,106,0.13),transparent_25rem)]" />
-      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(202,221,210,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(202,221,210,0.035)_1px,transparent_1px)] [background-size:42px_42px]" />
-      <div className="relative w-full max-w-md">
-        <div className="card p-7 sm:p-9">
-          <div className="text-center mb-10">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#f7d99a]/45 bg-[linear-gradient(145deg,#e5c276,#a67836)] text-[#15201c] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.2}
-                  d="m5 15 7-7 7 7"
-                />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8v11" />
+    <main className="login-shell">
+      <div className="login-shell__grid" aria-hidden="true" />
+      <div className="login-shell__orbit" aria-hidden="true" />
+
+      <section className="login-panel">
+        <div className="login-intro">
+          <div className="login-brand">
+            <div className="dashboard-brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="m16 5 4.2 4.2L16 13.4l-4.2-4.2L16 5Z" fill="currentColor" />
+                <path d="m8.8 12.2 4.2 4.2-4.2 4.2-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+                <path d="m23.2 12.2 4.2 4.2-4.2 4.2-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+                <path d="m16 19.4 4.2 4.2L16 27.8l-4.2-4.2 4.2-4.2Z" fill="currentColor" />
+                <path d="m16 12.2 4.2 4.2-4.2 4.2-4.2-4.2 4.2-4.2Z" fill="currentColor" />
               </svg>
             </div>
-            <p className="dashboard-overline mb-2">Binance Futures · Private workspace</p>
-            <h1 className="mb-2 text-3xl font-bold tracking-[-0.05em] text-[#f2f7f1]">访问验证</h1>
-            <p className="text-sm text-[#a8b9b1]">请输入访问码以继续访问交易看板</p>
+            <div>
+              <p>Futures intelligence</p>
+              <strong>PRIVATE DESK</strong>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="login-intro__copy">
+            <p className="dashboard-overline">REAL-TIME DERIVATIVES WORKSPACE</p>
+            <h1>你的合约决策中枢</h1>
+            <p>统一查看实时仓位、风险阈值和订单信号，保持每一次决策都有数据依据。</p>
+          </div>
+
+          <div className="login-intro__signals" aria-label="工作台能力">
             <div>
-              <label
-                htmlFor="access-code"
-                className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#71857c]"
-              >
-                访问码
-              </label>
-              <div className="relative">
-                <input
-                  id="access-code"
-                  type="password"
-                  value={code}
-                  onChange={e => setCode(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-[#071b1b]/75 px-4 py-3.5 text-[#f2f7f1] placeholder-[#526861] outline-none transition focus:border-[#d8b36a]/70 focus:ring-4 focus:ring-[#d8b36a]/10"
-                  placeholder="••••••••"
-                  autoFocus
-                  required
-                />
-              </div>
+              <span>01</span>
+              <p>仓位与行情同步</p>
+            </div>
+            <div>
+              <span>02</span>
+              <p>强平距离监控</p>
+            </div>
+            <div>
+              <span>03</span>
+              <p>私密会话保护</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="login-form-panel">
+          <div className="login-form-panel__status">
+            <span>SECURE ACCESS</span>
+            <i aria-hidden="true" />
+            <span>ENCRYPTED SESSION</span>
+          </div>
+
+          <div className="login-form-panel__heading">
+            <p>身份验证</p>
+            <h2>欢迎回来</h2>
+            <span>输入工作台访问码以继续</span>
+          </div>
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <label htmlFor="access-code">访问码</label>
+            <div className="login-field">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="5" y="10" width="14" height="10" rx="2" strokeWidth={1.7} />
+                <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" strokeWidth={1.7} />
+              </svg>
+              <input
+                id="access-code"
+                type="password"
+                value={code}
+                onChange={e => setCode(e.target.value)}
+                placeholder="输入访问码"
+                autoComplete="current-password"
+                autoFocus
+                required
+              />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-[#ff7676]/25 bg-[#ff7676]/10 p-3">
-                <svg
-                  className="h-4 w-4 shrink-0 text-[#ff8585]"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <p className="text-sm text-[#ffb4b4]">{error}</p>
+              <div className="login-error" role="alert">
+                <span aria-hidden="true">!</span>
+                <p>{error}</p>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading || !code}
-              className="w-full rounded-xl border border-[#f7d99a]/30 bg-[linear-gradient(135deg,#e5c276,#b38441)] px-4 py-3.5 font-bold text-[#17211d] shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <button type="submit" disabled={loading || !code} className="login-submit">
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
+                <span>
+                  <i className="loading-spinner" aria-hidden="true" />
                   验证中...
                 </span>
               ) : (
-                '确认访问'
+                <>
+                  进入工作台
+                  <span aria-hidden="true">↗</span>
+                </>
               )}
             </button>
           </form>
-        </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-xs text-[#71857c]">币安合约交易看板 · 实时数据监控</p>
+          <p className="login-form-panel__footnote">
+            访问凭证仅用于本次安全会话，不会保存在浏览器中
+          </p>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }
 

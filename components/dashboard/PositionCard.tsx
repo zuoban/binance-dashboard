@@ -176,17 +176,13 @@ function PositionCardComponent({
   }, [liveMarkPrice, position])
 
   return (
-    <div className={`position-card ${className}`}>
-      <div className="position-card__header px-5 py-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                positionData.isLong
-                  ? 'bg-[#42d392]/10 text-[#73e2ad] ring-1 ring-[#42d392]/15'
-                  : 'bg-[#ff7676]/10 text-[#ff9999] ring-1 ring-[#ff7676]/15'
-              }`}
-            >
+    <article
+      className={`position-card position-card--${positionData.isLong ? 'long' : 'short'} ${className}`}
+    >
+      <div className="position-card__header">
+        <div className="position-card__header-inner">
+          <div className="position-card__identity">
+            <div className="position-card__direction-icon">
               {positionData.isLong ? (
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -208,24 +204,20 @@ function PositionCardComponent({
               )}
             </div>
             <div>
-              <h3 className="theme-text-primary font-mono text-base font-bold tracking-tight">
-                {position.symbol}
-              </h3>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="position-card__symbol-row">
+                <h3>{position.symbol}</h3>
                 <span
                   className={`position-direction ${positionData.isLong ? 'position-direction--long' : 'position-direction--short'}`}
                 >
                   {positionData.isLong ? '做多' : '做空'}
                 </span>
-                <span className="theme-text-muted text-xs font-medium">·</span>
-                <span className="theme-text-secondary text-xs font-medium">
-                  {positionData.leverage}x 杠杆
-                </span>
               </div>
+              <p className="position-card__leverage">永续合约 · {positionData.leverage}x 杠杆</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-baseline gap-1">
+          <div className="position-card__pnl-block">
+            <span className="position-card__pnl-label">未实现盈亏</span>
+            <div className="position-card__pnl-values">
               <span
                 className={`position-pnl ${positionData.isProfit ? 'position-pnl--positive' : 'position-pnl--negative'}`}
               >
@@ -247,8 +239,8 @@ function PositionCardComponent({
         </div>
       </div>
 
-      <div className="px-5 py-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+      <div className="position-card__body">
+        <div className="position-card__metrics">
           <div className="position-metric space-y-1">
             <div className="position-metric__label">持仓金额</div>
             <div className="position-metric__value">${positionData.positionValue.toFixed(2)}</div>
@@ -303,7 +295,7 @@ function PositionCardComponent({
         )}
       </div>
 
-      <div className="relative">
+      <div className="position-card__chart">
         <KlineChart
           symbol={position.symbol}
           data={chartData}
@@ -316,7 +308,7 @@ function PositionCardComponent({
           theme={theme}
         />
       </div>
-    </div>
+    </article>
   )
 }
 
