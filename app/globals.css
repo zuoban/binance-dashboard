@@ -1216,6 +1216,8 @@ textarea {
 .position-card {
   position: relative;
   overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 780px;
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
   background: var(--surface);
@@ -1721,6 +1723,52 @@ textarea {
 
 .position-card__chart {
   position: relative;
+}
+
+.position-card__chart-placeholder {
+  position: relative;
+  display: flex;
+  min-height: 35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border-top: 1px solid var(--divider);
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    color-mix(in srgb, var(--surface) 92%, var(--background));
+  background-size: 48px 48px;
+}
+
+.position-card__chart-placeholder::after {
+  position: absolute;
+  top: calc(50% + 1.4rem);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  content: '图表将在接近视口时加载';
+}
+
+.position-card__chart-placeholder span {
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 62%, var(--text-muted));
+}
+
+.position-card__chart-placeholder span:nth-child(1) {
+  height: 0.8rem;
+  opacity: 0.45;
+}
+
+.position-card__chart-placeholder span:nth-child(2) {
+  height: 1.6rem;
+  opacity: 0.85;
+}
+
+.position-card__chart-placeholder span:nth-child(3) {
+  height: 1.1rem;
+  opacity: 0.6;
 }
 
 .chart-placeholder {
@@ -2860,6 +2908,10 @@ textarea {
 
   .position-card__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .position-card__chart-placeholder {
+    min-height: 28rem;
   }
 
   .dashboard-header::after {

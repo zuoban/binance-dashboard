@@ -22,6 +22,82 @@ interface DashboardData {
   klines: Record<string, KlineData[]>
 }
 
+/** 比较 SSE 返回的 JSON 数据；相同切片会复用旧引用，便于下游 memo 跳过渲染。 */
+function areDashboardValuesEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) {
+    return true
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => areDashboardValuesEqual(value, right[index]))
+    )
+  }
+
+  if (typeof left !== 'object' || left === null || typeof right !== 'object' || right === null) {
+    return false
+  }
+
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      key => key in rightRecord && areDashboardValuesEqual(leftRecord[key], rightRecord[key])
+    )
+  )
+}
+
+/** 只替换发生变化的数据切片，避免标记价格更新连带刷新订单统计等独立区域。 */
+function reconcileDashboardData(previous: DashboardData, next: DashboardData): DashboardData {
+  const account = areDashboardValuesEqual(previous.account, next.account)
+    ? previous.account
+    : next.account
+  const positions = areDashboardValuesEqual(previous.positions, next.positions)
+    ? previous.positions
+    : next.positions
+  const orders = areDashboardValuesEqual(previous.orders, next.orders)
+    ? previous.orders
+    : next.orders
+  const openOrdersStats = areDashboardValuesEqual(previous.openOrdersStats, next.openOrdersStats)
+    ? previous.openOrdersStats
+    : next.openOrdersStats
+  const openOrders = areDashboardValuesEqual(previous.openOrders, next.openOrders)
+    ? previous.openOrders
+    : next.openOrders
+  const klines = areDashboardValuesEqual(previous.klines, next.klines)
+    ? previous.klines
+    : next.klines
+
+  if (
+    account === previous.account &&
+    positions === previous.positions &&
+    orders === previous.orders &&
+    openOrdersStats === previous.openOrdersStats &&
+    openOrders === previous.openOrders &&
+    next.todayRealizedPnl === previous.todayRealizedPnl &&
+    klines === previous.klines
+  ) {
+    return previous
+  }
+
+  return {
+    account,
+    positions,
+    orders,
+    openOrdersStats,
+    openOrders,
+    todayRealizedPnl: next.todayRealizedPnl,
+    klines,
+  }
+}
+
 interface UseDashboardWebSocketOptions {
   /** 是否自动连接 */
   autoConnect?: boolean
@@ -68,6 +144,11 @@ interface UseDashboardWebSocketReturn {
   disconnect: () => void
 }
 
+interface PendingDashboardMessage {
+  data: DashboardData
+  timestamp: number
+}
+
 /**
  * 看板 SSE Hook
  *
@@ -107,12 +188,37 @@ export function useDashboardWebSocket(
 
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingMessageRef = useRef<PendingDashboardMessage | null>(null)
   const callbacksRef = useRef({ onDataUpdate, onError, onConnectionError, onConnectionChange })
 
   // 事件源只在 autoConnect 改变时重建；回调则始终使用最新引用，避免闭包过期。
   useEffect(() => {
     callbacksRef.current = { onDataUpdate, onError, onConnectionError, onConnectionChange }
   }, [onDataUpdate, onError, onConnectionError, onConnectionChange])
+
+  /** 合并一次 SSE 数据；页面隐藏期间只保留最新消息，恢复可见后再提交 React 更新。 */
+  const applyDashboardMessage = useCallback((message: PendingDashboardMessage) => {
+    setData(previous => reconcileDashboardData(previous, message.data))
+    setLoading(false)
+    setError(null)
+    setLastUpdate(message.timestamp)
+    callbacksRef.current.onDataUpdate?.(message.data)
+  }, [])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || !pendingMessageRef.current) {
+        return
+      }
+
+      const pendingMessage = pendingMessageRef.current
+      pendingMessageRef.current = null
+      applyDashboardMessage(pendingMessage)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [applyDashboardMessage])
 
   /**
    * 清理资源
@@ -128,6 +234,7 @@ export function useDashboardWebSocket(
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null
     }
+    pendingMessageRef.current = null
   }, [])
 
   /**
@@ -179,11 +286,13 @@ export function useDashboardWebSocket(
           const message = JSON.parse(rawData)
 
           if (message.type === 'data') {
-            setData(message.data)
-            setLoading(false)
-            setError(null)
-            setLastUpdate(message.timestamp)
-            callbacksRef.current.onDataUpdate?.(message.data)
+            const nextData = message.data as DashboardData
+            const nextMessage = { data: nextData, timestamp: message.timestamp }
+            if (document.visibilityState === 'hidden') {
+              pendingMessageRef.current = nextMessage
+              return
+            }
+            applyDashboardMessage(nextMessage)
           }
         } catch {
           const errorMessage = '无法解析服务端实时数据'
@@ -246,7 +355,7 @@ export function useDashboardWebSocket(
       callbacksRef.current.onError?.(errorMessage)
       cleanup()
     }
-  }, [cleanup])
+  }, [applyDashboardMessage, cleanup])
 
   /**
    * 断开连接

@@ -4,19 +4,19 @@
 
 'use client'
 
-import { Order, OrderStatus } from '@/types/binance'
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { ExchangeInfoData } from '@/lib/hooks/useExchangeInfo'
 import { formatDateTime, formatDistanceToNow } from '@/lib/utils/date'
+import { Order, OrderStatus } from '@/types/binance'
 
 interface OrderModalProps {
   /** 订单数据 */
   order: Order
   /** 交易对精度信息 */
   exchangeInfo: ExchangeInfoData
-  /** 触发元素 */
-  children: React.ReactNode
+  /** 关闭模态框 */
+  onClose: () => void
 }
 
 /**
@@ -120,20 +120,15 @@ function formatPrice(
 /**
  * 订单详情模态框
  */
-export function OrderModal({ order, exchangeInfo, children }: OrderModalProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function OrderModal({ order, exchangeInfo, onClose }: OrderModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   // 监听 ESC、锁定背景滚动，并将焦点放到关闭按钮。
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsOpen(false)
+        onClose()
       }
-    }
-
-    if (!isOpen) {
-      return
     }
 
     const previousOverflow = document.body.style.overflow
@@ -145,7 +140,7 @@ export function OrderModal({ order, exchangeInfo, children }: OrderModalProps) {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
     }
-  }, [isOpen])
+  }, [onClose])
 
   const executedQty = parseFloat(order.executedQty)
   const price = parseFloat(order.price)
@@ -154,152 +149,136 @@ export function OrderModal({ order, exchangeInfo, children }: OrderModalProps) {
   const isPnlPositive = pnl !== null && pnl >= 0
   const commission = order.commission !== undefined ? parseFloat(order.commission) : null
 
-  return (
-    <>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+      {/* 背景遮罩 */}
       <div
-        className="relative inline-flex items-center justify-center cursor-pointer"
-        onClick={() => setIsOpen(true)}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* 模态框内容 */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="order-dialog-title"
+        className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-200"
       >
-        {children}
-      </div>
-
-      {isOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
-            {/* 背景遮罩 */}
-            <div
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* 模态框内容 */}
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="order-dialog-title"
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-200"
+        {/* 头部 */}
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-baseline gap-2">
+              <h3 id="order-dialog-title" className="text-lg font-bold text-slate-900">
+                {order.symbol}
+              </h3>
+              <span className="text-xs text-slate-500 font-medium">
+                {formatDistanceToNow(order.time)}
+              </span>
+            </div>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="关闭订单详情"
             >
-              {/* 头部 */}
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-baseline gap-2">
-                    <h3 id="order-dialog-title" className="text-lg font-bold text-slate-900">
-                      {order.symbol}
-                    </h3>
-                    <span className="text-xs text-slate-500 font-medium">
-                      {formatDistanceToNow(order.time)}
-                    </span>
-                  </div>
-                  <button
-                    ref={closeButtonRef}
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors"
-                    aria-label="关闭订单详情"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-                        order.side === 'BUY'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {order.side === 'BUY' ? '买入' : '卖出'}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-md text-xs font-medium ${
-                        order.type === 'MARKET'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {order.type === 'MARKET' ? '市价' : '限价'}
-                    </span>
-                  </div>
-                  <OrderStatusBadge status={order.status} />
-                </div>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <span
+                className={`px-2 py-0.5 rounded-md text-xs font-bold ${
+                  order.side === 'BUY'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
+                {order.side === 'BUY' ? '买入' : '卖出'}
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-md text-xs font-medium ${
+                  order.type === 'MARKET'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}
+              >
+                {order.type === 'MARKET' ? '市价' : '限价'}
+              </span>
+            </div>
+            <OrderStatusBadge status={order.status} />
+          </div>
+        </div>
 
-              {/* 内容区域 */}
-              <div className="px-6 py-5 space-y-4">
-                <div className="grid grid-cols-2 gap-6">
-                  {/* 价格 */}
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">成交价格</div>
-                    <div className="text-base font-bold text-slate-900">
-                      ${formatPrice(price, order.symbol, exchangeInfo)}
-                    </div>
-                  </div>
-
-                  {/* 数量 */}
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">成交数量</div>
-                    <div className="text-base font-bold text-slate-900">
-                      {executedQty.toFixed(4)}
-                    </div>
-                  </div>
-
-                  {/* 金额 */}
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">成交金额</div>
-                    <div className="text-base font-bold text-slate-900">
-                      ${totalAmount.toFixed(2)}
-                    </div>
-                  </div>
-
-                  {/* 盈亏/手续费 */}
-                  <div>
-                    {pnl !== null && order.side === 'SELL' ? (
-                      <>
-                        <div className="text-xs text-slate-500 mb-1">实现盈亏</div>
-                        <div
-                          className={`text-base font-bold ${
-                            isPnlPositive ? 'text-emerald-600' : 'text-red-600'
-                          }`}
-                        >
-                          {isPnlPositive ? '+' : ''}
-                          {pnl.toFixed(2)}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-xs text-slate-500 mb-1">手续费</div>
-                        <div className="text-base font-bold text-slate-700">
-                          {commission !== null ? parseFloat(commission.toFixed(4)) : 0}
-                          <span className="text-xs font-normal ml-1 text-slate-400">
-                            {order.commissionAsset}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* 底部 ID 信息 */}
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
-                <div className="flex justify-between items-center text-[10px] text-slate-400">
-                  <span>Order ID: {order.orderId}</span>
-                  <span>{formatDateTime(order.time)}</span>
-                </div>
+        {/* 内容区域 */}
+        <div className="px-6 py-5 space-y-4">
+          <div className="grid grid-cols-2 gap-6">
+            {/* 价格 */}
+            <div>
+              <div className="text-xs text-slate-500 mb-1">成交价格</div>
+              <div className="text-base font-bold text-slate-900">
+                ${formatPrice(price, order.symbol, exchangeInfo)}
               </div>
             </div>
-          </div>,
-          document.body
-        )}
-    </>
+
+            {/* 数量 */}
+            <div>
+              <div className="text-xs text-slate-500 mb-1">成交数量</div>
+              <div className="text-base font-bold text-slate-900">{executedQty.toFixed(4)}</div>
+            </div>
+
+            {/* 金额 */}
+            <div>
+              <div className="text-xs text-slate-500 mb-1">成交金额</div>
+              <div className="text-base font-bold text-slate-900">${totalAmount.toFixed(2)}</div>
+            </div>
+
+            {/* 盈亏/手续费 */}
+            <div>
+              {pnl !== null && order.side === 'SELL' ? (
+                <>
+                  <div className="text-xs text-slate-500 mb-1">实现盈亏</div>
+                  <div
+                    className={`text-base font-bold ${
+                      isPnlPositive ? 'text-emerald-600' : 'text-red-600'
+                    }`}
+                  >
+                    {isPnlPositive ? '+' : ''}
+                    {pnl.toFixed(2)}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-xs text-slate-500 mb-1">手续费</div>
+                  <div className="text-base font-bold text-slate-700">
+                    {commission !== null ? parseFloat(commission.toFixed(4)) : 0}
+                    <span className="text-xs font-normal ml-1 text-slate-400">
+                      {order.commissionAsset}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 底部 ID 信息 */}
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
+          <div className="flex justify-between items-center text-[10px] text-slate-400">
+            <span>Order ID: {order.orderId}</span>
+            <span>{formatDateTime(order.time)}</span>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   )
 }

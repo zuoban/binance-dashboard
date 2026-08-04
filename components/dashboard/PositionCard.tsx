@@ -4,11 +4,20 @@
 
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useBinanceKlines, useExchangeInfo } from '@/lib/hooks'
+import { areKlineDataEqual, areRelevantOrdersEqual } from '@/lib/utils/kline-equality'
 import { calculateLiquidationDistance } from '@/lib/utils/risk'
 import { Position, Order, KlineData } from '@/types/binance'
-import { areKlineDataEqual, areRelevantOrdersEqual, KlineChart } from './KlineChart'
+
+const KlineChart = dynamic(
+  () => import('./KlineChart').then(module => ({ default: module.KlineChart })),
+  {
+    ssr: false,
+    loading: () => <div className="position-card__chart-placeholder" aria-busy="true" />,
+  }
+)
 
 interface PositionCardProps {
   /** 持仓数据 */
@@ -120,6 +129,42 @@ function PositionRiskGauge({ distance }: { distance: number }) {
   )
 }
 
+/** 图表接近视口后再启动行情订阅和图表依赖，避免为屏幕外持仓占用连接与主线程。 */
+function useNearViewport(rootMargin: string = '600px'): {
+  targetRef: React.RefObject<HTMLDivElement | null>
+  isNearViewport: boolean
+} {
+  const targetRef = useRef<HTMLDivElement>(null)
+  const [isNearViewport, setIsNearViewport] = useState(false)
+
+  useEffect(() => {
+    const target = targetRef.current
+    if (!target) {
+      return
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      const timerId = setTimeout(() => setIsNearViewport(true), 0)
+      return () => clearTimeout(timerId)
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) {
+          setIsNearViewport(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [rootMargin])
+
+  return { targetRef, isNearViewport }
+}
+
 function PositionCardComponent({
   position,
   exchangeInfo,
@@ -129,6 +174,7 @@ function PositionCardComponent({
   className = '',
 }: PositionCardProps) {
   const klineData = klines?.[position.symbol] || []
+  const { targetRef: chartViewportRef, isNearViewport: isChartActive } = useNearViewport()
   const {
     klines: realtimeKlines,
     markPrice: realtimeMarkPrice,
@@ -138,6 +184,7 @@ function PositionCardComponent({
     interval: '15m',
     limit: 50,
     enableWS: true,
+    enabled: isChartActive,
   })
   const chartData = realtimeKlines.length > 0 ? realtimeKlines : klineData
   const liveMarkPrice = useMemo(() => {
@@ -295,18 +342,26 @@ function PositionCardComponent({
         )}
       </div>
 
-      <div className="position-card__chart">
-        <KlineChart
-          symbol={position.symbol}
-          data={chartData}
-          height={400}
-          pricePrecision={pricePrecision}
-          openOrders={openOrders}
-          markPrice={liveMarkPrice}
-          liquidationPrice={Number.parseFloat(position.liquidationPrice)}
-          feedMode={feedMode}
-          theme={theme}
-        />
+      <div ref={chartViewportRef} className="position-card__chart">
+        {isChartActive ? (
+          <KlineChart
+            symbol={position.symbol}
+            data={chartData}
+            height={400}
+            pricePrecision={pricePrecision}
+            openOrders={openOrders}
+            markPrice={liveMarkPrice}
+            liquidationPrice={Number.parseFloat(position.liquidationPrice)}
+            feedMode={feedMode}
+            theme={theme}
+          />
+        ) : (
+          <div className="position-card__chart-placeholder" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
       </div>
     </article>
   )
@@ -343,7 +398,7 @@ function arePositionCardPropsEqual(previous: PositionCardProps, next: PositionCa
 
 export const PositionCard = memo(PositionCardComponent, arePositionCardPropsEqual)
 
-export function PositionCards({
+function PositionCardsComponent({
   positions,
   openOrders,
   klines,
@@ -367,3 +422,5 @@ export function PositionCards({
     </div>
   )
 }
+
+export const PositionCards = memo(PositionCardsComponent)

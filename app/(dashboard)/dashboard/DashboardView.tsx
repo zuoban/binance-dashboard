@@ -6,8 +6,9 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { format, formatISO } from 'date-fns'
+import dynamic from 'next/dynamic'
 import {
   useDashboardWebSocket,
   useExchangeInfo,
@@ -16,7 +17,6 @@ import {
   useSessionExpiryRedirect,
 } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
-import { OrderModal } from '@/components/dashboard/OrderModal'
 import { DataReliability, RiskMonitor } from '@/components/dashboard/DashboardSignals'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -26,6 +26,12 @@ import type { Order } from '@/types/binance'
 type DashboardTheme = 'dark' | 'light'
 
 const RECENT_ORDER_LIMIT = 20
+
+const OrderModal = dynamic(
+  () =>
+    import('@/components/dashboard/OrderModal').then(module => ({ default: module.OrderModal })),
+  { ssr: false }
+)
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -212,18 +218,26 @@ function StatsOverview({
   orders: Order[]
 }) {
   const { exchangeInfo } = useExchangeInfo()
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
-  const recentOrders = getRecentOrders(orders)
-  const totalPnl = calculateTotalPnl(recentOrders)
-  const recentBuyCount = recentOrders.filter(order => order.side === 'BUY').length
-  const recentSellCount = recentOrders.filter(order => order.side === 'SELL').length
-  const latestOrderTime = recentOrders[0] ? getOrderTradeTime(recentOrders[0]) : 0
+  const { recentOrders, totalPnl, recentBuyCount, recentSellCount, latestOrderTime } =
+    useMemo(() => {
+      const nextRecentOrders = getRecentOrders(orders)
+      return {
+        recentOrders: nextRecentOrders,
+        totalPnl: calculateTotalPnl(nextRecentOrders),
+        recentBuyCount: nextRecentOrders.filter(order => order.side === 'BUY').length,
+        recentSellCount: nextRecentOrders.filter(order => order.side === 'SELL').length,
+        latestOrderTime: nextRecentOrders[0] ? getOrderTradeTime(nextRecentOrders[0]) : 0,
+      }
+    }, [orders])
   const latestOrderRelativeTime =
     latestOrderTime > 0 ? formatRecentOrderTime(latestOrderTime) : null
   const orderStats = openOrdersStats || { total: 0, buy: 0, sell: 0 }
   const marginSafetyPercent = Math.min(100, Math.max(0, availableMarginPercent))
   const marginSafetyTone =
     marginSafetyPercent <= 10 ? 'critical' : marginSafetyPercent <= 25 ? 'warning' : 'healthy'
+  const closeOrderModal = useCallback(() => setSelectedOrder(null), [])
 
   return (
     <section className="dashboard-stats-grid">
@@ -350,24 +364,23 @@ function StatsOverview({
                 const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${orderTradeTime > 0 ? formatRecentOrderTime(orderTradeTime) : '时间未知'}`
 
                 return (
-                  <OrderModal
+                  <button
                     key={`${order.orderId}-${order.time}`}
-                    order={order}
-                    exchangeInfo={exchangeInfo}
-                  >
-                    <button
-                      type="button"
-                      aria-label={`查看订单详情：${orderLabel}`}
-                      className={`activity-dot ${order.side === 'BUY' ? 'activity-dot--buy' : 'activity-dot--sell'}`}
-                      title={orderLabel}
-                    />
-                  </OrderModal>
+                    type="button"
+                    onClick={() => setSelectedOrder(order)}
+                    aria-label={`查看订单详情：${orderLabel}`}
+                    className={`activity-dot ${order.side === 'BUY' ? 'activity-dot--buy' : 'activity-dot--sell'}`}
+                    title={orderLabel}
+                  />
                 )
               })}
             </div>
           </div>
         </div>
       </article>
+      {selectedOrder && (
+        <OrderModal order={selectedOrder} exchangeInfo={exchangeInfo} onClose={closeOrderModal} />
+      )}
     </section>
   )
 }
@@ -415,10 +428,6 @@ export function DashboardView() {
     reconnect,
   } = useDashboardWebSocket({ onConnectionError: handleConnectionError })
 
-  if (!mounted) {
-    return <></>
-  }
-
   const totalEquity = account
     ? parseFloat(account.totalWalletBalance) + parseFloat(account.unrealizedProfit)
     : 0
@@ -426,13 +435,21 @@ export function DashboardView() {
   const availableMarginPercent = totalEquity > 0 ? (availableMargin / totalEquity) * 100 : 0
 
   const hasNoData = !account && positions.length === 0
-  const riskAlerts = getDashboardRiskAlerts({
-    positions,
-    availableMarginPercent,
-    isConnected,
-    isConnecting,
-    thresholds,
-  })
+  const riskAlerts = useMemo(
+    () =>
+      getDashboardRiskAlerts({
+        positions,
+        availableMarginPercent,
+        isConnected,
+        isConnecting,
+        thresholds,
+      }),
+    [availableMarginPercent, isConnected, isConnecting, positions, thresholds]
+  )
+
+  if (!mounted) {
+    return <></>
+  }
 
   return (
     <div className="dashboard-workspace">

@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatISO } from 'date-fns'
 import {
@@ -332,7 +332,7 @@ function RiskHistoryTimeline({
 }
 
 /** 风险监控条。健康状态采用中性终端表面，预警时才增强对应风险色。 */
-export function RiskMonitor({
+export const RiskMonitor = memo(function RiskMonitor({
   alerts,
   thresholds,
   onSaveThresholds,
@@ -392,7 +392,7 @@ export function RiskMonitor({
       </div>
     </section>
   )
-}
+})
 
 /** 页头数据可信度摘要，显示连接状态、数据延迟和本次页面会话的重连次数。 */
 export function DataReliability({

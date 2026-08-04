@@ -29,6 +29,8 @@ interface UseBinanceKlinesOptions {
   interval?: KlineInterval
   limit?: number
   enableWS?: boolean
+  /** 是否启用行情请求，用于延迟初始化视口外的图表。 */
+  enabled?: boolean
 }
 
 export interface UseBinanceKlinesReturn {
@@ -223,6 +225,7 @@ export function useBinanceKlines({
   interval = '15m',
   limit = 50,
   enableWS = true,
+  enabled = true,
 }: UseBinanceKlinesOptions): UseBinanceKlinesReturn {
   const [markPrice, setMarkPrice] = useState<number | null>(null)
   const [klines, setKlines] = useState<KlineData[]>([])
@@ -354,6 +357,10 @@ export function useBinanceKlines({
 
       latestMarkPriceRef.current = { price, time: timestamp }
       hasUsableDataRef.current = true
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return true
+      }
+
       setMarkPrice(previous => (previous === price ? previous : price))
       setKlines(previous => applyMarkPriceToKlines(previous, price, timestamp, interval, limit))
       setLastUpdate(timestamp)
@@ -532,6 +539,9 @@ export function useBinanceKlines({
     }
 
     historyResyncTimerRef.current = setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        return
+      }
       void fetchHistoricalKlines(false)
     }, HISTORY_RESYNC_INTERVAL)
   }, [fetchHistoricalKlines])
@@ -609,6 +619,10 @@ export function useBinanceKlines({
   )
 
   const connectWebSocket = useCallback(() => {
+    if (!enabled) {
+      return
+    }
+
     if (!enableWS || !shouldReconnectRef.current || typeof WebSocket === 'undefined') {
       startPolling()
       return
@@ -681,6 +695,7 @@ export function useBinanceKlines({
     }
   }, [
     clearConnectionTimeout,
+    enabled,
     enableWS,
     fetchHistoricalKlines,
     handleWSMessage,
@@ -699,9 +714,29 @@ export function useBinanceKlines({
   }, [fetchHistoricalKlines, fetchLatestMarkPrice])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refresh()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [enabled, refresh])
+
+  useEffect(() => {
     const requestControllers = requestControllersRef.current
 
     requestGenerationRef.current += 1
+    if (!enabled) {
+      shouldReconnectRef.current = false
+      return
+    }
+
     shouldReconnectRef.current = true
     reconnectAttemptsRef.current = 0
     latestMarkPriceRef.current = null
@@ -756,6 +791,7 @@ export function useBinanceKlines({
     clearMarkPriceStaleTimer,
     clearStreamStaleTimer,
     connectWebSocket,
+    enabled,
     enableWS,
     fetchHistoricalKlines,
     startHistoryResync,

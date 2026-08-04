@@ -1,24 +1,57 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
-import dynamic from 'next/dynamic'
+import Chart from 'react-apexcharts'
+import { areKlineDataEqual, areRelevantOrdersEqual } from '@/lib/utils/kline-equality'
 import { resolveChartOrderLevels } from '@/lib/utils/chart-order-levels'
 import type { KlineData, Order } from '@/types/binance'
 
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false })
+const MOBILE_MEDIA_QUERY = '(max-width: 767px)'
+const mobileSubscribers = new Set<() => void>()
+let mobileQueryList: MediaQueryList | null = null
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
+function getMobileQueryList(): MediaQueryList | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  mobileQueryList ??= window.matchMedia(MOBILE_MEDIA_QUERY)
+  return mobileQueryList
+}
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+function notifyMobileSubscribers(): void {
+  mobileSubscribers.forEach(subscriber => subscriber())
+}
 
-  return isMobile
+function subscribeMobileViewport(subscriber: () => void): () => void {
+  const queryList = getMobileQueryList()
+  mobileSubscribers.add(subscriber)
+  if (mobileSubscribers.size === 1) {
+    queryList?.addEventListener('change', notifyMobileSubscribers)
+  }
+
+  return () => {
+    mobileSubscribers.delete(subscriber)
+    if (mobileSubscribers.size === 0) {
+      queryList?.removeEventListener('change', notifyMobileSubscribers)
+    }
+  }
+}
+
+function getMobileViewportSnapshot(): boolean {
+  return getMobileQueryList()?.matches ?? false
+}
+
+function useIsMobile(): boolean {
+  return useSyncExternalStore(subscribeMobileViewport, getMobileViewportSnapshot, () => false)
 }
 
 interface KlineChartProps {
@@ -90,14 +123,16 @@ function formatPriceGapPercent(percent: number): string {
   return percent > 0 && percent < 0.01 ? '<0.01%' : `${percent.toFixed(2)}%`
 }
 
+const KLINE_TIME_FORMATTER = new Intl.DateTimeFormat('zh-CN', {
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
 function formatKlineTime(timestamp: number): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(timestamp * 1000))
+  return KLINE_TIME_FORMATTER.format(new Date(timestamp * 1000))
 }
 
 function KlineChartComponent({
@@ -107,7 +142,7 @@ function KlineChartComponent({
   className = '',
   pricePrecision,
   openOrders = [],
-  visibleCount = 30,
+  visibleCount = 32,
   markPrice,
   liquidationPrice,
   feedMode = 'loading',
@@ -127,30 +162,45 @@ function KlineChartComponent({
       : typeof latestClose === 'number' && Number.isFinite(latestClose) && latestClose > 0
         ? latestClose
         : undefined
+  const activeOrderLevels = useMemo(
+    () =>
+      resolveChartOrderLevels(
+        openOrders.filter(
+          order =>
+            order.symbol === symbol &&
+            (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
+        )
+      ),
+    [openOrders, symbol]
+  )
   const nextOrderPrices = useMemo(() => {
     if (displayedMarkPrice === undefined) {
       return { buy: undefined, sell: undefined }
     }
 
-    const activeOrderLevels = resolveChartOrderLevels(
-      openOrders.filter(
-        order =>
-          order.symbol === symbol && (order.status === 'NEW' || order.status === 'PARTIALLY_FILLED')
-      )
-    )
-    const findNearestPrice = (side: 'BUY' | 'SELL') =>
-      activeOrderLevels
-        .filter(level => level.order.side === side)
-        .sort(
-          (left, right) =>
-            Math.abs(left.price - displayedMarkPrice) - Math.abs(right.price - displayedMarkPrice)
-        )[0]?.price
+    const findNearestPrice = (side: 'BUY' | 'SELL') => {
+      let nearestPrice: number | undefined
+      let nearestDistance = Number.POSITIVE_INFINITY
+
+      for (const level of activeOrderLevels) {
+        if (level.order.side !== side) {
+          continue
+        }
+        const distance = Math.abs(level.price - displayedMarkPrice)
+        if (distance < nearestDistance) {
+          nearestDistance = distance
+          nearestPrice = level.price
+        }
+      }
+
+      return nearestPrice
+    }
 
     return {
       buy: findNearestPrice('BUY'),
       sell: findNearestPrice('SELL'),
     }
-  }, [displayedMarkPrice, openOrders, symbol])
+  }, [activeOrderLevels, displayedMarkPrice])
   const priceGaps = {
     buy: calculatePriceGap(displayedMarkPrice, nextOrderPrices.buy),
     sell: calculatePriceGap(displayedMarkPrice, nextOrderPrices.sell),
@@ -382,11 +432,6 @@ function KlineChartComponent({
         level.price <= maxPrice
     )
 
-    const dates = displayData.map(d => {
-      const date = new Date(d.time * 1000)
-      return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
-    })
-
     return {
       chart: {
         height: chartHeight,
@@ -452,7 +497,6 @@ function KlineChartComponent({
       ],
       xaxis: {
         type: 'datetime',
-        categories: dates,
         labels: {
           show: true,
           style: {
@@ -690,7 +734,7 @@ function KlineChartComponent({
           </span>
           <div>
             <div className="kline-chart__title">标记价 K 线</div>
-            <div className="kline-chart__meta">15 分钟 · {visibleCount} 根</div>
+            <div className="kline-chart__meta">近 8 小时 · 15 分钟/根 · {visibleCount} 根</div>
           </div>
         </div>
         <span
@@ -911,64 +955,6 @@ function KlineChartComponent({
       </div>
     </section>
   )
-}
-
-/**
- * SSE 消息反序列化后会生成新的数组引用。逐项比较可避免未变化的 K 线反复触发图表更新。
- */
-export function areKlineDataEqual(previousData: KlineData[], nextData: KlineData[]): boolean {
-  if (previousData === nextData) {
-    return true
-  }
-
-  if (previousData.length !== nextData.length) {
-    return false
-  }
-
-  return previousData.every((previousKline, index) => {
-    const nextKline = nextData[index]
-    return (
-      previousKline.time === nextKline?.time &&
-      previousKline.open === nextKline.open &&
-      previousKline.high === nextKline.high &&
-      previousKline.low === nextKline.low &&
-      previousKline.close === nextKline.close &&
-      previousKline.volume === nextKline.volume
-    )
-  })
-}
-
-/**
- * 比较会影响 K 线标注的当前交易对挂单，避免其他看板数据刷新时重复更新 ApexCharts。
- */
-export function areRelevantOrdersEqual(
-  previousOrders: Order[],
-  nextOrders: Order[],
-  symbol: string
-): boolean {
-  const previous = previousOrders.filter(order => order.symbol === symbol)
-  const next = nextOrders.filter(order => order.symbol === symbol)
-
-  if (previous.length !== next.length) {
-    return false
-  }
-
-  return previous.every((order, index) => {
-    const nextOrder = next[index]
-    return (
-      order.orderId === nextOrder?.orderId &&
-      order.price === nextOrder.price &&
-      order.stopPrice === nextOrder.stopPrice &&
-      order.status === nextOrder.status &&
-      order.side === nextOrder.side &&
-      order.type === nextOrder.type &&
-      order.origType === nextOrder.origType &&
-      order.reduceOnly === nextOrder.reduceOnly &&
-      order.closePosition === nextOrder.closePosition &&
-      order.workingType === nextOrder.workingType &&
-      order.positionSide === nextOrder.positionSide
-    )
-  })
 }
 
 export const KlineChart = memo(KlineChartComponent, (previous, next) => {
