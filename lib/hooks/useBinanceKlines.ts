@@ -5,7 +5,7 @@ import type { KlineData } from '@/types/binance'
 import type { BinanceMarkPriceWSMessage } from '@/types/binance-api'
 import { binanceConfig } from '@/lib/config'
 
-type KlineInterval =
+export type KlineInterval =
   | '1m'
   | '3m'
   | '5m'

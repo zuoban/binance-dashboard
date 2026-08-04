@@ -9,10 +9,18 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react'
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
+import type {
+  CSSProperties,
+  KeyboardEvent as ReactKeyboardEvent,
+  TouchEvent as ReactTouchEvent,
+} from 'react'
 import Chart from 'react-apexcharts'
+import type { KlineInterval } from '@/lib/hooks/useBinanceKlines'
 import { areKlineDataEqual, areRelevantOrdersEqual } from '@/lib/utils/kline-equality'
 import { resolveChartOrderLevels } from '@/lib/utils/chart-order-levels'
+import type { ChartOrderLevel } from '@/lib/utils/chart-order-levels'
+import { resolveChartPriceRange } from '@/lib/utils/chart-price-range'
+import type { ChartLevelPlacement } from '@/lib/utils/chart-price-range'
 import type { KlineData, Order } from '@/types/binance'
 
 const MOBILE_MEDIA_QUERY = '(max-width: 767px)'
@@ -69,6 +77,10 @@ interface KlineChartProps {
   liquidationPrice?: number
   /** 当前标记价格行情源状态。 */
   feedMode?: 'loading' | 'stream' | 'polling' | 'error'
+  /** 最新一笔有效行情的接收时间。 */
+  lastUpdate?: number | null
+  /** K 线周期。 */
+  interval?: KlineInterval
   theme: 'dark' | 'light'
 }
 
@@ -77,8 +89,110 @@ type KlineFeedMode = NonNullable<KlineChartProps['feedMode']>
 const FEED_STATUS: Record<KlineFeedMode, string> = {
   loading: '连接行情',
   stream: '实时',
-  polling: '轮询同步',
+  polling: '轮询',
   error: '行情异常',
+}
+
+const KLINE_INTERVAL_MILLISECONDS: Record<KlineInterval, number> = {
+  '1m': 60 * 1000,
+  '3m': 3 * 60 * 1000,
+  '5m': 5 * 60 * 1000,
+  '15m': 15 * 60 * 1000,
+  '30m': 30 * 60 * 1000,
+  '1h': 60 * 60 * 1000,
+  '2h': 2 * 60 * 60 * 1000,
+  '4h': 4 * 60 * 60 * 1000,
+  '6h': 6 * 60 * 60 * 1000,
+  '8h': 8 * 60 * 60 * 1000,
+  '12h': 12 * 60 * 60 * 1000,
+  '1d': 24 * 60 * 60 * 1000,
+  '1w': 7 * 24 * 60 * 60 * 1000,
+  '1M': 30 * 24 * 60 * 60 * 1000,
+}
+
+const KLINE_INTERVAL_LABELS: Record<KlineInterval, string> = {
+  '1m': '1 分钟',
+  '3m': '3 分钟',
+  '5m': '5 分钟',
+  '15m': '15 分钟',
+  '30m': '30 分钟',
+  '1h': '1 小时',
+  '2h': '2 小时',
+  '4h': '4 小时',
+  '6h': '6 小时',
+  '8h': '8 小时',
+  '12h': '12 小时',
+  '1d': '1 天',
+  '1w': '1 周',
+  '1M': '1 月',
+}
+
+function formatRangeDuration(milliseconds: number): string {
+  const totalMinutes = Math.max(1, Math.round(milliseconds / (60 * 1000)))
+  const days = Math.floor(totalMinutes / (24 * 60))
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60)
+  const minutes = totalMinutes % 60
+
+  if (days > 0) {
+    return hours > 0 ? `${days} 天 ${hours} 小时` : `${days} 天`
+  }
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} 小时 ${minutes} 分钟` : `${hours} 小时`
+  }
+  return `${minutes} 分钟`
+}
+
+function formatLocalTimezone(): string {
+  const offsetMinutes = -new Date().getTimezoneOffset()
+  const sign = offsetMinutes >= 0 ? '+' : '-'
+  const absoluteMinutes = Math.abs(offsetMinutes)
+  const hours = Math.floor(absoluteMinutes / 60)
+  const minutes = absoluteMinutes % 60
+  return `UTC${sign}${hours}${minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : ''}`
+}
+
+const LOCAL_TIMEZONE = formatLocalTimezone()
+
+interface KlineFeedStatusProps {
+  feedMode: KlineFeedMode
+  lastUpdate?: number | null
+}
+
+/** 独立刷新行情新鲜度，避免为了秒数文案重建整张图。 */
+function KlineFeedStatus({ feedMode, lastUpdate }: KlineFeedStatusProps) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (lastUpdate === null || lastUpdate === undefined) {
+      return
+    }
+
+    const timerId = window.setInterval(() => setNow(Date.now()), 5000)
+    return () => window.clearInterval(timerId)
+  }, [lastUpdate])
+
+  const ageSeconds =
+    typeof lastUpdate === 'number' ? Math.max(0, Math.floor((now - lastUpdate) / 1000)) : null
+  const freshness =
+    ageSeconds === null
+      ? null
+      : ageSeconds < 3
+        ? '刚刚'
+        : ageSeconds < 60
+          ? `${ageSeconds} 秒前`
+          : `${Math.floor(ageSeconds / 60)} 分钟前`
+  const freshnessTone = ageSeconds !== null && ageSeconds >= 15 ? 'stale' : 'fresh'
+
+  return (
+    <span
+      className={`kline-feed-status kline-feed-status--${feedMode} kline-feed-status--${freshnessTone}`}
+      aria-label={`行情状态：${FEED_STATUS[feedMode]}${freshness ? `，${freshness}更新` : ''}`}
+    >
+      <i aria-hidden="true" />
+      <span>{FEED_STATUS[feedMode]}</span>
+      {freshness && <small>{freshness}</small>}
+    </span>
+  )
 }
 
 function formatChartPrice(value: number, pricePrecision?: number): string {
@@ -92,6 +206,12 @@ interface PriceGap {
   absolute: number
   percent: number
   relation: '高于' | '低于' | '等于'
+}
+
+interface EdgeOrderLevel {
+  key: 'buy' | 'sell'
+  level: ChartOrderLevel<Order>
+  placement: Exclude<ChartLevelPlacement, 'visible'>
 }
 
 function calculatePriceGap(markPrice?: number, orderPrice?: number): PriceGap | null {
@@ -135,6 +255,50 @@ function formatKlineTime(timestamp: number): string {
   return KLINE_TIME_FORMATTER.format(new Date(timestamp * 1000))
 }
 
+/** 将相邻价位标签错开，避免买单、卖单和标记价文字互相遮挡。 */
+function resolveAnnotationLabelOffsets(
+  prices: readonly number[],
+  minPrice: number,
+  maxPrice: number,
+  chartHeight: number
+): number[] {
+  const priceRange = maxPrice - minPrice
+  if (prices.length < 2 || priceRange <= 0 || chartHeight <= 0) {
+    return prices.map(() => 0)
+  }
+
+  const plotHeight = Math.max(120, chartHeight - 60)
+  const minimumPriceSpacing = (priceRange * 28) / plotHeight
+  const sorted = prices
+    .map((price, index) => ({ price, index }))
+    .sort((left, right) => left.price - right.price)
+  const offsets = prices.map(() => 0)
+  let clusterStart = 0
+
+  const distributeCluster = (start: number, end: number) => {
+    const clusterSize = end - start
+    if (clusterSize < 2) {
+      return
+    }
+    for (let position = 0; position < clusterSize; position += 1) {
+      const item = sorted[start + position]
+      // 价格轴从上到下递减：低价标签向下移，高价标签向上移。
+      offsets[item.index] = Math.round(((clusterSize - 1) / 2 - position) * 22)
+    }
+  }
+
+  for (let index = 1; index <= sorted.length; index += 1) {
+    const isClusterBoundary =
+      index === sorted.length || sorted[index].price - sorted[index - 1].price > minimumPriceSpacing
+    if (isClusterBoundary) {
+      distributeCluster(clusterStart, index)
+      clusterStart = index
+    }
+  }
+
+  return offsets
+}
+
 function KlineChartComponent({
   symbol,
   data,
@@ -146,6 +310,8 @@ function KlineChartComponent({
   markPrice,
   liquidationPrice,
   feedMode = 'loading',
+  lastUpdate,
+  interval = '15m',
   theme,
 }: KlineChartProps) {
   const isMobile = useIsMobile()
@@ -173,13 +339,13 @@ function KlineChartComponent({
       ),
     [openOrders, symbol]
   )
-  const nextOrderPrices = useMemo(() => {
+  const nextOrderLevels = useMemo(() => {
     if (displayedMarkPrice === undefined) {
       return { buy: undefined, sell: undefined }
     }
 
-    const findNearestPrice = (side: 'BUY' | 'SELL') => {
-      let nearestPrice: number | undefined
+    const findNearestLevel = (side: 'BUY' | 'SELL'): ChartOrderLevel<Order> | undefined => {
+      let nearestLevel: ChartOrderLevel<Order> | undefined
       let nearestDistance = Number.POSITIVE_INFINITY
 
       for (const level of activeOrderLevels) {
@@ -189,18 +355,22 @@ function KlineChartComponent({
         const distance = Math.abs(level.price - displayedMarkPrice)
         if (distance < nearestDistance) {
           nearestDistance = distance
-          nearestPrice = level.price
+          nearestLevel = level
         }
       }
 
-      return nearestPrice
+      return nearestLevel
     }
 
     return {
-      buy: findNearestPrice('BUY'),
-      sell: findNearestPrice('SELL'),
+      buy: findNearestLevel('BUY'),
+      sell: findNearestLevel('SELL'),
     }
   }, [activeOrderLevels, displayedMarkPrice])
+  const nextOrderPrices = useMemo(
+    () => ({ buy: nextOrderLevels.buy?.price, sell: nextOrderLevels.sell?.price }),
+    [nextOrderLevels]
+  )
   const priceGaps = {
     buy: calculatePriceGap(displayedMarkPrice, nextOrderPrices.buy),
     sell: calculatePriceGap(displayedMarkPrice, nextOrderPrices.sell),
@@ -214,16 +384,16 @@ function KlineChartComponent({
       : null
   const buyGapValue = formatGapValue(priceGaps.buy)
   const sellGapValue = formatGapValue(priceGaps.sell)
-  const describeGap = (side: '买' | '卖', gap: PriceGap | null) =>
+  const describeGap = (label: string, gap: PriceGap | null) =>
     gap
-      ? `下一个${side}单价格${gap.relation}标记价格 ${formatChartPrice(gap.absolute, pricePrecision)}，价差占标记价格 ${formatPriceGapPercent(gap.percent)}`
-      : `暂无下一个${side}单价差`
+      ? `${label}价格${gap.relation}标记价格 ${formatChartPrice(gap.absolute, pricePrecision)}，价差占标记价格 ${formatPriceGapPercent(gap.percent)}`
+      : `暂无${label}价差`
 
-  const chartContainerRef = useRef<HTMLDivElement>(null)
   const displayDataRef = useRef(displayData)
-  const [shouldRenderChart, setShouldRenderChart] = useState(false)
   const [pinnedTime, setPinnedTime] = useState<number | null>(null)
   const [hoveredTime, setHoveredTime] = useState<number | null>(null)
+  const [hasExploredChart, setHasExploredChart] = useState(false)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     displayDataRef.current = displayData
@@ -243,6 +413,7 @@ function KlineChartComponent({
     if (pinSelection) {
       setPinnedTime(previous => (previous === kline.time ? previous : kline.time))
       setHoveredTime(null)
+      setHasExploredChart(true)
       return
     }
 
@@ -274,6 +445,28 @@ function KlineChartComponent({
     : 0
   const chartHeight = isMobile ? Math.min(height, 300) : height
 
+  const movePinnedSelection = useCallback(
+    (direction: -1 | 1) => {
+      if (displayData.length === 0) {
+        return
+      }
+
+      const fallbackIndex = displayData.length - 1
+      const currentIndex =
+        resolvedPinnedTime === null
+          ? fallbackIndex
+          : displayData.findIndex(kline => kline.time === resolvedPinnedTime)
+      const nextIndex = Math.min(
+        fallbackIndex,
+        Math.max(0, (currentIndex < 0 ? fallbackIndex : currentIndex) + direction)
+      )
+      setPinnedTime(displayData[nextIndex].time)
+      setHoveredTime(null)
+      setHasExploredChart(true)
+    },
+    [displayData, resolvedPinnedTime]
+  )
+
   const handleChartKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       if (displayData.length === 0) {
@@ -286,53 +479,89 @@ function KlineChartComponent({
         return
       }
 
+      if (event.key === 'Home') {
+        event.preventDefault()
+        setPinnedTime(displayData[0].time)
+        setHoveredTime(null)
+        setHasExploredChart(true)
+        return
+      }
+
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
         return
       }
 
       event.preventDefault()
-      const fallbackIndex = displayData.length - 1
-      const currentIndex =
-        resolvedPinnedTime === null
-          ? fallbackIndex
-          : displayData.findIndex(kline => kline.time === resolvedPinnedTime)
       const direction = event.key === 'ArrowLeft' ? -1 : 1
-      const nextIndex = Math.min(
-        fallbackIndex,
-        Math.max(0, (currentIndex < 0 ? fallbackIndex : currentIndex) + direction)
-      )
-      setPinnedTime(displayData[nextIndex].time)
-      setHoveredTime(null)
+      movePinnedSelection(direction)
     },
-    [displayData, resolvedPinnedTime]
+    [displayData, movePinnedSelection]
   )
 
-  useEffect(() => {
-    const chartContainer = chartContainerRef.current
-
-    if (!chartContainer) {
-      return
-    }
-
-    if (!('IntersectionObserver' in window)) {
-      const timerId = setTimeout(() => setShouldRenderChart(true), 0)
-      return () => clearTimeout(timerId)
-    }
-
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0]?.isIntersecting) {
-          setShouldRenderChart(true)
-          observer.disconnect()
-        }
-      },
-      { rootMargin: '300px' }
-    )
-
-    observer.observe(chartContainer)
-
-    return () => observer.disconnect()
+  const handleChartTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = event.changedTouches[0]
+    touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null
   }, [])
+
+  const handleChartTouchEnd = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      const start = touchStartRef.current
+      const touch = event.changedTouches[0]
+      touchStartRef.current = null
+      if (!start || !touch) {
+        return
+      }
+
+      const deltaX = touch.clientX - start.x
+      const deltaY = touch.clientY - start.y
+      if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) {
+        return
+      }
+
+      movePinnedSelection(deltaX < 0 ? -1 : 1)
+    },
+    [movePinnedSelection]
+  )
+
+  const chartPriceRange = useMemo(() => {
+    const klinePrices = displayData
+      .flatMap(kline => [kline.open, kline.close, kline.low, kline.high])
+      .filter(price => Number.isFinite(price) && price > 0)
+
+    if (displayedMarkPrice !== undefined) {
+      klinePrices.push(displayedMarkPrice)
+    }
+
+    return resolveChartPriceRange(klinePrices, [nextOrderPrices.buy, nextOrderPrices.sell])
+  }, [displayData, displayedMarkPrice, nextOrderPrices])
+  const edgeOrderLevels = useMemo(
+    () =>
+      [
+        {
+          key: 'buy' as const,
+          level: nextOrderLevels.buy,
+          placement: chartPriceRange.levelPlacements[0],
+        },
+        {
+          key: 'sell' as const,
+          level: nextOrderLevels.sell,
+          placement: chartPriceRange.levelPlacements[1],
+        },
+      ].filter(
+        (item): item is EdgeOrderLevel =>
+          item.level !== undefined && item.placement !== null && item.placement !== 'visible'
+      ),
+    [chartPriceRange.levelPlacements, nextOrderLevels]
+  )
+  const intervalLabel = KLINE_INTERVAL_LABELS[interval]
+  const loadedCount = displayData.length
+  const rangeLabel = formatRangeDuration(KLINE_INTERVAL_MILLISECONDS[interval] * loadedCount)
+  const loadedCountLabel =
+    loadedCount < visibleCount ? `已加载 ${loadedCount}/${visibleCount} 根` : `${loadedCount} 根`
+  const chartMeta =
+    loadedCount > 0
+      ? `近 ${rangeLabel} · ${intervalLabel}/根 · ${loadedCountLabel} · ${LOCAL_TIMEZONE}`
+      : `${intervalLabel}/根 · 正在加载 · ${LOCAL_TIMEZONE}`
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const options: any = useMemo(() => {
     const chartTheme =
@@ -389,29 +618,26 @@ function KlineChartComponent({
       }
     }
 
-    const hasMarkPrice = markPrice !== undefined && Number.isFinite(markPrice) && markPrice > 0
-    const allPrices = displayData
-      .flatMap(d => [d.open, d.close, d.low, d.high])
-      .filter(price => Number.isFinite(price) && price > 0)
-    if (hasMarkPrice) {
-      allPrices.push(markPrice)
-    }
-    const klineMinPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
-    const klineMaxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0
-
     const formatPrice = (value: number) => formatChartPrice(value, pricePrecision)
-
-    const priceRange = klineMaxPrice - klineMinPrice
-    const padding = Math.max(priceRange * 0.05, Math.max(Math.abs(klineMaxPrice) * 0.0005, 0.01))
-
-    const minPrice = klineMinPrice - padding
-    const maxPrice = klineMaxPrice + padding
+    const { minPrice, maxPrice } = chartPriceRange
 
     // 入场价和盈亏平衡价已在持仓信息区展示；图内仅保留进入可视区的强平风险线。
     const riskLevels = [
-      { price: liquidationPrice, color: chartTheme.liquidationLine, strokeDashArray: 10 },
+      {
+        price: liquidationPrice,
+        label: '强平',
+        color: chartTheme.liquidationLine,
+        strokeDashArray: 10,
+      },
     ].filter(
-      (level): level is { price: number; color: string; strokeDashArray: number } =>
+      (
+        level
+      ): level is {
+        price: number
+        label: string
+        color: string
+        strokeDashArray: number
+      } =>
         level.price !== undefined &&
         Number.isFinite(level.price) &&
         level.price > 0 &&
@@ -420,16 +646,49 @@ function KlineChartComponent({
     )
 
     const marketLevels = [
-      { price: nextOrderPrices.buy, color: chartTheme.buyLine, strokeDashArray: 6 },
-      { price: nextOrderPrices.sell, color: chartTheme.sellLine, strokeDashArray: 6 },
-      { price: displayedMarkPrice, color: chartTheme.markLine, strokeDashArray: 0 },
+      {
+        price: nextOrderLevels.buy?.price,
+        label: nextOrderLevels.buy?.label,
+        placement: chartPriceRange.levelPlacements[0],
+        color: chartTheme.buyLine,
+        strokeDashArray: 6,
+      },
+      {
+        price: nextOrderLevels.sell?.price,
+        label: nextOrderLevels.sell?.label,
+        placement: chartPriceRange.levelPlacements[1],
+        color: chartTheme.sellLine,
+        strokeDashArray: 2,
+      },
+      {
+        price: displayedMarkPrice,
+        label: '标记价',
+        placement: 'visible' as const,
+        color: chartTheme.markLine,
+        strokeDashArray: 0,
+      },
     ].filter(
-      (level): level is { price: number; color: string; strokeDashArray: number } =>
+      (
+        level
+      ): level is {
+        price: number
+        label: string
+        placement: 'visible'
+        color: string
+        strokeDashArray: number
+      } =>
         level.price !== undefined &&
         Number.isFinite(level.price) &&
         level.price > 0 &&
-        level.price >= minPrice &&
-        level.price <= maxPrice
+        level.label !== undefined &&
+        level.placement === 'visible'
+    )
+    const annotationLevels = [...marketLevels, ...riskLevels]
+    const labelOffsets = resolveAnnotationLabelOffsets(
+      annotationLevels.map(level => level.price),
+      minPrice,
+      maxPrice,
+      chartHeight
     )
 
     return {
@@ -645,7 +904,7 @@ function KlineChartComponent({
                       minute: '2-digit',
                     })}
                   </div>
-                  ${!isMobile ? `<div style="font-size: 10px; color: ${chartTheme.axis};">15分钟标记价格 K 线</div>` : ''}
+                  ${!isMobile ? `<div style="font-size: 10px; color: ${chartTheme.axis};">${intervalLabel}标记价格 K 线</div>` : ''}
                 </div>
                 <div style="text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 4px; padding: ${isMobile ? '2px 6px' : '4px 8px'}; border-radius: 6px; background: ${changeBgColor};">
@@ -694,22 +953,45 @@ function KlineChartComponent({
         },
       },
       annotations: {
-        yaxis: [...marketLevels, ...riskLevels].map(level => ({
+        yaxis: annotationLevels.map((level, index) => ({
           y: level.price,
           borderColor: level.color,
-          borderWidth: 1,
+          borderWidth: 1.5,
           strokeDashArray: level.strokeDashArray,
+          label: {
+            text: `${level.label} ${formatPrice(level.price)}`,
+            position: 'right',
+            offsetX: isMobile ? -6 : -8,
+            offsetY: labelOffsets[index],
+            borderColor: level.color,
+            borderWidth: 1,
+            borderRadius: 4,
+            style: {
+              background: chartTheme.tooltipBackground,
+              color: level.color,
+              fontFamily: 'var(--font-app-mono)',
+              fontSize: '10px',
+              fontWeight: 700,
+              padding: {
+                left: 5,
+                right: 5,
+                top: 2,
+                bottom: 2,
+              },
+            },
+          },
         })),
       },
     }
   }, [
     chartHeight,
+    chartPriceRange,
     displayData,
     displayedMarkPrice,
+    intervalLabel,
     isMobile,
     liquidationPrice,
-    markPrice,
-    nextOrderPrices,
+    nextOrderLevels,
     pricePrecision,
     selectKlineByIndex,
     theme,
@@ -720,8 +1002,10 @@ function KlineChartComponent({
   const readoutMode =
     resolvedPinnedTime !== null ? '已选' : resolvedHoveredTime !== null ? '查看' : '最新'
   const chartAriaLabel = activeKline
-    ? `${symbol} 15 分钟标记价格 K 线，${formatKlineTime(activeKline.time)}，开盘 ${formatChartPrice(activeKline.open, pricePrecision)}，最高 ${formatChartPrice(activeKline.high, pricePrecision)}，最低 ${formatChartPrice(activeKline.low, pricePrecision)}，收盘 ${formatChartPrice(activeKline.close, pricePrecision)}`
-    : `${symbol} 15 分钟标记价格 K 线正在加载`
+    ? `${symbol} ${intervalLabel}标记价格 K 线，${formatKlineTime(activeKline.time)}，开盘 ${formatChartPrice(activeKline.open, pricePrecision)}，最高 ${formatChartPrice(activeKline.high, pricePrecision)}，最低 ${formatChartPrice(activeKline.low, pricePrecision)}，收盘 ${formatChartPrice(activeKline.close, pricePrecision)}`
+    : `${symbol} ${intervalLabel}标记价格 K 线正在加载`
+  const buyOrderLabel = nextOrderLevels.buy?.label ?? '买入'
+  const sellOrderLabel = nextOrderLevels.sell?.label ?? '卖出'
 
   return (
     <section className={`kline-chart ${className}`} aria-label={`${symbol} K 线图表面板`}>
@@ -734,19 +1018,13 @@ function KlineChartComponent({
           </span>
           <div>
             <div className="kline-chart__title">标记价 K 线</div>
-            <div className="kline-chart__meta">近 8 小时 · 15 分钟/根 · {visibleCount} 根</div>
+            <div className="kline-chart__meta">{chartMeta}</div>
           </div>
         </div>
-        <span
-          className={`kline-feed-status kline-feed-status--${feedMode}`}
-          aria-label={`行情状态：${FEED_STATUS[feedMode]}`}
-        >
-          <i aria-hidden="true" />
-          {FEED_STATUS[feedMode]}
-        </span>
+        <KlineFeedStatus feedMode={feedMode} lastUpdate={lastUpdate} />
       </header>
 
-      <div className="kline-readout">
+      <div className={`kline-readout ${resolvedPinnedTime !== null ? 'is-expanded' : ''}`}>
         <div className="kline-readout__context">
           <div>
             <span
@@ -773,17 +1051,21 @@ function KlineChartComponent({
 
         <dl className="kline-readout__values">
           {[
-            ['开', activeKline?.open],
-            ['高', activeKline?.high],
-            ['低', activeKline?.low],
-            ['收', activeKline?.close],
-          ].map(([label, value]) => (
-            <div key={label as string}>
-              <dt>{label}</dt>
-              <dd>{typeof value === 'number' ? formatChartPrice(value, pricePrecision) : '--'}</dd>
+            { key: 'open', label: '开', value: activeKline?.open },
+            { key: 'high', label: '高', value: activeKline?.high },
+            { key: 'low', label: '低', value: activeKline?.low },
+            { key: 'close', label: '收', value: activeKline?.close },
+          ].map(metric => (
+            <div key={metric.key} className={`kline-readout__value--${metric.key}`}>
+              <dt>{metric.label}</dt>
+              <dd>
+                {typeof metric.value === 'number'
+                  ? formatChartPrice(metric.value, pricePrecision)
+                  : '--'}
+              </dd>
             </div>
           ))}
-          <div>
+          <div className="kline-readout__value--change">
             <dt>涨跌</dt>
             <dd className={activeIsPositive ? 'is-positive' : 'is-negative'}>
               {activeKline
@@ -791,96 +1073,41 @@ function KlineChartComponent({
                 : '--'}
             </dd>
           </div>
-          <div>
+          <div className="kline-readout__value--amplitude">
             <dt>振幅</dt>
             <dd>{activeKline ? `${activeAmplitude.toFixed(2)}%` : '--'}</dd>
           </div>
         </dl>
       </div>
 
-      <dl
-        className="kline-levels"
-        aria-label="当前关键交易价位"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          margin: '0 clamp(1rem, 2vw, 1.25rem)',
-          padding: '0.125rem 0 0.25rem',
-        }}
-      >
+      <dl className="kline-levels" aria-label="当前关键交易价位">
         {[
           {
             key: 'buy',
-            label: '下一个买单',
+            label: `最近${buyOrderLabel}`,
             value: nextOrderPrices.buy,
-            color: 'var(--success)',
           },
           {
             key: 'mark',
             label: '标记价格',
             value: displayedMarkPrice,
-            color: 'var(--warning)',
           },
           {
             key: 'sell',
-            label: '下一个卖单',
+            label: `最近${sellOrderLabel}`,
             value: nextOrderPrices.sell,
-            color: 'var(--danger)',
           },
-        ].map((level, index) => {
+        ].map(level => {
           const formattedValue =
             typeof level.value === 'number' ? formatChartPrice(level.value, pricePrecision) : '--'
 
           return (
-            <div
-              key={level.key}
-              className="kline-levels__item"
-              style={{
-                minWidth: 0,
-                borderLeft: index === 0 ? undefined : '1px solid var(--divider)',
-                padding: '0 clamp(0.5rem, 1.5vw, 0.75rem)',
-              }}
-            >
-              <dt
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                  color: level.color,
-                  fontSize: '0.625rem',
-                  fontWeight: 750,
-                  letterSpacing: '0.035em',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <i
-                  aria-hidden="true"
-                  style={{
-                    width: '0.375rem',
-                    height: '0.375rem',
-                    flex: '0 0 auto',
-                    borderRadius: '999px',
-                    background: 'currentColor',
-                  }}
-                />
+            <div key={level.key} className={`kline-levels__item kline-levels__item--${level.key}`}>
+              <dt>
+                <i aria-hidden="true" />
                 {level.label}
               </dt>
-              <dd
-                title={formattedValue}
-                style={{
-                  marginTop: '0.25rem',
-                  overflow: 'hidden',
-                  color: level.color,
-                  fontFamily: 'var(--font-app-mono)',
-                  fontSize: '0.75rem',
-                  fontWeight: 750,
-                  letterSpacing: '-0.025em',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {formattedValue}
-              </dd>
+              <dd title={formattedValue}>{formattedValue}</dd>
             </div>
           )
         })}
@@ -889,14 +1116,15 @@ function KlineChartComponent({
       <div
         className="kline-gaps"
         role="group"
-        aria-label={`${describeGap('买', priceGaps.buy)}；${describeGap('卖', priceGaps.sell)}`}
+        aria-label={`${describeGap(buyOrderLabel, priceGaps.buy)}；${describeGap(sellOrderLabel, priceGaps.sell)}`}
       >
         <span className="kline-gaps__item kline-gaps__item--buy" aria-hidden="true">
           <i className="kline-gaps__arrow">←</i>
           <span className="kline-gaps__text">
             {buyGapValue ? (
               <>
-                距买 <span className="kline-gaps__absolute">{buyGapValue.absolute}</span>
+                距{buyOrderLabel}{' '}
+                <span className="kline-gaps__absolute">{buyGapValue.absolute}</span>
                 <span className="kline-gaps__separator"> · </span>
                 <span>{buyGapValue.percent}</span>
               </>
@@ -911,7 +1139,8 @@ function KlineChartComponent({
           <span className="kline-gaps__text">
             {sellGapValue ? (
               <>
-                距卖 <span className="kline-gaps__absolute">{sellGapValue.absolute}</span>
+                距{sellOrderLabel}{' '}
+                <span className="kline-gaps__absolute">{sellGapValue.absolute}</span>
                 <span className="kline-gaps__separator"> · </span>
                 <span>{sellGapValue.percent}</span>
               </>
@@ -926,31 +1155,60 @@ function KlineChartComponent({
       </div>
 
       <div
-        ref={chartContainerRef}
         className="kline-chart__plot"
         style={{ '--kline-chart-height': `${height}px` } as CSSProperties}
         role="group"
         tabIndex={0}
-        aria-label={`${chartAriaLabel}。使用左右方向键查看历史 K 线，按 End 或 Escape 返回最新。`}
+        aria-label={`${chartAriaLabel}。使用左右方向键查看历史 K 线，按 Home 查看最早一根，按 End 或 Escape 返回最新。`}
         onKeyDown={handleChartKeyDown}
+        onTouchStart={handleChartTouchStart}
+        onTouchEnd={handleChartTouchEnd}
       >
-        {displayData.length === 0 || !shouldRenderChart ? (
+        {displayData.length === 0 ? (
           <div
             className="chart-placeholder flex h-full items-center justify-center"
             aria-busy="true"
           >
-            <span className="theme-text-muted text-xs">
-              {displayData.length === 0 ? '正在获取标记价格 K 线…' : '图表加载中…'}
-            </span>
+            <span className="theme-text-muted text-xs">正在获取标记价格 K 线…</span>
           </div>
         ) : (
-          <Chart
-            key={symbol}
-            options={options}
-            series={options.series}
-            type="candlestick"
-            height={chartHeight}
-          />
+          <>
+            {!hasExploredChart && isMobile && edgeOrderLevels.length === 0 && (
+              <span className="kline-chart__gesture-hint">点按查看 · 左右滑动切换</span>
+            )}
+            {(['above', 'below'] as const).map(placement => {
+              const levels = edgeOrderLevels.filter(level => level.placement === placement)
+              if (levels.length === 0) {
+                return null
+              }
+
+              return (
+                <div
+                  key={placement}
+                  className={`kline-edge-levels kline-edge-levels--${placement}`}
+                >
+                  {levels.map(({ key, level }) => (
+                    <span
+                      key={key}
+                      className={`kline-edge-level kline-edge-level--${key}`}
+                      aria-label={`${level.label} ${formatChartPrice(level.price, pricePrecision)}，位于当前图表${placement === 'above' ? '上方' : '下方'}`}
+                    >
+                      <i aria-hidden="true">{placement === 'above' ? '↑' : '↓'}</i>
+                      <span>{level.label}</span>
+                      <strong>{formatChartPrice(level.price, pricePrecision)}</strong>
+                    </span>
+                  ))}
+                </div>
+              )
+            })}
+            <Chart
+              key={symbol}
+              options={options}
+              series={options.series}
+              type="candlestick"
+              height={chartHeight}
+            />
+          </>
         )}
       </div>
     </section>
@@ -968,6 +1226,8 @@ export const KlineChart = memo(KlineChartComponent, (previous, next) => {
     previous.markPrice === next.markPrice &&
     previous.liquidationPrice === next.liquidationPrice &&
     previous.feedMode === next.feedMode &&
+    previous.lastUpdate === next.lastUpdate &&
+    previous.interval === next.interval &&
     previous.theme === next.theme &&
     areRelevantOrdersEqual(previous.openOrders || [], next.openOrders || [], previous.symbol)
   )

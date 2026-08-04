@@ -179,6 +179,7 @@ function PositionCardComponent({
     klines: realtimeKlines,
     markPrice: realtimeMarkPrice,
     feedMode,
+    lastUpdate,
   } = useBinanceKlines({
     symbol: position.symbol,
     interval: '15m',
@@ -353,6 +354,8 @@ function PositionCardComponent({
             markPrice={liveMarkPrice}
             liquidationPrice={Number.parseFloat(position.liquidationPrice)}
             feedMode={feedMode}
+            lastUpdate={lastUpdate}
+            interval="15m"
             theme={theme}
           />
         ) : (
