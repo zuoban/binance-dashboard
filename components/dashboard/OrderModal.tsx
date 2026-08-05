@@ -4,9 +4,9 @@
 
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { createPortal } from 'react-dom'
-import type { ExchangeInfoData } from '@/lib/hooks/useExchangeInfo'
+import { useDialogFocus, type ExchangeInfoData } from '@/lib/hooks'
 import { formatDateTime, formatDistanceToNow } from '@/lib/utils/date'
 import { Order, OrderStatus } from '@/types/binance'
 
@@ -28,50 +28,42 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
       case 'FILLED':
         return {
           label: '已完成',
-          className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-          dot: 'bg-emerald-500 shadow-emerald-500/30',
+          tone: 'success',
         }
       case 'CANCELED':
         return {
           label: '已撤销',
-          className: 'bg-slate-100 text-slate-600 border-slate-200',
-          dot: 'bg-slate-500',
+          tone: 'neutral',
         }
       case 'NEW':
         return {
           label: '新建',
-          className: 'bg-blue-100 text-blue-700 border-blue-200',
-          dot: 'bg-blue-500 shadow-blue-500/30',
+          tone: 'info',
         }
       case 'PARTIALLY_FILLED':
         return {
           label: '部分成交',
-          className: 'bg-amber-100 text-amber-700 border-amber-200',
-          dot: 'bg-amber-500 shadow-amber-500/30',
+          tone: 'warning',
         }
       case 'PENDING_CANCEL':
         return {
           label: '撤销中',
-          className: 'bg-orange-100 text-orange-700 border-orange-200',
-          dot: 'bg-orange-500',
+          tone: 'warning',
         }
       case 'REJECTED':
         return {
           label: '已拒绝',
-          className: 'bg-red-100 text-red-700 border-red-200',
-          dot: 'bg-red-500 shadow-red-500/30',
+          tone: 'danger',
         }
       case 'EXPIRED':
         return {
           label: '已过期',
-          className: 'bg-slate-100 text-slate-600 border-slate-200',
-          dot: 'bg-slate-500',
+          tone: 'neutral',
         }
       default:
         return {
           label: status,
-          className: 'bg-slate-100 text-slate-600 border-slate-200',
-          dot: 'bg-slate-500',
+          tone: 'neutral',
         }
     }
   }
@@ -79,10 +71,8 @@ function OrderStatusBadge({ status }: { status: OrderStatus }) {
   const config = getStatusConfig()
 
   return (
-    <span
-      className={`inline-flex items-center gap-[1px] px-2.5 py-1 rounded-full text-xs font-bold border ${config.className}`}
-    >
-      <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${config.dot}`} />
+    <span className={`order-status-badge order-status-badge--${config.tone}`}>
+      <i aria-hidden="true" />
       {config.label}
     </span>
   )
@@ -122,25 +112,10 @@ function formatPrice(
  */
 export function OrderModal({ order, exchangeInfo, onClose }: OrderModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
-
-  // 监听 ESC、锁定背景滚动，并将焦点放到关闭按钮。
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    const previousOverflow = document.body.style.overflow
-    document.addEventListener('keydown', handleKeyDown)
-    document.body.style.overflow = 'hidden'
-    closeButtonRef.current?.focus()
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [onClose])
+  const { dialogRef, onDialogKeyDown } = useDialogFocus<HTMLElement>({
+    onClose,
+    initialFocusRef: closeButtonRef,
+  })
 
   const executedQty = parseFloat(order.executedQty)
   const price = parseFloat(order.price)
@@ -150,39 +125,38 @@ export function OrderModal({ order, exchangeInfo, onClose }: OrderModalProps) {
   const commission = order.commission !== undefined ? parseFloat(order.commission) : null
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
-      {/* 背景遮罩 */}
-      <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* 模态框内容 */}
-      <div
+    <div
+      className="order-modal"
+      role="presentation"
+      onMouseDown={event => {
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="order-dialog-title"
-        className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-200"
+        className="order-modal__dialog"
+        tabIndex={-1}
+        onKeyDown={onDialogKeyDown}
       >
-        {/* 头部 */}
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-baseline gap-2">
-              <h3 id="order-dialog-title" className="text-lg font-bold text-slate-900">
-                {order.symbol}
-              </h3>
-              <span className="text-xs text-slate-500 font-medium">
-                {formatDistanceToNow(order.time)}
-              </span>
+        <header className="order-modal__header">
+          <div className="order-modal__title-row">
+            <div>
+              <h3 id="order-dialog-title">{order.symbol}</h3>
+              <span>{formatDistanceToNow(order.time)}</span>
             </div>
             <button
               ref={closeButtonRef}
               type="button"
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 transition-colors"
+              className="order-modal__close"
               aria-label="关闭订单详情"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -193,91 +167,56 @@ export function OrderModal({ order, exchangeInfo, onClose }: OrderModalProps) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <span
-                className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-                  order.side === 'BUY'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-red-100 text-red-700'
-                }`}
-              >
+          <div className="order-modal__tags">
+            <div>
+              <span className={`order-modal__side order-modal__side--${order.side.toLowerCase()}`}>
                 {order.side === 'BUY' ? '买入' : '卖出'}
               </span>
-              <span
-                className={`px-2 py-0.5 rounded-md text-xs font-medium ${
-                  order.type === 'MARKET'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-blue-100 text-blue-700'
-                }`}
-              >
-                {order.type === 'MARKET' ? '市价' : '限价'}
-              </span>
+              <span className="order-modal__type">{order.type === 'MARKET' ? '市价' : '限价'}</span>
             </div>
             <OrderStatusBadge status={order.status} />
           </div>
-        </div>
+        </header>
 
-        {/* 内容区域 */}
-        <div className="px-6 py-5 space-y-4">
-          <div className="grid grid-cols-2 gap-6">
-            {/* 价格 */}
-            <div>
-              <div className="text-xs text-slate-500 mb-1">成交价格</div>
-              <div className="text-base font-bold text-slate-900">
-                ${formatPrice(price, order.symbol, exchangeInfo)}
-              </div>
-            </div>
-
-            {/* 数量 */}
-            <div>
-              <div className="text-xs text-slate-500 mb-1">成交数量</div>
-              <div className="text-base font-bold text-slate-900">{executedQty.toFixed(4)}</div>
-            </div>
-
-            {/* 金额 */}
-            <div>
-              <div className="text-xs text-slate-500 mb-1">成交金额</div>
-              <div className="text-base font-bold text-slate-900">${totalAmount.toFixed(2)}</div>
-            </div>
-
-            {/* 盈亏/手续费 */}
-            <div>
-              {pnl !== null && order.side === 'SELL' ? (
-                <>
-                  <div className="text-xs text-slate-500 mb-1">实现盈亏</div>
-                  <div
-                    className={`text-base font-bold ${
-                      isPnlPositive ? 'text-emerald-600' : 'text-red-600'
-                    }`}
-                  >
-                    {isPnlPositive ? '+' : ''}
-                    {pnl.toFixed(2)}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-xs text-slate-500 mb-1">手续费</div>
-                  <div className="text-base font-bold text-slate-700">
-                    {commission !== null ? parseFloat(commission.toFixed(4)) : 0}
-                    <span className="text-xs font-normal ml-1 text-slate-400">
-                      {order.commissionAsset}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
+        <dl className="order-modal__metrics">
+          <div>
+            <dt>成交价格</dt>
+            <dd>${formatPrice(price, order.symbol, exchangeInfo)}</dd>
           </div>
-        </div>
-
-        {/* 底部 ID 信息 */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
-          <div className="flex justify-between items-center text-[10px] text-slate-400">
-            <span>Order ID: {order.orderId}</span>
-            <span>{formatDateTime(order.time)}</span>
+          <div>
+            <dt>成交数量</dt>
+            <dd>{executedQty.toFixed(4)}</dd>
           </div>
-        </div>
-      </div>
+          <div>
+            <dt>成交金额</dt>
+            <dd>${totalAmount.toFixed(2)}</dd>
+          </div>
+          <div>
+            {pnl !== null && order.side === 'SELL' ? (
+              <>
+                <dt>实现盈亏</dt>
+                <dd className={isPnlPositive ? 'is-positive' : 'is-negative'}>
+                  {isPnlPositive ? '+' : ''}
+                  {pnl.toFixed(2)}
+                </dd>
+              </>
+            ) : (
+              <>
+                <dt>手续费</dt>
+                <dd>
+                  {commission !== null ? parseFloat(commission.toFixed(4)) : 0}
+                  <span>{order.commissionAsset}</span>
+                </dd>
+              </>
+            )}
+          </div>
+        </dl>
+
+        <footer className="order-modal__footer">
+          <span>Order ID: {order.orderId}</span>
+          <span>{formatDateTime(order.time)}</span>
+        </footer>
+      </section>
     </div>,
     document.body
   )

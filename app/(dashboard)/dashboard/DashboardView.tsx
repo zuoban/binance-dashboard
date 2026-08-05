@@ -18,6 +18,7 @@ import {
 } from '@/lib/hooks'
 import { PositionCards } from '@/components/dashboard/PositionCard'
 import { DataReliability, RiskMonitor } from '@/components/dashboard/DashboardSignals'
+import { RecentOrdersSheet } from '@/components/dashboard/RecentOrdersSheet'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getDashboardRiskAlerts } from '@/lib/utils/risk'
@@ -136,27 +137,16 @@ function DashboardHeader({
             </svg>
           </div>
           <div className="min-w-0">
-            <div className="dashboard-identity__eyebrow">
-              <p className="dashboard-overline">Futures intelligence</p>
-              <span>Private desk</span>
-            </div>
+            <p className="dashboard-overline">BINANCE FUTURES</p>
             <h1 className="dashboard-title">合约交易看板</h1>
             <div className="dashboard-context" aria-label="工作台信息">
-              <span>USDC-M</span>
-              <i aria-hidden="true" />
-              <span>实时仓位</span>
-              <i aria-hidden="true" />
-              <span>风险与订单信号</span>
+              <span>USDC-M 永续 · 仓位、风险与订单实时概览</span>
             </div>
           </div>
         </div>
 
         <div className="dashboard-header__side">
           <div className="dashboard-header__actions">
-            <span className="dashboard-session-badge">
-              <i aria-hidden="true" />
-              LIVE SESSION
-            </span>
             <button
               type="button"
               onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
@@ -219,6 +209,7 @@ function StatsOverview({
 }) {
   const { exchangeInfo } = useExchangeInfo()
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isRecentOrdersOpen, setIsRecentOrdersOpen] = useState(false)
 
   const { recentOrders, totalPnl, recentBuyCount, recentSellCount, latestOrderTime } =
     useMemo(() => {
@@ -238,6 +229,8 @@ function StatsOverview({
   const marginSafetyTone =
     marginSafetyPercent <= 10 ? 'critical' : marginSafetyPercent <= 25 ? 'warning' : 'healthy'
   const closeOrderModal = useCallback(() => setSelectedOrder(null), [])
+  const openRecentOrders = useCallback(() => setIsRecentOrdersOpen(true), [])
+  const closeRecentOrders = useCallback(() => setIsRecentOrdersOpen(false), [])
 
   return (
     <section className="dashboard-stats-grid">
@@ -248,7 +241,7 @@ function StatsOverview({
         </div>
         <div className="relative z-10 mt-5 flex items-end gap-2">
           <p className="stat-number">${formatNumber(totalEquity)}</p>
-          <span className="stat-unit mb-1">TOTAL</span>
+          <span className="stat-unit mb-1">USDC</span>
         </div>
         <div className="card-divider relative z-10 mt-4" />
         <div className="relative z-10 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -293,7 +286,7 @@ function StatsOverview({
         </div>
         <div className="relative z-10 mt-5 flex items-end gap-2">
           <p className="stat-number stat-number--compact">{orderStats.total}</p>
-          <span className="stat-unit mb-1">OPEN ORDERS</span>
+          <span className="stat-unit mb-1">笔委托</span>
         </div>
         <div className="card-divider relative z-10 mt-4" />
         <div className="relative z-10 mt-3 flex items-center gap-4 text-xs">
@@ -331,7 +324,7 @@ function StatsOverview({
           >
             {totalPnl >= 0 ? '+' : ''}${formatNumber(totalPnl)}
           </p>
-          <span className="stat-unit mb-1">REALIZED</span>
+          <span className="stat-unit mb-1">已实现</span>
         </div>
         <div className="card-divider relative z-10 mt-4" />
         <div className="relative z-10 mt-3 flex items-center justify-between gap-3">
@@ -358,7 +351,7 @@ function StatsOverview({
                 <strong>{latestOrderRelativeTime}</strong>
               </time>
             )}
-            <div className="grid grid-cols-10 gap-1 sm:gap-2 md:hidden xl:grid">
+            <div className="hidden grid-cols-10 gap-2 xl:grid">
               {recentOrders.map(order => {
                 const orderTradeTime = getOrderTradeTime(order)
                 const orderLabel = `${order.side === 'BUY' ? '买入' : '卖出'} - ${orderTradeTime > 0 ? formatRecentOrderTime(orderTradeTime) : '时间未知'}`
@@ -377,7 +370,43 @@ function StatsOverview({
             </div>
           </div>
         </div>
+        <button
+          type="button"
+          className="recent-orders-trigger"
+          onClick={openRecentOrders}
+          disabled={recentOrders.length === 0}
+          aria-haspopup="dialog"
+        >
+          <span>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.8}
+                d="M8 7h8M8 12h8M8 17h5"
+              />
+            </svg>
+            {recentOrders.length > 0 ? `查看最近 ${recentOrders.length} 笔成交` : '暂无成交记录'}
+          </span>
+          {recentOrders.length > 0 && (
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.8}
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+          )}
+        </button>
       </article>
+      {isRecentOrdersOpen && (
+        <RecentOrdersSheet
+          orders={recentOrders}
+          onSelectOrder={setSelectedOrder}
+          onClose={closeRecentOrders}
+        />
+      )}
       {selectedOrder && (
         <OrderModal order={selectedOrder} exchangeInfo={exchangeInfo} onClose={closeOrderModal} />
       )}
@@ -484,10 +513,7 @@ export function DashboardView() {
           title="暂时无法加载交易数据"
           description={error}
           action={
-            <button
-              onClick={reconnect}
-              className="rounded-lg border border-[#d8b36a]/35 bg-[#d8b36a]/10 px-3 py-1.5 text-xs font-bold text-[#edcf90] transition hover:bg-[#d8b36a]/20"
-            >
+            <button onClick={reconnect} className="theme-action-button">
               立即重试
             </button>
           }
@@ -521,20 +547,15 @@ export function DashboardView() {
           <section className="dashboard-positions">
             <header className="dashboard-section-header">
               <div>
-                <div className="dashboard-section-header__eyebrow">
-                  <span>POSITION BOOK</span>
-                  <i aria-hidden="true" />
-                  <span>MARK PRICE</span>
-                </div>
                 <h2>活跃持仓</h2>
-                <p>逐仓追踪盈亏、强平距离与关键委托价位</p>
+                <p>追踪盈亏、强平距离与关键委托价位</p>
               </div>
               <div
                 className="dashboard-section-header__count"
                 aria-label={`${positions.length} 个持仓`}
               >
                 <strong>{positions.length}</strong>
-                <span>OPEN</span>
+                <span>个持仓</span>
               </div>
             </header>
             {positions.length === 0 ? (

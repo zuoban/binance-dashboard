@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation'
 function LoginForm() {
   const searchParams = useSearchParams()
   const [code, setCode] = useState('')
+  const [showCode, setShowCode] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -48,9 +49,6 @@ function LoginForm() {
 
   return (
     <main className="login-shell">
-      <div className="login-shell__grid" aria-hidden="true" />
-      <div className="login-shell__orbit" aria-hidden="true" />
-
       <section className="login-panel">
         <div className="login-intro">
           <div className="login-brand">
@@ -64,44 +62,21 @@ function LoginForm() {
               </svg>
             </div>
             <div>
-              <p>Futures intelligence</p>
-              <strong>PRIVATE DESK</strong>
+              <p>BINANCE FUTURES</p>
+              <strong>合约交易看板</strong>
             </div>
           </div>
 
           <div className="login-intro__copy">
-            <p className="dashboard-overline">REAL-TIME DERIVATIVES WORKSPACE</p>
-            <h1>你的合约决策中枢</h1>
-            <p>统一查看实时仓位、风险阈值和订单信号，保持每一次决策都有数据依据。</p>
-          </div>
-
-          <div className="login-intro__signals" aria-label="工作台能力">
-            <div>
-              <span>01</span>
-              <p>仓位与行情同步</p>
-            </div>
-            <div>
-              <span>02</span>
-              <p>强平距离监控</p>
-            </div>
-            <div>
-              <span>03</span>
-              <p>私密会话保护</p>
-            </div>
+            <h1>欢迎回来</h1>
+            <p>查看实时仓位、风险阈值与订单状态。</p>
           </div>
         </div>
 
         <div className="login-form-panel">
-          <div className="login-form-panel__status">
-            <span>SECURE ACCESS</span>
-            <i aria-hidden="true" />
-            <span>ENCRYPTED SESSION</span>
-          </div>
-
           <div className="login-form-panel__heading">
-            <p>身份验证</p>
-            <h2>欢迎回来</h2>
-            <span>输入工作台访问码以继续</span>
+            <h2>验证访问码</h2>
+            <span>请输入访问码以进入工作台</span>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -113,14 +88,47 @@ function LoginForm() {
               </svg>
               <input
                 id="access-code"
-                type="password"
+                type={showCode ? 'text' : 'password'}
                 value={code}
-                onChange={e => setCode(e.target.value)}
+                onChange={e => {
+                  setCode(e.target.value)
+                  if (error) {
+                    setError('')
+                  }
+                }}
                 placeholder="输入访问码"
                 autoComplete="current-password"
                 autoFocus
                 required
               />
+              <button
+                type="button"
+                className="login-field__toggle"
+                onClick={() => setShowCode(current => !current)}
+                aria-label={showCode ? '隐藏访问码' : '显示访问码'}
+                aria-pressed={showCode}
+              >
+                {showCode ? (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.8}
+                      d="m4 4 16 16M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 5.2A10.7 10.7 0 0 1 12 5c5.5 0 9 5.5 9 7a10.8 10.8 0 0 1-2.1 3.1M6.2 6.2C4.2 7.5 3 9.5 3 12c0 1.5 3.5 7 9 7 1.3 0 2.5-.3 3.5-.7"
+                    />
+                  </svg>
+                ) : (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.8}
+                      d="M3 12c0-1.5 3.5-7 9-7s9 5.5 9 7-3.5 7-9 7-9-5.5-9-7Z"
+                    />
+                    <circle cx="12" cy="12" r="2.5" strokeWidth={1.8} />
+                  </svg>
+                )}
+              </button>
             </div>
 
             {error && (
@@ -139,7 +147,14 @@ function LoginForm() {
               ) : (
                 <>
                   进入工作台
-                  <span aria-hidden="true">↗</span>
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="m9 18 6-6-6-6"
+                    />
+                  </svg>
                 </>
               )}
             </button>

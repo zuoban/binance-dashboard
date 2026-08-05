@@ -6,7 +6,7 @@
 
 'use client'
 
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatISO } from 'date-fns'
 import {
@@ -15,7 +15,7 @@ import {
   type RiskAlert,
   type RiskThresholds,
 } from '@/lib/utils/risk'
-import { useRiskHistory } from '@/lib/hooks'
+import { useDialogFocus, useRiskHistory } from '@/lib/hooks'
 import { formatDateTime } from '@/lib/utils/date'
 import type { RiskHistoryEvent } from '@/lib/utils/risk-history'
 
@@ -76,6 +76,13 @@ function RiskThresholdSettings({
   const [isOpen, setIsOpen] = useState(false)
   const [draft, setDraft] = useState(thresholds)
   const [error, setError] = useState('')
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const closeSettings = useCallback(() => setIsOpen(false), [])
+  const { dialogRef, onDialogKeyDown } = useDialogFocus<HTMLElement>({
+    onClose: closeSettings,
+    isOpen,
+    initialFocusRef: closeButtonRef,
+  })
 
   const openSettings = () => {
     setDraft(thresholds)
@@ -93,7 +100,7 @@ function RiskThresholdSettings({
       return
     }
 
-    setIsOpen(false)
+    closeSettings()
   }
 
   const handleReset = () => {
@@ -101,21 +108,6 @@ function RiskThresholdSettings({
     setDraft(DEFAULT_RISK_THRESHOLDS)
     setError('')
   }
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
 
   return (
     <div className="risk-threshold-settings">
@@ -135,15 +127,18 @@ function RiskThresholdSettings({
             role="presentation"
             onMouseDown={event => {
               if (event.target === event.currentTarget) {
-                setIsOpen(false)
+                closeSettings()
               }
             }}
           >
             <section
+              ref={dialogRef}
               className="risk-modal__dialog"
               role="dialog"
               aria-modal="true"
               aria-labelledby="risk-threshold-dialog-title"
+              tabIndex={-1}
+              onKeyDown={onDialogKeyDown}
             >
               <header className="risk-modal__header">
                 <div>
@@ -152,9 +147,10 @@ function RiskThresholdSettings({
                   <p>仅保存到当前浏览器，用于调整看板风险提醒的敏感度。</p>
                 </div>
                 <button
+                  ref={closeButtonRef}
                   type="button"
                   className="risk-modal__close"
-                  onClick={() => setIsOpen(false)}
+                  onClick={closeSettings}
                   aria-label="关闭阈值设置"
                 >
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -251,11 +247,7 @@ function RiskThresholdSettings({
                 >
                   恢复默认
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="risk-modal__cancel"
-                >
+                <button type="button" onClick={closeSettings} className="risk-modal__cancel">
                   取消
                 </button>
               </footer>
@@ -267,65 +259,33 @@ function RiskThresholdSettings({
   )
 }
 
-function RiskHistoryTimeline({
-  history,
-  onClear,
-}: {
-  history: RiskHistoryEvent[]
-  onClear: () => void
-}) {
-  const [isOpen, setIsOpen] = useState(false)
+function RiskHistoryTimeline({ history }: { history: RiskHistoryEvent[] }) {
   const visibleHistory = history.slice(0, 6)
 
   return (
-    <div className="risk-history">
-      <div className="risk-history__header">
-        <div>
-          <p className="risk-history__title">风险历史</p>
-          <p className="risk-history__caption">本地保留最近 100 条事件</p>
-        </div>
-        <div className="risk-history__actions">
-          {history.length > 0 && (
-            <button type="button" onClick={onClear} className="risk-history__clear">
-              清空
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsOpen(current => !current)}
-            className="risk-history__toggle"
-            aria-expanded={isOpen}
-          >
-            {isOpen ? '收起' : `查看${history.length > 0 ? `（${history.length}）` : ''}`}
-          </button>
-        </div>
-      </div>
-      {isOpen && (
-        <div className="risk-history__timeline">
-          {visibleHistory.length > 0 ? (
-            visibleHistory.map(event => (
-              <div key={event.id} className="risk-history__event">
-                <span
-                  className={`risk-history__event-dot ${
-                    event.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
-                  }`}
-                />
-                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                  <p className="text-[11px] font-bold">{event.title}</p>
-                  <time
-                    className="text-[10px] font-medium opacity-65"
-                    dateTime={formatISO(event.occurredAt)}
-                  >
-                    {formatDateTime(event.occurredAt)}
-                  </time>
-                </div>
-                <p className="text-[10px] font-medium opacity-75">{event.description}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-[11px] font-medium opacity-70">暂未记录风险事件。</p>
-          )}
-        </div>
+    <div className="risk-history__timeline">
+      {visibleHistory.length > 0 ? (
+        visibleHistory.map(event => (
+          <div key={event.id} className="risk-history__event">
+            <span
+              className={`risk-history__event-dot ${
+                event.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
+              }`}
+            />
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+              <p className="text-[11px] font-bold">{event.title}</p>
+              <time
+                className="text-[10px] font-medium opacity-65"
+                dateTime={formatISO(event.occurredAt)}
+              >
+                {formatDateTime(event.occurredAt)}
+              </time>
+            </div>
+            <p className="text-[10px] font-medium opacity-75">{event.description}</p>
+          </div>
+        ))
+      ) : (
+        <p className="text-[11px] font-medium opacity-70">暂未记录风险事件。</p>
       )}
     </div>
   )
@@ -339,6 +299,7 @@ export const RiskMonitor = memo(function RiskMonitor({
   onResetThresholds,
 }: RiskMonitorProps) {
   const { history, clearHistory } = useRiskHistory(alerts)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const visibleAlerts = alerts.slice(0, 3)
   const hasCriticalAlert = alerts.some(alert => alert.severity === 'critical')
   const severity = hasCriticalAlert ? 'critical' : alerts.length > 0 ? 'warning' : 'healthy'
@@ -364,11 +325,49 @@ export const RiskMonitor = memo(function RiskMonitor({
                 可用保证金 ≤ <strong>{thresholds.availableMarginWarningPercent}%</strong>
               </p>
             </div>
-            <RiskThresholdSettings
-              thresholds={thresholds}
-              onSaveThresholds={onSaveThresholds}
-              onResetThresholds={onResetThresholds}
-            />
+            <div className="risk-monitor__controls">
+              <RiskThresholdSettings
+                thresholds={thresholds}
+                onSaveThresholds={onSaveThresholds}
+                onResetThresholds={onResetThresholds}
+              />
+              {isHistoryOpen && history.length > 0 && (
+                <button type="button" onClick={clearHistory} className="risk-history__clear">
+                  清空
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsHistoryOpen(current => !current)}
+                className="risk-history__toggle"
+                aria-expanded={isHistoryOpen}
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M12 8v4l2.5 1.5M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"
+                  />
+                </svg>
+                <span>{isHistoryOpen ? '收起记录' : '风险记录'}</span>
+                <strong>{history.length}</strong>
+                <svg
+                  className="risk-history__chevron"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="m9 18 6-6-6-6"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
           {visibleAlerts.length > 0 ? (
             <div className="risk-monitor__alerts">
@@ -387,7 +386,7 @@ export const RiskMonitor = memo(function RiskMonitor({
           ) : (
             <p className="risk-monitor__summary">当前风险指标正常，持续监控中。</p>
           )}
-          <RiskHistoryTimeline history={history} onClear={clearHistory} />
+          {isHistoryOpen && <RiskHistoryTimeline history={history} />}
         </div>
       </div>
     </section>
