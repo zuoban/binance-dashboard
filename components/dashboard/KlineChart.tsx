@@ -799,6 +799,7 @@ function KlineChartComponent({
         max: maxPrice,
         tickAmount: isMobile ? 5 : 6,
         floating: isMobile, // 移动端浮动Y轴标签，节省空间
+        opposite: isMobile,
         labels: {
           show: true,
           style: {
@@ -807,8 +808,8 @@ function KlineChartComponent({
             fontFamily: 'ui-monospace, monospace',
           },
           formatter: (value: number) => formatPrice(value),
-          align: isMobile ? 'left' : 'right',
-          offsetX: isMobile ? 0 : -5,
+          align: 'right',
+          offsetX: isMobile ? -12 : -5,
         },
         axisBorder: {
           show: false,

@@ -2812,6 +2812,11 @@ textarea:focus-visible,
     height: min(var(--kline-chart-height), 300px);
     padding-inline: 0;
   }
+
+  /* 首个时间刻度贴近裁切边缘时只显示残缺字符，移动端保留其余完整刻度即可。 */
+  .kline-chart__plot .apexcharts-xaxis-texts-g .apexcharts-xaxis-label:first-child {
+    visibility: hidden;
+  }
 }
 
 @media (max-width: 420px) {

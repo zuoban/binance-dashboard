@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { format, formatISO } from 'date-fns'
 import dynamic from 'next/dynamic'
 import {
@@ -22,17 +22,41 @@ import { RecentOrdersSheet } from '@/components/dashboard/RecentOrdersSheet'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getDashboardRiskAlerts } from '@/lib/utils/risk'
-import type { Order } from '@/types/binance'
+import type { KlineData, Order, Position } from '@/types/binance'
 
 type DashboardTheme = 'dark' | 'light'
 
 const RECENT_ORDER_LIMIT = 20
+const MOBILE_DASHBOARD_MEDIA_QUERY = '(max-width: 640px)'
 
 const OrderModal = dynamic(
   () =>
     import('@/components/dashboard/OrderModal').then(module => ({ default: module.OrderModal })),
   { ssr: false }
 )
+
+function subscribeToMobileDashboard(callback: () => void): () => void {
+  const mediaQuery = window.matchMedia(MOBILE_DASHBOARD_MEDIA_QUERY)
+  mediaQuery.addEventListener('change', callback)
+  return () => mediaQuery.removeEventListener('change', callback)
+}
+
+function getMobileDashboardSnapshot(): boolean {
+  return window.matchMedia(MOBILE_DASHBOARD_MEDIA_QUERY).matches
+}
+
+function getServerMobileDashboardSnapshot(): boolean {
+  return false
+}
+
+/** 手机端优先展示活跃持仓，减少到达核心行情前的滚动距离。 */
+function useMobileDashboardLayout(): boolean {
+  return useSyncExternalStore(
+    subscribeToMobileDashboard,
+    getMobileDashboardSnapshot,
+    getServerMobileDashboardSnapshot
+  )
+}
 
 function calculateTotalPnl(orders: Order[]): number {
   return orders.reduce((total, order) => {
@@ -414,8 +438,47 @@ function StatsOverview({
   )
 }
 
+interface PositionsOverviewProps {
+  /** 当前持仓 */
+  positions: Position[]
+  /** 当前委托 */
+  openOrders: Order[]
+  /** 持仓交易对 K 线 */
+  klines: Record<string, KlineData[]>
+  /** 当前主题 */
+  theme: DashboardTheme
+}
+
+function PositionsOverview({ positions, openOrders, klines, theme }: PositionsOverviewProps) {
+  return (
+    <section className="dashboard-positions">
+      <header className="dashboard-section-header">
+        <div>
+          <h2>活跃持仓</h2>
+          <p>追踪盈亏、强平距离与关键委托价位</p>
+        </div>
+        <div className="dashboard-section-header__count" aria-label={`${positions.length} 个持仓`}>
+          <strong>{positions.length}</strong>
+          <span>个持仓</span>
+        </div>
+      </header>
+      {positions.length === 0 ? (
+        <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
+      ) : (
+        <PositionCards
+          positions={positions}
+          openOrders={openOrders}
+          klines={klines}
+          theme={theme}
+        />
+      )}
+    </section>
+  )
+}
+
 export function DashboardView() {
   const mounted = useIsMounted()
+  const isMobileLayout = useMobileDashboardLayout()
   const handleConnectionError = useSessionExpiryRedirect()
   const { thresholds, saveThresholds, resetThresholds } = useRiskThresholds()
   const [theme, setTheme] = useState<DashboardTheme>(() => {
@@ -475,6 +538,28 @@ export function DashboardView() {
       }),
     [availableMarginPercent, isConnected, isConnecting, positions, thresholds]
   )
+  const statsOverview = (
+    <StatsOverview
+      key="stats"
+      totalEquity={totalEquity}
+      availableMargin={availableMargin}
+      availableMarginPercent={availableMarginPercent}
+      openOrdersStats={openOrdersStats}
+      orders={orders}
+    />
+  )
+  const positionsOverview = (
+    <PositionsOverview
+      key="positions"
+      positions={positions}
+      openOrders={openOrders}
+      klines={klines}
+      theme={theme}
+    />
+  )
+  const dashboardSections = isMobileLayout
+    ? [positionsOverview, statsOverview]
+    : [statsOverview, positionsOverview]
 
   if (!mounted) {
     return <></>
@@ -536,39 +621,7 @@ export function DashboardView() {
             onSaveThresholds={saveThresholds}
             onResetThresholds={resetThresholds}
           />
-          <StatsOverview
-            totalEquity={totalEquity}
-            availableMargin={availableMargin}
-            availableMarginPercent={availableMarginPercent}
-            openOrdersStats={openOrdersStats}
-            orders={orders}
-          />
-
-          <section className="dashboard-positions">
-            <header className="dashboard-section-header">
-              <div>
-                <h2>活跃持仓</h2>
-                <p>追踪盈亏、强平距离与关键委托价位</p>
-              </div>
-              <div
-                className="dashboard-section-header__count"
-                aria-label={`${positions.length} 个持仓`}
-              >
-                <strong>{positions.length}</strong>
-                <span>个持仓</span>
-              </div>
-            </header>
-            {positions.length === 0 ? (
-              <EmptyState title="暂无持仓" description="您当前没有活跃的持仓仓位" />
-            ) : (
-              <PositionCards
-                positions={positions}
-                openOrders={openOrders}
-                klines={klines}
-                theme={theme}
-              />
-            )}
-          </section>
+          {dashboardSections}
         </>
       )}
     </div>
