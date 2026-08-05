@@ -960,8 +960,9 @@ function KlineChartComponent({
           strokeDashArray: level.strokeDashArray,
           label: {
             text: `${level.label} ${formatPrice(level.price)}`,
-            position: 'right',
-            offsetX: isMobile ? -6 : -8,
+            position: 'left',
+            textAnchor: 'start',
+            offsetX: isMobile ? 6 : 8,
             offsetY: labelOffsets[index],
             borderColor: level.color,
             borderWidth: 1,
